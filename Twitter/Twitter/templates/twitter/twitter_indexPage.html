@@ -1,0 +1,28 @@
+{% extends "./twitter_base.html" %}
+
+
+{% block title %} Twitter.ru {% endblock title %}
+
+{% block content %}
+	<div class="content-wrapper">
+		{% if latest_posts %}
+			<div class="feed_wall">
+				{% for post in latest_posts %}
+					{% include "./twitter_post.html" %}
+					{% block posts%}
+					{% endblock posts %}
+				{% endfor %}
+			</div>
+		{% else %}
+			<div class="warning no_post">Постов нет!</div>
+		{% endif %}
+		<div class="sidebar">
+			<ul>
+				<li></li>
+				<li></li>
+				<li></li>
+				<li></li>
+			</ul>
+		</div>
+	</div>
+{% endblock content %}
