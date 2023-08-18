@@ -66,11 +66,29 @@ nav {
 	padding: 10px;
 	width: 70%;
 }
+
+/* post */
 .post {
 	width: 780px;
 	background-color: #fff;
 	margin: 10px auto;
+	padding: 10px;
 }
+.post_text {
+	margin-top: 10px;
+}
+.post_date {
+	text-align: right;
+}
+.post_thumbs {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.post_thumb {
+	max-width: 350px;
+}
+
 .sidebar {
 	width: 30%;
 	background-color: #fff;

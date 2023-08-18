@@ -1,11 +1,11 @@
 {% block posts %}
 		<div class="post">
-			<div class="post_thumbs">
-				{% for post_thumb_image in post_thumbs_as_images %}
-					<img src="{{ post_thumb_image }}" class="post_thumb" />
-				{% endfor %}
-			</div>
+			{% if post.post_images %}
+				<div class="post_thumbs">
+					<img src="media/{{ post.post_images }}" class="post_thumb" />
+				</div>
+			{% endif %}
 			<div class="post_text">{{post.post_text}}</div>
-			<div class="post_date">{{post.post_date}}</div>
+			<div class="post_date">{{post.post_date|date}}</div>
 		</div>
 {% endblock posts %}

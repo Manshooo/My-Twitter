@@ -2,23 +2,22 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.template.response import TemplateResponse
+from django.views.generic.list import ListView
+from django.views import generic
 
-from .models import Post
+from .models import Post, Test
 
 def index(request):
-	post_thumbs_field = "post_thumbs"
-	post_obj = Post.objects.first()
-	post_thumbs = getattr(post_obj, post_thumbs_field).split(";")
-
 	latest_posts = Post.objects.order_by("-post_date")[:5]
-	context = {"latest_posts": latest_posts, "post_thumbs_as_images": post_thumbs}
+	context = {"latest_posts": latest_posts}
 	return render(request, "twitter/twitter_indexPage.html", context)
 
-def postThumbsTuple(request, template_name="twitter/twitter_post.html"):
-	post_thumbs_field = "post_thumbs"
-	post_obj = Post.objects.first()
-	post_thumbs = getattr(post_obj, post_thumbs_field).split(";")
+class PostListView(ListView):
+	template_name = "twitter/twitter_post.html"
+	model = Post
+	context_object_name = "post"
 
-	context = {"post_thumbs_as_images": post_thumbs}
-	
-	return TemplateResponse(request, template_name, context)
+class TestListView(ListView):
+	template_name = "twitter/twitter_test.html"
+	model = Test
+	context_object_name = "test"
