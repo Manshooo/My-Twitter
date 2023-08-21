@@ -8,13 +8,16 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.contrib.auth.decorators import login_required
 
 from .models import Post, Test
 
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication])
-
+def my_view(request):
+	content = {'message': 'Hello, world!'}
+	return Response(content)
 def index(request):
 	isAuthenticated = request.user.is_authenticated
 	latest_posts = Post.objects.order_by("-post_date")[:5]
@@ -30,7 +33,6 @@ class TestListView(ListView):
 	template_name = "twitter/twitter_test.html"
 	model = Test
 	context_object_name = "test"
-
-def my_view(request):
-    content = {'message': 'Hello, world!'}
-    return Response(content)
+@login_required
+def users_profile(request):
+	return render(request, "registration/profile.html")

@@ -4,15 +4,25 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 
-class Post(models.Model):
+
+class Profile(models.Model):
+
+	user = models.OneToOneField(User, on_delete=models.CASCADE)
+	avatar = models.ImageField(default='default.jpg', upload_to='profile_images')
+	bio = models.TextField()
 
 	def __str__(self):
-		return f"{self.id, self.post_author}"
+		return self.user.username
+	
+class Post(models.Model):
 	
 	post_text = models.TextField("Post text", blank=True, default="")
 	post_author = models.ForeignKey(User, on_delete=models.CASCADE)
 	post_date = models.DateTimeField("Date published")
 	post_images = models.ImageField()
+	
+	def __str__(self):
+		return f"{self.id, self.post_author}"
 	
 	class Meta():
 		ordering = ["-id"]

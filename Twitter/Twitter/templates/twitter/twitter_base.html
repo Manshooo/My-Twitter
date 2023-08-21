@@ -30,6 +30,9 @@
 							<li class="auth-account">
 								{% if user.is_authenticated %}
 								<a href="#" data-target="dropdown_menu">Профиль</a>
+								<ul id="account" class="dropdown-menu">	
+									<li class="logout"><a href="{% url 'logout' %}">Выйти</a></li>
+								</ul>
 								{% else %}
 								<a href="#" data-target="dropdown_menu">Авторизация</a>
 								<ul id="account" class="dropdown-menu">	
