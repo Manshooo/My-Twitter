@@ -14,26 +14,36 @@
 				<div class="header">
 					<div class="logocap">
 						<img class="site_logo" src="{% static 'images/logo_circle.png' %}" />
-						<div class="site_caption"><h1>Twitter.ru</h1></div>
+						<div class="site_caption"><h1><a href="/">Twitter.ru</a></h1></div>
 					</div>
 				</div>
 			</div>
-		</header>
-		<nav>
-			<div class="page-width">
-				<div class="underheader_menu">
-					<ul class="hot-categories">
-						<li><a href="#">Горячее</a></li>
-						<li><a href="#">Интересное</a></li>
-						<li><a href="#">Новое от подписок</a></li>
-					</ul>
-					<ul class="auth-search">
-						<li><a href="#">Авторизация</a></li>
-						<li><a href="#">Поиск</a></li>
-					</ul>
+			<nav>
+				<div class="page-width">
+					<div class="underheader_menu">
+						<ul class="hot-categories">
+							<li><a href="#">Горячее</a></li>
+							<li><a href="#">Интересное</a></li>
+							<li><a href="#">Новое от подписок</a></li>
+						</ul>
+						<ul class="auth-search">
+							<li class="auth-account">
+								{% if user.is_authenticated %}
+								<a href="#" data-target="dropdown_menu">Профиль</a>
+								{% else %}
+								<a href="#" data-target="dropdown_menu">Авторизация</a>
+								<ul id="account" class="dropdown-menu">	
+									<li class="login"><a href="{% url 'login' %}">Войти</a></li>
+									<li class="register"><a href="#">Регистрация</a></li>
+								</ul>
+								{% endif %}
+							</li>
+							<li><a href="#">Поиск</a></li>
+						</ul>
+					</div>
 				</div>
-			</div>
-		</nav>
+			</nav>
+		</header>
 		<div class="content">
 			<div class="page-width">
 				{% block content %}
