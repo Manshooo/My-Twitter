@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from .models import Post
+from .models import Post, Profile
 
+class UserProfileSerialezer(serializers.ModelSerializer):
+	class Meta:
+		model = Profile
+		fields = "__all__"
 class PostSerializer(serializers.ModelSerializer):
-    
 	class Meta:
 		model = Post
-		fields = ('pk', 'post_text', 'post_author', 'post_date', 'post_images')
+		fields = "__all__"

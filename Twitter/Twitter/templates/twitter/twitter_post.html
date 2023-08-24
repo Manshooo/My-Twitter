@@ -2,10 +2,13 @@
 		<div class="post">
 			{% if post.post_images %}
 				<div class="post_thumbs">
-					<img src="media/{{ post.post_images }}" class="post_thumb" />
+					<img src="/media/{{ post.post_images }}" class="post_thumb" />
 				</div>
 			{% endif %}
 			<div class="post_text">{{post.post_text}}</div>
-			<div class="post_date">{{post.post_date|date}}</div>
+			<div class="post-footer">
+				<div class="post_author"><a href="/users/{{post.post_author.user}}">{{post.post_author}}</a></div>
+				<div class="post_date">{{post.post_date|date}}</div>
+			</div>
 		</div>
 {% endblock posts %}

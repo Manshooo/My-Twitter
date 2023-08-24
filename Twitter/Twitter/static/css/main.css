@@ -9,6 +9,10 @@ body {
 h1 {
 	margin: 0;
 }
+header h2 {
+	margin: 0;
+	font-size: 28px;
+}
 ul {
 	list-style: none;
 	padding: 0;
@@ -48,7 +52,7 @@ img.site_logo {
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	padding: 5px 0;
+	padding: 2px 0;
 }
 .logocap {
 	display: flex;
@@ -61,6 +65,8 @@ img.site_logo {
 nav {
 	padding: 5px 0;
 	background-color: #fff;
+	position: sticky;
+	top: 0;
 }
 .feed_wall {
 	width: 70%;
@@ -90,6 +96,13 @@ nav {
 .post_thumb {
 	max-width: 350px;
 }
+.post-footer {
+	display: flex;
+	justify-content: flex-end;
+}
+.post_author {
+	margin-right: 15px;
+}
 
 .sidebar {
 	width: 30%;
@@ -116,13 +129,52 @@ footer {
 	display: block;
 	position: absolute;
 }
+.content-body {
+	width: 70%;
+}
+
 /* account authentication */
 #account {
 	top: 20px;
 	background-color: #fff;
 	padding: 7px;
 	box-shadow: 0px 0px 4px 1px #d5d5d5;
+	width: 100px;
+}
+#account > li {
+	margin: 6px 0;
+}
+#account > li:first-child {
+	margin-top: 0;
+}
+#account > li:last-child {
+	margin-bottom: 0;
 }
 .auth-account {
 	position: relative;
+}
+#account .avatar {
+	width: 60px;
+}
+
+/* user profile */
+.profile-page {
+	background: #fff;
+	padding: 5px;
+	margin-right: 20px;
+}
+
+.profile-avatar {
+	width: 120px;
+}
+.profile-header {
+	display: flex;
+}
+.aka {
+	display: inline-block;
+	background: #e9e9e9;
+	color: #959595;
+	border-radius: 4px;
+	padding: 2px;
+	margin: 0 4px;
 }

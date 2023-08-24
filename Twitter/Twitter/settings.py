@@ -1,17 +1,15 @@
 from pathlib import Path
+from .deploy_settings import *
 import os
+""" import mimetypes
+mimetypes.add_type("text/css", ".css", True)
+mimetypes.add_type("text/html", ".html", True) """
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = secret_key
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=#$ntne!31^xsyfm!pa&=mhn_r42t=69ya*f$09&k58bn!hf(g'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -20,21 +18,23 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'Twitter.apps.TwitterConfig',
 	'django.contrib.admin',
 	'django.contrib.auth',
 	'django.contrib.contenttypes',
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
+    'Twitter',
+	'rest_framework',
+	'corsheaders',
+    'crispy_forms',
+	
 ]
 
 MIDDLEWARE = [
 	'django.middleware.security.SecurityMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+	'corsheaders.middleware.CorsMiddleware',
 	'django.middleware.common.CommonMiddleware',
 	'django.middleware.csrf.CsrfViewMiddleware',
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -42,11 +42,15 @@ MIDDLEWARE = [
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+	'DEFAULT_AUTHENTICATION_CLASSES': [
 		'rest_framework.authentication.BasicAuthentication',
 		'rest_framework.authentication.SessionAuthentication',
-    ]
+	]
 }
+ALLOWED_HOSTS = [
+	'localhost',
+	'127.0.0.1',
+]
 
 ROOT_URLCONF = 'Twitter.urls'
 
@@ -54,7 +58,7 @@ TEMPLATES = [
 	{
 		'BACKEND': 'django.template.backends.django.DjangoTemplates',
 		'DIRS': [
-            'Twitter/templates'
+			'Twitter/templates'
 		],
 		'APP_DIRS': True,
 		'OPTIONS': {
@@ -69,10 +73,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Twitter.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
 	'default': {
@@ -100,6 +100,10 @@ AUTH_PASSWORD_VALIDATORS = [
 	},
 ]
 
+AUTHENTICATION_BACKENDS = ['Twitter.backends.EmailBackend']
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -113,14 +117,12 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
+#STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = (
+	os.path.join(BASE_DIR, 'static'),
+)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-LOGIN_REDIRECT_URL = '/'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

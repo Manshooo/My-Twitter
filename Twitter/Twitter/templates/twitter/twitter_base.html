@@ -1,7 +1,8 @@
+{% load crispy_forms_tags %}
 <!DOCTYPE html>
 <html lang="ru">
 	<head>
-		<title>{% block title %}Twitter.ru{% endblock title %}</title>
+		<title>{% block title %}AzzB{% endblock title %}</title>
 		<meta charset="utf-8">
 		{% load static %}
 		<link rel="stylesheet" href="{% static 'css/main.css' %}" type="text/css" />
@@ -13,44 +14,56 @@
 			<div class="page-width">
 				<div class="header">
 					<div class="logocap">
-						<img class="site_logo" src="{% static 'images/logo_circle.png' %}" />
-						<div class="site_caption"><h1><a href="/">Twitter.ru</a></h1></div>
+						<div class="site_caption"><h2><a href="/">AzzB</a></h2></div>
 					</div>
 				</div>
 			</div>
-			<nav>
-				<div class="page-width">
-					<div class="underheader_menu">
-						<ul class="hot-categories">
-							<li><a href="#">Горячее</a></li>
-							<li><a href="#">Интересное</a></li>
-							<li><a href="#">Новое от подписок</a></li>
-						</ul>
-						<ul class="auth-search">
-							<li class="auth-account">
-								{% if user.is_authenticated %}
-								<a href="#" data-target="dropdown_menu">Профиль</a>
-								<ul id="account" class="dropdown-menu">	
-									<li class="logout"><a href="{% url 'logout' %}">Выйти</a></li>
-								</ul>
-								{% else %}
-								<a href="#" data-target="dropdown_menu">Авторизация</a>
-								<ul id="account" class="dropdown-menu">	
-									<li class="login"><a href="{% url 'login' %}">Войти</a></li>
-									<li class="register"><a href="#">Регистрация</a></li>
-								</ul>
-								{% endif %}
-							</li>
-							<li><a href="#">Поиск</a></li>
-						</ul>
-					</div>
-				</div>
-			</nav>
 		</header>
+		<nav>
+			<div class="page-width">
+				<div class="underheader_menu">
+					<ul class="hot-categories">
+						<li><a href="#">Горячее</a></li>
+						<li><a href="#">Интересное</a></li>
+						<li><a href="#">Новое от подписок</a></li>
+					</ul>
+					<ul class="auth-search">
+						<li class="search"><a href="#">Поиск</a></li>
+						{% if user.is_authenticated %}
+							<li class="new-post"><a href="#">Новый пост</a></li>
+						{% endif %}
+						<li class="auth-account">
+							{% if user.is_authenticated %}
+							<a href="#" data-target="dropdown_menu">{{ user }}</a>
+							<ul id="account" class="dropdown-menu">
+								<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
+								<li class="profile"><a href="/users/{{ user.profile }}">Профиль</a></li>
+								<li class="logout"><a href="{% url 'logout' %}">Выйти</a></li>
+							</ul>
+							{% else %}
+							<a href="#" data-target="dropdown_menu">Авторизация</a>
+							<ul id="account" class="dropdown-menu">	
+								<li class="login"><a href="{% url 'login' %}">Войти</a></li>
+								<li class="register"><a href="#">Регистрация</a></li>
+							</ul>
+							{% endif %}
+						</li>
+					</ul>
+				</div>
+			</div>
+		</nav>
 		<div class="content">
 			<div class="page-width">
-				{% block content %}
-				{% endblock content %}
+				<div class="content-wrapper">
+					<div class="content-body">
+						{% block content %}
+						{% endblock content %}
+					</div>
+					<div class="sidebar">
+						{% block sidebar %}
+						{% endblock sidebar %}
+					</div>
+				</div>
 			</div>	
 		</div>
 		<footer>
