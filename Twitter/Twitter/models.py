@@ -1,17 +1,14 @@
 from datetime import datetime
-from typing import Iterable, Optional
-
-from django.utils import timezone
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 
+from .settings import AUTH_USER_MODEL
 
 def user_profile_avatar_path(instance, filename):
     # файл загрузится в MEDIA_ROOT/users/user_<id>/<filename>
 	return f"users/user_{instance.user.id}/{filename}"
-@receiver(post_save, sender=User)
+@receiver(post_save, sender=AUTH_USER_MODEL)
 def create_profile(sender, instance, created, **kwargs):
 	if created:
 		user_profile = Profile(user=instance)
@@ -20,7 +17,7 @@ def create_profile(sender, instance, created, **kwargs):
 		user_profile.save()
 class Profile(models.Model):
 
-	user = models.OneToOneField(User, on_delete=models.CASCADE)
+	user = models.OneToOneField(AUTH_USER_MODEL, on_delete=models.CASCADE)
 	username = models.CharField("Отображаемое имя пользователя", max_length=150, default=None, blank=True)
 	avatar = models.ImageField(default='default/default_user_avatar.jpg', upload_to=user_profile_avatar_path)
 	bio = models.TextField(blank=True)
@@ -29,14 +26,14 @@ class Profile(models.Model):
 		return self.username
 	def save(self,  *args, **kwargs):
 		if not self.username:
-			self.username = self.user
+			self.username = self.user.username
 		super(Profile, self).save(*args, **kwargs)
 
 class Post(models.Model):
 	
-	post_text = models.TextField("Post text", blank=True, default="")
+	post_text = models.TextField("Текст поста", blank=True, default="")
 	post_author = models.ForeignKey(Profile, on_delete=models.CASCADE)
-	post_date = models.DateTimeField("Date published", blank=True)
+	post_date = models.DateTimeField("Дата публикации", blank=True)
 	post_images = models.ImageField(blank=True)
 	
 	def save(self,  *args, **kwargs):

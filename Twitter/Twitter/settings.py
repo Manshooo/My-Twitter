@@ -22,11 +22,11 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
-    'Twitter',
+	'Twitter',
+	'customUser.apps.CustomUserConfig',
 	'rest_framework',
 	'corsheaders',
-    'crispy_forms',
-	
+	'django-debug-toolbar',
 ]
 
 MIDDLEWARE = [
@@ -38,7 +38,13 @@ MIDDLEWARE = [
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
+	"debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
+
+INTRENAL_IPS = [
+    "127.0.0.1",
+]
+
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
 		'rest_framework.authentication.BasicAuthentication',
@@ -69,6 +75,7 @@ TEMPLATES = [
 		},
 	},
 ]
+CRISPY_TEMPLATE_PACK = 'uni_form'
 
 WSGI_APPLICATION = 'Twitter.wsgi.application'
 
@@ -98,7 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 	},
 ]
 
-AUTHENTICATION_BACKENDS = ['Twitter.backends.EmailBackend']
+AUTH_USER_MODEL = 'customUser.CustomUser'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
@@ -124,5 +131,3 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-LOGIN_REDIRECT_URL = '/'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
