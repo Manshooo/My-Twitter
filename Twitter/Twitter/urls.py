@@ -6,6 +6,7 @@ from django.conf import settings
 
 from .views import index, PostListView, UserProfileDetailView, my_view
 
+
 urlpatterns = [
 	path('', index, name='index'),
 	path('', PostListView.as_view(), name='post'),
@@ -14,6 +15,8 @@ urlpatterns = [
 	path('auth/', include('django.contrib.auth.urls')),
 	path('my-api/', my_view, name='my-api'),
 	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='user_profile'),
+	
 ]
 if settings.DEBUG:
+	urlpatterns += path("__debug__/", include("debug_toolbar.urls")),
 	urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,19 +1,19 @@
 {% extends "twitter/twitter_base.html" %}
 
-{% if error_messages %}
-	<!-- <div class="login-error">
-		<p>Имя пользователя и/или пароль не подходят. Попробуйте ещё раз.</p>
-	</div> -->
-	{{ error_messages }}
-{% endif %}
-{% if next %}
-	{% if user.is_authenticated %}
-		<p>У вашего аккаунта нет доступа к это странице. Чтобы продолжить, пожалуйста водите в аккаунт у которого есть доступ.</p>
-	{% else %}
-		<p>Чтобы увидеть содержимое страницы <a>войдите</a> пожалуйста.</p>
-	{% endif %}
-{% endif %}
+
 {% block content %}
+	{% if form.errors %}
+		<div class="login-error">
+			<p>Имя пользователя и/или пароль не подходят. Попробуйте ещё раз.</p>
+		</div> 
+	{% endif %}
+	{% if next %}
+		{% if user.is_authenticated %}
+			<div class="login-error">
+				<p>У вашего аккаунта нет доступа к это странице. Чтобы продолжить, пожалуйста водите в аккаунт у которого есть доступ.</p>
+			</div>
+		{% endif %}
+	{% endif %}
 	<div class="login-form">
 		<form method="post" action="{% url 'login' %}">
 			{% csrf_token %}
@@ -22,7 +22,7 @@
 			{{ form.password.label_tag }}
 			{{ form.password }}
 
-			<input type="submit" value="login" />
+			<input type="submit" value="Войти" />
 			<input type="hidden" name="next" value="{{ next }}" />
 		</form>
 

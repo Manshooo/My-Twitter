@@ -21,6 +21,9 @@ ul {
 header {
 	background-color: #e1f7f7;
 }
+p {
+	margin: 0;
+}
 a {
 	color: #333;
 	text-decoration: none;
@@ -177,4 +180,32 @@ footer {
 	border-radius: 4px;
 	padding: 2px;
 	margin: 0 4px;
+}
+
+/* login/signup form */
+.login-error, .signup-error {
+	border: 1px solid #d9afaf;
+	border-radius: 6px;
+	background: #f7d9d9;
+	padding: 13px;
+	width: 480px;
+}
+.login-form, .signup-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+}
+.login-form form, .signup-form form {
+	width: 100%;
+}
+.login-form label, .login-form input, .signup-form label, .signup-form input {
+	display: block;
+	margin: 7px 0;
+}
+.login-form a, .signup-form a {
+	text-decoration: underline;
+}
+.signup-helptext {
+	color: #747474;
+	margin: -4px 0;
 }

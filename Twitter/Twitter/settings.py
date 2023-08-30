@@ -1,19 +1,12 @@
 from pathlib import Path
 from .deploy_settings import *
 import os
-""" import mimetypes
-mimetypes.add_type("text/css", ".css", True)
-mimetypes.add_type("text/html", ".html", True) """
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = secret_key
 
 DEBUG = True
-
-ALLOWED_HOSTS = []
-
-# Application definition
 
 INSTALLED_APPS = [
 	'django.contrib.admin',
@@ -23,10 +16,10 @@ INSTALLED_APPS = [
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
 	'Twitter',
+    'debug_toolbar',
 	'customUser.apps.CustomUserConfig',
 	'rest_framework',
 	'corsheaders',
-	'django-debug-toolbar',
 ]
 
 MIDDLEWARE = [
@@ -41,9 +34,7 @@ MIDDLEWARE = [
 	"debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
-INTRENAL_IPS = [
-    "127.0.0.1",
-]
+INTERNAL_IPS = ['127.0.0.1', '127.0.0.1:8000',]
 
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -75,7 +66,6 @@ TEMPLATES = [
 		},
 	},
 ]
-CRISPY_TEMPLATE_PACK = 'uni_form'
 
 WSGI_APPLICATION = 'Twitter.wsgi.application'
 
@@ -106,6 +96,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = 'customUser.CustomUser'
+LOGIN_URL = '/auth/login'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 

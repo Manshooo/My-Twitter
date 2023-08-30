@@ -6,16 +6,22 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 from django.contrib.auth.decorators import login_required
 
-from .models import Post, Test, Profile
-
-def my_view(request):
-	content = {'message': 'Hello, world!'}
-	return Response(content)
+from .models import Post, Profile
 
 def index(request):
-	latest_posts = Post.objects.order_by("-post_date")[:5]
+	latest_posts = Post.objects.order_by("-created_at")[:10]
 	context = {"latest_posts": latest_posts}
 	return render(request, "twitter/twitter_indexPage.html", context)
+@login_required()
+def create_post(request):
+	if request.method == 'POST':
+		user = request.user.username
+		text = request.POST['text']
+
+		new_post = Post.objects.create(user=user, text=text)
+		new_post.save()
+	else:
+		pass
 
 class PostListView(ListView):
 	template_name = "twitter/twitter_post.html"

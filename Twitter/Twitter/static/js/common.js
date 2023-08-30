@@ -18,7 +18,8 @@ window.addEventListener('DOMContentLoaded', function() {
 
 function setMinHeight() {
 	let headerHeight = Number(document.querySelector("header").offsetHeight);
+	let navHeight = Number(document.querySelector("nav").offsetHeight);
 	let footerHeight = Number(document.querySelector("footer").offsetHeight);
-	let minHeight = window.innerHeight-(headerHeight+footerHeight+10);
+	let minHeight = window.innerHeight-(headerHeight+footerHeight+navHeight+10);
 	document.querySelector(".content").style.minHeight = minHeight + 'px';
 }

@@ -1,4 +1,3 @@
-{% load crispy_forms_tags %}
 <!DOCTYPE html>
 <html lang="ru">
 	<head>
@@ -38,12 +37,12 @@
 							<ul id="account" class="dropdown-menu">
 								<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
 								<li class="profile"><a href="/users/{{ user.profile }}">Профиль</a></li>
-								<li class="logout"><a href="{% url 'logout' %}">Выйти</a></li>
+								<li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li>
 							</ul>
 							{% else %}
 							<a href="#" data-target="dropdown_menu">Авторизация</a>
 							<ul id="account" class="dropdown-menu">	
-								<li class="login"><a href="{% url 'login' %}">Войти</a></li>
+								<li class="login"><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a></li>
 								<li class="register"><a href="{% url 'signup' %}">Регистрация</a></li>
 							</ul>
 							{% endif %}
