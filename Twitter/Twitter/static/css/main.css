@@ -72,7 +72,7 @@ nav {
 	top: 0;
 }
 .feed_wall {
-	width: 70%;
+	width: 780px;
 }
 
 /* post */
@@ -80,9 +80,8 @@ nav {
 	margin-top: 0px;
 }
 .post {
-	width: 780px;
 	background-color: #fff;
-	margin: 10px auto;
+	margin: 10px 0;
 	padding: 10px;
 }
 .post_text {
@@ -162,9 +161,7 @@ footer {
 
 /* user profile */
 .profile-page {
-	background: #fff;
-	padding: 5px;
-	margin-right: 20px;
+	width: 780px;
 }
 
 .profile-avatar {
@@ -180,6 +177,12 @@ footer {
 	border-radius: 4px;
 	padding: 2px;
 	margin: 0 4px;
+}
+.profile {
+	background: #fff;
+}
+#profile-feed {
+	margin-top: 10px;
 }
 
 /* login/signup form */

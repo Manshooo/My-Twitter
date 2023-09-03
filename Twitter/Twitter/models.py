@@ -18,12 +18,16 @@ def create_profile(sender, instance, created, **kwargs):
 		user_profile.follows.add(instance.profile)
 		user_profile.save()
 class Profile(models.Model):
-
-	user = models.OneToOneField(User, on_delete=models.CASCADE)
+	user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 	username = models.CharField("Отображаемое имя пользователя", max_length=150, default=None, blank=True)
 	avatar = models.ImageField(default='default/default_user_avatar.jpg', upload_to=user_profile_avatar_path)
 	bio = models.TextField(blank=True)
 	follows = models.ManyToManyField("self", related_name="followed_by", symmetrical=False, blank=True)
+	def has_posts(self):
+		posts = Post.objects.filter(author=self.user.id)
+		if posts:
+			return True
+		
 	def __str__(self):
 		return self.username
 	def save(self,  *args, **kwargs):
@@ -35,16 +39,22 @@ class Post(models.Model):
 	
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4)
 	text = models.TextField("Текст поста", blank=True, default="")
-	author = models.ForeignKey(Profile, on_delete=models.CASCADE)
+	author = models.ForeignKey(Profile, to_field='user', on_delete=models.CASCADE, related_name='post_author')
 	created_at = models.DateTimeField("Дата публикации", blank=True)
 	image = models.ImageField("Имаге", blank=True)
-	likes = models.BigIntegerField("Количество классов", default=0)
-	
+	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked')
+		
 	def save(self,  *args, **kwargs):
-		if not self.post_date:
-			self.post_date = datetime.now()
+		if not self.created_at:
+			self.created_at = datetime.now()
 		super(Post, self).save(*args, **kwargs)
-	
+
+	def get_likes(self):
+		return self.likes.all()
+	@property
+	def likes_count(self):
+		return self.likes.all().count()
+
 	class Meta():
 		ordering = ["-created_at"]
 

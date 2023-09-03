@@ -23,3 +23,15 @@ function setMinHeight() {
 	let minHeight = window.innerHeight-(headerHeight+footerHeight+navHeight+10);
 	document.querySelector(".content").style.minHeight = minHeight + 'px';
 }
+/* 
+$.ajax({
+	type: 'GET',
+	url: '/posts-json/',
+	success: function(response){
+		console.log(response)
+	},
+	error: function(error){
+		console.log(error)
+	}
+})
+ */
