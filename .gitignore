@@ -397,7 +397,8 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-Twitter/media/
+azzb/media/
 *.sqlite3
 /Server/
-Twitter/*/deploy_settings.py
+azzb/*/deploy_settings.py
+.env

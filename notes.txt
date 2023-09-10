@@ -1,3 +1,3 @@
 My Twitter/ просто папка шк проекта
-My Twitter/Twitter папка проекта Джанго, то, что делалось с помощью в консоле django-admin
-My Twitter/Twitter/Twitter папка приложения Джанго
+My Twitter/azzb папка проекта Джанго, то, что делалось с помощью в консоле django-admin
+My Twitter/azzb/azzb папка приложения Джанго

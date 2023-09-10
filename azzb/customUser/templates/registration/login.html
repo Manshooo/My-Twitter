@@ -1,0 +1,31 @@
+{% extends "azzb/twitter_base.html" %}
+
+
+{% block content %}
+	{% if form.errors %}
+		<div class="login-error">
+			<p>Имя пользователя и/или пароль не подходят. Попробуйте ещё раз.</p>
+		</div> 
+	{% endif %}
+	{% if next %}
+		{% if user.is_authenticated %}
+			<div class="login-error">
+				<p>У вашего аккаунта нет доступа к это странице. Чтобы продолжить, пожалуйста водите в аккаунт у которого есть доступ.</p>
+			</div>
+		{% endif %}
+	{% endif %}
+	<div class="login-form">
+		<form method="post" action="{% url 'login' %}">
+			{% csrf_token %}
+			{{ form.username.label_tag }}
+			{{ form.username }}
+			{{ form.password.label_tag }}
+			{{ form.password }}
+
+			<input type="submit" value="Войти" />
+			<input type="hidden" name="next" value="{{ next }}" />
+		</form>
+
+		<p class="forgot-password"><a href="{% url 'password_reset' %}">Забыли пароль?</a></p>
+	</div>
+{% endblock content %}
