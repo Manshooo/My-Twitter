@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-=#$ntne!31^xsyfm!pa&=mhn_r42t=69ya*f$09&k58bn!hf(g')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
-DEBUG = bool(os.getenv('DJANGO_DEBUG', True))
+DEBUG = os.getenv('DJANGO_DEBUG', False)
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
@@ -22,6 +22,7 @@ INSTALLED_APPS = [
 	'customUser.apps.CustomUserConfig',
 	'rest_framework',
 	'corsheaders',
+	'post',
 ]
 
 MIDDLEWARE = [
