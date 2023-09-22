@@ -20,7 +20,6 @@
 			<form method="POST" action="{% url 'signup' %}">
 				{% csrf_token %}
 				{{ form.username.label_tag }}
-					<div class="signup-helptext">{{ form.username.help_text}}</div>
 				{{ form.username }}
 				{{ form.email.label_tag }}
 				{{ form.email }}

@@ -22,7 +22,6 @@ INSTALLED_APPS = [
 	'customUser.apps.CustomUserConfig',
 	'rest_framework',
 	'corsheaders',
-	'post',
 ]
 
 MIDDLEWARE = [
@@ -48,7 +47,8 @@ REST_FRAMEWORK = {
 ALLOWED_HOSTS = [
 	'localhost',
 	'127.0.0.1',
-	'azzb.ru'
+	'azzb.ru',
+	'www.azzb.ru'
 ]
 
 ROOT_URLCONF = 'azzb.urls'

@@ -1,8 +1,10 @@
 {% extends "./twitter_base.html" %}
 
 
-{% block title %} AzzB {% endblock title %}
-
+{% block title %}AzzB{% endblock title %}
+{% block metatags %}
+	<meta name="yandex-verification" content="461141e64faf3f9b" />
+{% endblock metatags %}
 {% block content %}
 	{% if latest_posts %}
 		<div class="feed_wall">
