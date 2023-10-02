@@ -1,14 +1,25 @@
 {% block posts %}
 		<div class="post">
-			{% if post.images %}
+			{% if post.image %}
 				<div class="post_thumbs">
-					<img src="/media/{{ post.images }}" class="post_thumb" />
+					<img src="/media/{{ post.image }}" class="post_thumb" />
 				</div>
 			{% endif %}
 			<div class="post_text">{{post.text}}</div>
 			<div class="post-footer">
+				{% comment %}
+				<div class="post-footer-actions">
+					<div class="like"></div>
+					<div class="comment"></div>
+					<div class="reply"></div>
+				</div>
+				<div class="post-footer-info">
+					<div class="post_author"><a href="/users/{{post.author}}">{{post.author}}</a></div>
+					<div class="post_date">{{post.created_at}}</div>
+				</div>
+				{% endcomment %}
 				<div class="post_author"><a href="/users/{{post.author.user}}">{{post.author}}</a></div>
-				<div class="post_date">{{post.created_at|date}}</div>
+				<div class="post_date">{{post.created_at}}</div>
 			</div>
 		</div>
 {% endblock posts %}

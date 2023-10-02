@@ -4,16 +4,17 @@ from django.urls import include, path, re_path
 from django.conf.urls.static import static
 from django.conf import settings
 
-from .views import index, PostListView, UserProfileDetailView, PostListAPIView
+from .views import index, UserProfileDetailView
 
 
 urlpatterns = [
 	path('', index, name='index'),
 	path('admin/', admin.site.urls),
-	path("auth/", include('customUser.urls')),
+	path('auth/', include('customUser.urls')),
 	path('auth/', include('django.contrib.auth.urls')),
 	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='user_profile'),
-	path('api/users/<int:id>/posts', PostListAPIView.as_view(), name='profile_posts_json'),
+	path('api/', include('api.urls')),
+	#path('api/users/<int:id>/posts', PostListAPIView.as_view(), name='profile_posts_json'),
 ]
 if settings.DEBUG:
 	urlpatterns += path("__debug__/", include("debug_toolbar.urls")),

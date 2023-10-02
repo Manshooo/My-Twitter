@@ -1,28 +1,46 @@
 {% extends "azzb/twitter_base.html" %}
 {% block title %}{{profile.user}}{% endblock title %}
+{% load static %}
+{% block scripts %}
+	<script src="{% static 'js/profile.js' %}"></script>
+{% endblock scripts %}
 {% block content %}
 	<div class="profile-page">
 		<div class="profile">
 			<div class="profile-header">
 				<img src="{{ profile.avatar.url }}" alt="" class="profile-avatar">
-				<div class="profile-username">{{profile.user.username}} {% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}</div>
-			</div>
-			<div class="profile-body">
-				<div class="profile-bio">
-					{% if profile.bio %}
-						{{profile.bio}}
-					{% else %}
-						No bio...
-					{% endif %}
+				<div class="wrapper-profile-header-info">
+					<div class="profile-username">{{profile.user.username}} {% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}</div>
+					<div class="profile-bio">
+						{% if profile.bio %}
+							{{profile.bio}}
+						{% else %}
+							No bio...
+						{% endif %}
+					</div>
 				</div>
 			</div>
+			<div class="profile-body">
+				{% if request.user == profile.user %}
+				<div class="new-post-form">
+					{% csrf_token %}
+					<div class="wrapper-post-text">
+						<div name="new_post" id="id__post-text" role="textbox" contenteditable="true" data-placeholder="Хммм..." onfocus="showEditPost()" aria-multiline="true"></div>
+					</div>
+					<div class="wrapper-form-actions">
+						<div class="form-actions">
+							<button name="form_actions" type="submit" id="submit">Постим?</button>
+						</div>
+					</div>
+				</div>
+				{% endif %}
+			</div>
+			{% comment %} <hr class="hr-profile"> {% endcomment %}
 		</div>
 		<div id="profile-feed">
 			{% if profile.has_posts %}
-
 				{% include 'azzb/profile_posts.html'%}
 				{% block posts %}
-			
 				{% endblock posts %}
 			{% else %}
 				<div class="no_post">
@@ -37,6 +55,5 @@
 	<ul class="profile-statistics">
 		<li>{% if profile.user.last_login %}Последний вход: {{profile.user.last_login}}{% endif %}</li>
 		<li>Дата регистрации: {{ profile.user.date_joined|date:"m.d.Y"}}</li>
-		<li></li>
 	</ul>
 {% endblock sidebar %}

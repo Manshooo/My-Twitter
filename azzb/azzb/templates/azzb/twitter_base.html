@@ -32,14 +32,14 @@
 					<ul class="auth-search">
 						<li class="search"><a href="#">Поиск</a></li>
 						{% if user.is_authenticated %}
-							<li class="new-post"><a href="#">Новый пост</a></li>
+							<li class="new-post"><a href="{% url 'user_profile' user %}">Новый пост</a></li>
 						{% endif %}
 						<li class="auth-account">
 							{% if user.is_authenticated %}
 							<a href="#" data-target="dropdown_menu">{{ user }}</a>
 							<ul id="account" class="dropdown-menu">
 								<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
-								<li class="profile"><a href="{% url 'user_profile' user.profile %}">Профиль</a></li>
+								<li class="header-profile"><a href="{% url 'user_profile' user %}">Профиль</a></li>
 								<li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li>
 							</ul>
 							{% else %}
