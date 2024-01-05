@@ -1,0 +1,28 @@
+{% extends "./azzb_base.html" %}
+
+{% block title %}AzzB{% endblock title %}
+{% block metatags %}
+	<meta name="yandex-verification" content="461141e64faf3f9b">
+	<meta name="mailru-domain" content="6mUzAjqGDGUqpJ3y">
+{% endblock metatags %}
+{% block content %}
+	{% if latest_posts %}
+		<div class="feed_wall">
+			{% block posts%}
+				{% for post in latest_posts %}
+					{% include "post/post.html" %}
+				{% endfor %}
+			{% endblock posts %}
+		</div>
+	{% else %}
+		<div class="warning no_post">Постов нет!</div>
+	{% endif %}
+{% endblock content %}
+{% block sidebar %}
+	<ul>
+		<li></li>
+		<li></li>
+		<li></li>
+		<li></li>
+	</ul>
+{% endblock sidebar %}

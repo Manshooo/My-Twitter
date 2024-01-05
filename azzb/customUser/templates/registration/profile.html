@@ -1,5 +1,6 @@
-{% extends "azzb/twitter_base.html" %}
-{% block title %}{{profile.user}}{% endblock title %}
+{% extends "azzb/azzb_base.html" %}
+{% block title %}{{profile.username}}{% endblock title %}
+{% block meta_description %}Крутой юзер!{% endblock meta_description %}
 {% load static %}
 {% block scripts %}
 	<script src="{% static 'js/profile.js' %}"></script>
@@ -10,7 +11,12 @@
 			<div class="profile-header">
 				<img src="{{ profile.avatar.url }}" alt="" class="profile-avatar">
 				<div class="wrapper-profile-header-info">
-					<div class="profile-username">{{profile.user.username}} {% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}</div>
+					<div class="profile-username">
+						{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}
+						{% if profile.user.isStaff %}
+							<span class></span>
+						{% endif %}
+					</div>
 					<div class="profile-bio">
 						{% if profile.bio %}
 							{{profile.bio}}
@@ -38,9 +44,11 @@
 			{% comment %} <hr class="hr-profile"> {% endcomment %}
 		</div>
 		<div id="profile-feed">
-			{% if profile.has_posts %}
-				{% include 'azzb/profile_posts.html'%}
+			{% if profile_posts %}
 				{% block posts %}
+					{% for post in profile_posts %}
+						{% include 'post/post.html'%}
+					{% endfor %}
 				{% endblock posts %}
 			{% else %}
 				<div class="no_post">
@@ -52,8 +60,35 @@
 	
 {% endblock content %}
 {% block sidebar %}
-	<ul class="profile-statistics">
-		<li>{% if profile.user.last_login %}Последний вход: {{profile.user.last_login}}{% endif %}</li>
-		<li>Дата регистрации: {{ profile.user.date_joined|date:"m.d.Y"}}</li>
-	</ul>
+	<div class="profile-info">
+		<ul class="profile-statistics">
+			<li>{% if profile.user.last_login %}Последний визит: {% if not profile.user.last_visit %}
+				{{profile.user.last_login}}
+				{% else %}
+				{{profile.user.last_visit}}
+				{% endif %}
+				{% endif %}</li>
+			<li>Дата регистрации: {{profile.user.date_joined|date:"d.m.Y"}}</li>
+		</ul>
+		{% if profile.follows != profile %}
+			<div class="following">
+				<h3>Подписан на</h3>
+				<ul class="following__profiles-list">
+					{% for following in profile.follows.all %}
+					<li><a href="{% url 'profile' following.user %}">{{following}}</a></li>
+					{% endfor %}
+				</ul>
+			</div>
+		{% endif %}
+		{% if profile.follows != profile %}
+			<div class="followed-by">
+				<h3>Папищики</h3>
+				<ul class="followed-by__profiles-list">
+					{% for following in profile.followed_by.all %}
+					<li><a href="{% url 'profile' following.user %}">{{following}}</a></li>
+					{% endfor %}
+				</ul>
+			</div>
+		{% endif %}
+	</div>
 {% endblock sidebar %}

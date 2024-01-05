@@ -1,0 +1,32 @@
+<div class="post" data-postId="{{post.id}}">
+	{% if post.image %}
+		<div class="post_thumbs">
+			<img src="/media/{{ post.image }}" class="post_thumb">
+		</div>
+	{% endif %}
+	<div class="post_text">{{post.text}}</div>
+	<div class="post-footer">
+		<div class="post-footer-actions">
+			<div class="like">
+				{% if liked %}
+					<span class="material-symbols-outlined post__like liked" onclick="post_like(event)">favorite</span>
+				{% else %}
+					<span class="material-symbols-outlined post__like" onclick="post_like(event)">favorite</span>
+				{% endif %}
+				<span class="like__count">{{post.likes_count}}</span>
+			</div>
+			{% comment %}
+			<div class="comment"></div>
+			<div class="reply"></div>
+			{% endcomment %}
+		</div>
+		<div class="post-footer-info">
+			<div class="post_author"><a href="{% url "profile" post.author.user %}">{{post.author}}</a></div>
+			<div class="post_date">{{post.created_at}}</div>
+		</div>
+		{% comment %}
+		<div class="post_author"><a href="/users/{{post.author.user}}">{{post.author}}</a></div>
+		<div class="post_date">{{post.created_at}}</div>
+		{% endcomment %}
+	</div>
+</div>

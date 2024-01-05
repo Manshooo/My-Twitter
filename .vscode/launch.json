@@ -5,7 +5,17 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Python: Django",
+			"name": "Client: React.js",
+			"request": "launch",
+			"type": "node",
+			"cwd":"${workspaceFolder}\\azzb\\frontend",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": [
+				"start"
+			]
+		},
+		{
+			"name": "Server: Django",
 			"type": "python",
 			"request": "launch",
 			"program": "${workspaceFolder}\\azzb\\manage.py",
@@ -15,5 +25,11 @@
 			"django": true,
 			"justMyCode": true
 		}
-	]
+	],
+	"compounds": [
+		{
+			"name": "Server/Client",
+			"configurations": ["Server: Django", "Client: React.js"]
+		}
+	  ]
 }

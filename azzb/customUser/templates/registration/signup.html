@@ -1,4 +1,4 @@
-{% extends "azzb/twitter_base.html" %}
+{% extends "azzb/azzb_base.html" %}
 {% block title %}Регистрация{% endblock title %}
 {% block content %}
 	{% if user.is_authenticated %}
@@ -27,7 +27,7 @@
 				{{ form.password1 }}
 				{{ form.password2.label_tag }}
 				{{ form.password2 }}
-				<button type="submit">Зарегистрироваться</button>
+				<button type="submit" id="submit">Зарегистрироваться</button>
 			</form>
 		</div>
 	{% endif %}

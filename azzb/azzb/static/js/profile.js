@@ -21,8 +21,8 @@ $(document).ready(function () {
 				$("#profile-feed").prepend(data);
 			},
 			error: function(data){
-				loadingIndicator()
-				console.log(data)
+				loadingIndicator();
+				console.log(data);
 			},
 		});
 	});

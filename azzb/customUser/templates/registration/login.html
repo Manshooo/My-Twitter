@@ -1,6 +1,7 @@
-{% extends "azzb/twitter_base.html" %}
+{% extends "azzb/azzb_base.html" %}
 
-
+{% block title %}Авторизация{% endblock title %}
+{% block meta_description %}Авторизация для доступа к основным функциям сайта{% endblock meta_description %}
 {% block content %}
 	{% if user.is_authenticated %}
 		<p>Вы уже авторизованы!</p>
@@ -13,7 +14,7 @@
 		{% if next %}
 			{% if user.is_authenticated %}
 				<div class="login-error">
-					<p>У вашего аккаунта нет доступа к это странице. Чтобы продолжить, пожалуйста водите в аккаунт у которого есть доступ.</p>
+					<p>У вашего аккаунта нет доступа к этой странице. Чтобы продолжить, пожалуйста водите в другой аккаунт.</p>
 				</div>
 			{% endif %}
 		{% endif %}
@@ -25,8 +26,8 @@
 				{{ form.password.label_tag }}
 				{{ form.password }}
 
-				<input type="submit" value="Войти" />
-				<input type="hidden" name="next" value="{{ next }}" />
+				<button type="submit" id="submit" >Войти</button>
+				<input type="hidden" name="next" value="{{ next }}">
 			</form>
 
 			<p class="forgot-password"><a href="{% url 'password_reset' %}">Забыли пароль?</a></p>

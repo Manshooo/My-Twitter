@@ -49,4 +49,31 @@ $.ajax({
 		console.log(error)
 	}
 })
- */
+*/
+function post_like(event){
+	const csrftoken = getCookie('csrftoken');
+	let post = event.target.closest(".post")
+	let id = post.dataset.postid
+	let data = {
+		"id":id,
+	}
+	$.ajax({
+		type: "POST",
+		url: "/api/like-post/",
+		contentType: "application/json; charset=utf-8",
+		headers:{"X-CSRFToken": csrftoken },
+		data: JSON.stringify(data),
+		dataType: "json",
+		success: function (response) {
+			$(post).find('.like__count').text(response.likes_count);
+			if(response.liked) {
+				$(post).find('.post__like').addClass("liked")
+			} else {
+				$(post).find('.post__like').removeClass("liked")
+			}
+			
+		},
+		error: function (response) {
+		}
+	});
+}

@@ -17,14 +17,21 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
+
 	'azzb',
-    'debug_toolbar',
 	'customUser.apps.CustomUserConfig',
+	'post.apps.PostConfig',
+
+	'django_hosts',
+    'debug_toolbar',
 	'rest_framework',
 	'corsheaders',
+	
 ]
 
 MIDDLEWARE = [
+	'django_hosts.middleware.HostsRequestMiddleware',
+
 	'django.middleware.security.SecurityMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
 	'corsheaders.middleware.CorsMiddleware',
@@ -33,12 +40,27 @@ MIDDLEWARE = [
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
-	"debug_toolbar.middleware.DebugToolbarMiddleware",
+
+	'django_hosts.middleware.HostsResponseMiddleware',
+
+	'debug_toolbar.middleware.DebugToolbarMiddleware',
+
+	'customUser.middleware.SetLastVisitMiddleware',
+	
+]
+
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOWED_ORIGINS = [
+       'https://localhost:3000',
+	   'http://localhost:3000',
 ]
 
 INTERNAL_IPS = ['127.0.0.1', '62.109.26.178',]
 
 REST_FRAMEWORK = {
+#	'DEFAULT_RENDERER_CLASSES': [
+#		'rest_framework.renderers.JSONRenderer',
+#	],
 	'DEFAULT_AUTHENTICATION_CLASSES': [
 		'rest_framework.authentication.BasicAuthentication',
 		'rest_framework.authentication.SessionAuthentication',
@@ -51,7 +73,10 @@ ALLOWED_HOSTS = [
 	'www.azzb.ru'
 ]
 
+ROOT_HOSTCONF = 'azzb.hosts'
 ROOT_URLCONF = 'azzb.urls'
+
+DEFAULT_HOST = 'www'
 
 TEMPLATES = [
 	{
@@ -120,3 +145,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.mail.ru'
+EMAIL_PORT = 2525
+EMAIL_HOST_USER = "information@azzb.ru"
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

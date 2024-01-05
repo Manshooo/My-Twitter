@@ -1,36 +1,15 @@
-from django.http import response
+from django.conf import settings
 from django.shortcuts import render
-from django.views.generic import CreateView
-from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
-from rest_framework.views import APIView, status
-from django.contrib.auth.decorators import login_required
 
-
-from .models import Post, Profile
+from .models import Profile
+from post.models import Post
 #from .serializers import PostSerializer
 
 def index(request):
-	latest_posts = Post.objects.order_by("-created_at")[:10]
+	latest_posts = Post.objects.order_by("-created_at")[:10].select_related("author")
 	context = {"latest_posts": latest_posts}
-	return render(request, "azzb/twitter_indexPage.html", context)
-
-class UserProfileDetailView(DetailView):
-	template_name = "registration/profile.html"
-	model = Profile
-	context_object_name = "profile"
-	pk_url_kwarg = "username"
-	slug_field = "user__username"
-	
-	def	get_context_data(self, **kwargs):
-		context = super().get_context_data(**kwargs)
-		profile_posts = Post.objects.filter(author=self.get_object())
-		context["profile_posts"] = profile_posts
-		return context
-#class PostListView(ListView):
-#	template_name = "azzb/twitter_post.html"
-#	model = Post
-#	context_object_name = "posts"
+	return render(request, "azzb/azzb_indexPage.html", context)
 
 #class PostListAPIView(APIView):
 #	def get(self, request, id):

@@ -1,9 +1,19 @@
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import authenticate, login
-from django.shortcuts import HttpResponseRedirect, render, HttpResponse
+from django.shortcuts import render, HttpResponse
 from django.urls import reverse_lazy
+from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView
-from .forms import CustomUserCreationForm
 
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework import status
+
+from post.models import Post
+
+from .forms import CustomUserCreationForm
+from .models import Profile
+from .serializers import *
 
 class CustomSignUp(CreateView):
 	form_class = CustomUserCreationForm
@@ -24,3 +34,18 @@ class CustomSignUp(CreateView):
 		else:
 			form = CustomUserCreationForm()
 		return render(request, 'registration/signup.html', {'form': form})
+
+class UserProfileDetailView(DetailView):
+	template_name = "registration/profile.html"
+	model = Profile
+	context_object_name = "profile"
+	pk_url_kwarg = "username"
+	slug_field = "user__username"
+	
+
+	def	get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		profile_posts = Post.objects.select_related("author").filter(author=self.get_object())
+		if profile_posts:
+			context["profile_posts"] = profile_posts
+		return context
