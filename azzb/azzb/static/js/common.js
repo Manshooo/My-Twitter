@@ -1,5 +1,5 @@
 'use strict'
-
+const csrftoken = getCookie('csrftoken');
 window.addEventListener('DOMContentLoaded', function() {
 	setMinHeight();
 	document.addEventListener("click", function(event) {
@@ -38,20 +38,21 @@ function getCookie(name) {
     }
     return cookieValue;
 }
-/* 
-$.ajax({
-	type: 'GET',
-	url: '/posts-json/',
-	success: function(response){
-		console.log(response)
-	},
-	error: function(error){
-		console.log(error)
-	}
-})
-*/
+/* function log_out(e) {
+	e.preventDefault()
+	$.ajax({
+		type: "POST",
+		url: "/auth/logout/",
+		headers: {"X-CSRFToken": csrftoken },
+		data: "",
+		dataType: "html",
+		success: function (response) {
+			console.log(response);
+			window.location = response;
+		}
+	});
+} */
 function post_like(event){
-	const csrftoken = getCookie('csrftoken');
 	let post = event.target.closest(".post")
 	let id = post.dataset.postid
 	let data = {

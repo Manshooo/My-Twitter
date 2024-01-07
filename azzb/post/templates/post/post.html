@@ -24,9 +24,5 @@
 			<div class="post_author"><a href="{% url "profile" post.author.user %}">{{post.author}}</a></div>
 			<div class="post_date">{{post.created_at}}</div>
 		</div>
-		{% comment %}
-		<div class="post_author"><a href="/users/{{post.author.user}}">{{post.author}}</a></div>
-		<div class="post_date">{{post.created_at}}</div>
-		{% endcomment %}
 	</div>
 </div>

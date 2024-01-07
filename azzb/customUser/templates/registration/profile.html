@@ -2,6 +2,7 @@
 {% block title %}{{profile.username}}{% endblock title %}
 {% block meta_description %}Крутой юзер!{% endblock meta_description %}
 {% load static %}
+{% load show_posts %}
 {% block scripts %}
 	<script src="{% static 'js/profile.js' %}"></script>
 {% endblock scripts %}
@@ -47,7 +48,7 @@
 			{% if profile_posts %}
 				{% block posts %}
 					{% for post in profile_posts %}
-						{% include 'post/post.html'%}
+						{% show_posts %}
 					{% endfor %}
 				{% endblock posts %}
 			{% else %}

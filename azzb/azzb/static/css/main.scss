@@ -195,30 +195,34 @@ footer {
 	width: 40px;
 	justify-content: space-between;
 	.material-symbols-outlined:hover {
-		color: red;
 		font-variation-settings:
-			"FILL" 1;
+			"FILL" 1,
+			"wght" 400;
 	}
 	.material-symbols-outlined {
 		cursor: pointer;
 		transition: font-variation-settings 200ms;
 		color: black;
 		font-variation-settings:
-			"FILL" 0;
+			"FILL" 0,
+			"wght" 400;
+		&.liked {
+			transition: font-variation-settings 200ms;
+			color: red;
+			font-variation-settings:
+				"FILL" 1,
+				"wght" 700;
+		}
 	}
-	.liked {
-		color: red;
-		font-variation-settings: "FILL" 1;
-	}
+
 }
 
 /* account authentication */
 #account {
 	top: 20px;
 	background-color: #fff;
-	padding: 7px;
+	padding: 7px 10px;
 	box-shadow: 0px 0px 4px 1px #d5d5d5;
-	width: 100px;
 }
 #account > li {
 	margin: 6px 0;
@@ -404,4 +408,15 @@ button#submit {
 .signup-helptext {
 	color: #747474;
 	margin: -4px 0;
+}
+#logout-form {
+	display: inline;
+	button {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		font-size: inherit;
+		font-family: inherit;
+	}
 }

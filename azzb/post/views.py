@@ -1,4 +1,5 @@
-from django.shortcuts import HttpResponse, get_object_or_404
+from django.contrib.auth import get_user_model
+from django.shortcuts import HttpResponse, get_object_or_404, render
 from django.views.generic.detail import DetailView
 from rest_framework.decorators import api_view
 
@@ -7,6 +8,8 @@ import json
 from post.serializer import PostSerializer
 
 from .models import Post
+
+User = get_user_model()
 
 @api_view(['POST',])
 def like(request):
@@ -27,7 +30,23 @@ def like(request):
 	context = {"likes_count": likes_count, "liked": liked,}
 
 	return HttpResponse(json.dumps(context), content_type='application/json')
+
 class PostDetailView(DetailView):
 	model = Post
+	template_name = "post/post.html"
 
-
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context["liked"] = False
+		if Post.likes.filter(pk=self.request.user.profile.id).exists():
+			context["liked"] = True
+		return context
+	def liked(request):
+		if Post.likes.filter(pk=request.user.profile.id).exists():
+			return True
+		return False
+	def get(self, request, *args, **kwargs):
+		isLiked = False
+		if Post.likes.filter(pk=request.user.profile.id).exists():
+			isLiked = True
+		return render(request, self.template_name, {"liked": isLiked})

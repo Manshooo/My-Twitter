@@ -19,7 +19,7 @@ from post.serializer import PostSerializer
 #		new_post.save()
 #	else:
 #		pass
-@api_view(['POST',])
+@api_view(['POST'])
 def create_post(request):
 	serializer = PostSerializer(data={**request.data, "author": request.user.id})
 	if serializer.is_valid():

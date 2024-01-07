@@ -8,7 +8,3 @@ from django.conf import settings
 from customUser.models import Profile
 
 User = settings.AUTH_USER_MODEL
-
-
-
-	

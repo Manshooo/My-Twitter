@@ -18,9 +18,10 @@ INSTALLED_APPS = [
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
 
+	'api',
 	'azzb',
-	'customUser.apps.CustomUserConfig',
-	'post.apps.PostConfig',
+	'post',
+	'customUser',
 
 	'django_hosts',
     'debug_toolbar',
@@ -58,9 +59,9 @@ CORS_ALLOWED_ORIGINS = [
 INTERNAL_IPS = ['127.0.0.1', '62.109.26.178',]
 
 REST_FRAMEWORK = {
-#	'DEFAULT_RENDERER_CLASSES': [
-#		'rest_framework.renderers.JSONRenderer',
-#	],
+	#'DEFAULT_RENDERER_CLASSES': [
+	#	'rest_framework.renderers.JSONRenderer',
+	#],
 	'DEFAULT_AUTHENTICATION_CLASSES': [
 		'rest_framework.authentication.BasicAuthentication',
 		'rest_framework.authentication.SessionAuthentication',

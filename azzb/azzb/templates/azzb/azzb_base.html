@@ -3,11 +3,12 @@
 	<head>
 		<title>{% block title %}AzzB{% endblock title %}</title>
 		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="description" content="{% block meta_description %}AzzB.ru - социальная сеть. Данный проект находится в стадии активной разработки, но вы уже можете присоединиться к этому сообществу!{% endblock meta_description %}">
 		{% load static %}
 		<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
 		<link rel="stylesheet" href="{% static 'css/main.css' %}">
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1">
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400..700,0..1">
 		<link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
 		<script src="{% static 'js/jquery-3.7.1/jquery-3.7.1.min.js' %}"></script>
 		<script src="{% static 'js/common.js' %}"></script>
@@ -43,7 +44,13 @@
 								<ul id="account" class="dropdown-menu">
 									<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
 									<li class="header-profile"><a href="{% url 'profile' user %}">Профиль</a></li>
-									<li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li>
+									{% comment %} <li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li> {% endcomment %}
+									<li class="logout">
+										<form id="logout-form" method="post" action="{% url 'admin:logout' %}?next={{ request.path|urlencode }}">
+											{% csrf_token %}
+											<button type="submit"><a>Выйти</a></button>
+										</form>
+									</li>
 								</ul>
 							{% else %}
 								<a href="#" data-target="dropdown_menu">Авторизация</a>
