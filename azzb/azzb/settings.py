@@ -56,12 +56,12 @@ CORS_ALLOWED_ORIGINS = [
 	   'http://localhost:3000',
 ]
 
-INTERNAL_IPS = ['127.0.0.1', '62.109.26.178',]
+INTERNAL_IPS = ['127.0.0.1',]
 
 REST_FRAMEWORK = {
-	#'DEFAULT_RENDERER_CLASSES': [
-	#	'rest_framework.renderers.JSONRenderer',
-	#],
+	'DEFAULT_RENDERER_CLASSES': [
+		'rest_framework.renderers.JSONRenderer',
+	],
 	'DEFAULT_AUTHENTICATION_CLASSES': [
 		'rest_framework.authentication.BasicAuthentication',
 		'rest_framework.authentication.SessionAuthentication',

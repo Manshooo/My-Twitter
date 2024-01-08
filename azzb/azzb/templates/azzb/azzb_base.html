@@ -31,7 +31,7 @@
 					<ul class="hot-categories">
 						<li><a href="#">Горячее</a></li>
 						<li><a href="#">Интересное</a></li>
-						<li><a href="#">Новое от подписок</a></li>
+						<li><a href="{% url "follows-updates" %}">Новое от подписок</a></li>
 					</ul>
 					<ul class="auth-search">
 						<li class="search"><a href="#">Поиск</a></li>
@@ -46,7 +46,7 @@
 									<li class="header-profile"><a href="{% url 'profile' user %}">Профиль</a></li>
 									{% comment %} <li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li> {% endcomment %}
 									<li class="logout">
-										<form id="logout-form" method="post" action="{% url 'admin:logout' %}?next={{ request.path|urlencode }}">
+										<form id="logout-form" method="post" action="{% url 'logout' %}?next={{ request.path|urlencode }}">
 											{% csrf_token %}
 											<button type="submit"><a>Выйти</a></button>
 										</form>

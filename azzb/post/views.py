@@ -13,7 +13,7 @@ User = get_user_model()
 
 @api_view(['POST',])
 def like(request):
-	
+	# profile.user_id = user.id (=user?)
 	if request.method == 'POST':
 		data = request.data
 		id = data['id']
@@ -41,12 +41,3 @@ class PostDetailView(DetailView):
 		if Post.likes.filter(pk=self.request.user.profile.id).exists():
 			context["liked"] = True
 		return context
-	def liked(request):
-		if Post.likes.filter(pk=request.user.profile.id).exists():
-			return True
-		return False
-	def get(self, request, *args, **kwargs):
-		isLiked = False
-		if Post.likes.filter(pk=request.user.profile.id).exists():
-			isLiked = True
-		return render(request, self.template_name, {"liked": isLiked})

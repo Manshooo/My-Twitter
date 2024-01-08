@@ -11,6 +11,21 @@ def index(request):
 	context = {"latest_posts": latest_posts}
 	return render(request, "azzb/azzb_indexPage.html", context)
 
+def follows_updates(request):
+	#try:
+	follows = request.user.profile.follows.all()
+	follows_posts = []
+	for followed in follows:
+		followed_posts = Post.objects.filter(author_id=followed.id).all()
+		for post in followed_posts:
+			follows_posts.append(post)
+	context = {"follows_posts": follows_posts}
+	return render(request, "azzb/followed_updates.html", context)
+	#except:
+	#	follows_posts = None
+	#	return render(request, "azzb/followed_updates.html", {"follows_posts": follows_posts})
+
+
 #class PostListAPIView(APIView):
 #	def get(self, request, id):
 #		posts = Post.objects.filter(author=id)

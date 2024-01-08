@@ -18,6 +18,6 @@ class Post(models.Model):
 	def likes_count(self):
 		return self.likes.all().count()
 	def __str__(self) -> str:
-		return str(self.author)
+		return str(self.author.username)
 	class Meta():
 		ordering = ["-created_at"]

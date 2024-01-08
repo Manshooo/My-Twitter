@@ -4,7 +4,7 @@ from django.urls import include, path, re_path
 from django.conf.urls.static import static
 from django.conf import settings
 
-from .views import index
+from .views import index, follows_updates
 from customUser.views import UserProfileDetailView
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
 	path('auth/', include('django.contrib.auth.urls')),
 	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='profile'),
 	path('api/', include('api.urls')),
+	path('follows-updates/', login_required(follows_updates), name="follows-updates"),
 ]
 if settings.DEBUG:
 	urlpatterns += path("__debug__/", include("debug_toolbar.urls")),
