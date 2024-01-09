@@ -19,6 +19,7 @@ def follows_updates(request):
 		followed_posts = Post.objects.filter(author_id=followed.id).all()
 		for post in followed_posts:
 			follows_posts.append(post)
+	follows_posts.sort(key=lambda x: x.created_at, reverse=True)
 	context = {"follows_posts": follows_posts}
 	return render(request, "azzb/followed_updates.html", context)
 	#except:
