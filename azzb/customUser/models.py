@@ -50,7 +50,7 @@ class Profile(models.Model):
 	username = models.CharField("Отображаемое имя пользователя", max_length=150, default=None, blank=True)
 	avatar = models.ImageField(default='default/default_user_avatar.jpg', upload_to=user_profile_avatar_path)
 	bio = models.CharField("О себе", max_length=250, blank=True, default="")
-	follows = models.ManyToManyField(to="self", related_name="followed_by", symmetrical=False, blank=True)
+	follows = models.ManyToManyField(verbose_name="Подписчики", to="self", related_name="followed_by", symmetrical=False, blank=True)
 	
 	def __str__(self):
 		return self.username
