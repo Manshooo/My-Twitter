@@ -2,6 +2,9 @@ from django.conf import settings
 from django.shortcuts import render
 from django.views.generic.detail import DetailView
 
+from operator import attrgetter
+from itertools import chain
+
 from .models import Profile
 from post.models import Post
 #from .serializers import PostSerializer
@@ -13,13 +16,11 @@ def index(request):
 
 def follows_updates(request):
 	#try:
-	follows = request.user.profile.follows.all()
-	follows_posts = []
-	for followed in follows:
-		followed_posts = Post.objects.filter(author_id=followed.id).all()
-		for post in followed_posts:
-			follows_posts.append(post)
-	follows_posts.sort(key=lambda x: x.created_at, reverse=True)
+	profile = request.user.profile
+	follows = profile.follows.all()
+	follows_ids = [follow.pk for follow in follows]
+	
+	follows_posts = Post.objects.filter(author__id__in=follows_ids)
 	context = {"follows_posts": follows_posts}
 	return render(request, "azzb/followed_updates.html", context)
 	#except:
