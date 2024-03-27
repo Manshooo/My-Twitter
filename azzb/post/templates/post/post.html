@@ -21,7 +21,10 @@
 			{% endcomment %}
 		</div>
 		<div class="post-footer-info">
-			<div class="post_author"><a href="{% url "profile" post.author.user %}">{{post.author}}</a></div>
+			<div class="author-delete-wrap">
+				<div class="post_author"><a href="{% url "profile" post.author.user %}">{{post.author}}</a></div>
+				{% if user == post.author.user %}<div class="post_delete" onclick="post_delete(event)">удалить</div>{% endif %}
+			</div>
 			<div class="post_date">{{post.created_at}}</div>
 		</div>
 	</div>

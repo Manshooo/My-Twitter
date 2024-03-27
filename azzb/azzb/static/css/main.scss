@@ -2,6 +2,7 @@ $border-color: #7a9b9b;
 $split-lines-color: #dfdfdf;
 $a-color: #437272;
 $a-color-alt: #333;
+$gray: #868585;
 * {
 	box-sizing: border-box;
 	-moz-box-sizing: border-box;
@@ -16,7 +17,12 @@ body {
 	margin: 0;
 	background-color: #ebebeb;
 }
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	margin: 0;
 }
 header h2 {
@@ -68,7 +74,7 @@ img.site_logo {
 }
 .site_caption {
 	margin-left: 40px;
-	font-family: 'Mulish Italic';
+	font-family: "Mulish Italic";
 }
 .header {
 	display: flex;
@@ -134,13 +140,25 @@ nav {
 }
 .post-footer-info {
 	display: flex;
-	width: 160px;
-	flex-wrap: wrap;
+	flex-direction: column;
 }
 .post_author {
 	a {
 		color: $a-color;
 		text-decoration: underline;
+	}
+}
+.author-delete-wrap {
+	display: flex;
+	align-items: baseline;
+	.post_delete {
+		color: $gray;
+		margin-left: 10px;
+		font-size: 12px;
+		cursor: pointer;
+		&:hover {
+			color: $a-color-alt;
+		}
 	}
 }
 .sidebar {
@@ -214,7 +232,6 @@ footer {
 				"wght" 700;
 		}
 	}
-
 }
 
 /* account authentication */
@@ -288,7 +305,7 @@ footer {
 }
 .profile-info {
 	padding: 10px;
-	>*{
+	> * {
 		background-color: #ccc;
 		border: 1px solid #b3b3b3;
 		margin-bottom: 15px;
@@ -302,7 +319,7 @@ footer {
 			border-bottom: 1px solid $split-lines-color;
 		}
 	}
-/* 	.following {
+	/* 	.following {
 
 	}
 	.followed-by {

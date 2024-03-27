@@ -16,7 +16,12 @@ body {
   background-color: #ebebeb;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
 }
 
@@ -158,13 +163,26 @@ nav a {
 
 .post-footer-info {
   display: flex;
-  width: 160px;
-  flex-wrap: wrap;
+  flex-direction: column;
 }
 
 .post_author a {
   color: #437272;
   text-decoration: underline;
+}
+
+.author-delete-wrap {
+  display: flex;
+  align-items: baseline;
+}
+.author-delete-wrap .post_delete {
+  color: #868585;
+  margin-left: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.author-delete-wrap .post_delete:hover {
+  color: #333;
 }
 
 .sidebar {
@@ -326,10 +344,10 @@ footer {
   padding: 10px;
   /* 	.following {
 
-  	}
-  	.followed-by {
+  }
+  .followed-by {
 
-  	} */
+  } */
 }
 .profile-info > * {
   background-color: #ccc;
