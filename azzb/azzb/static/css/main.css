@@ -16,7 +16,12 @@ body {
   background-color: #ebebeb;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
 }
 
@@ -101,19 +106,17 @@ img.site_logo {
   justify-content: space-between;
 }
 
-nav {
+.left-col-nav {
   padding: 5px 0;
-  background-color: #fff;
-  position: sticky;
-  top: 0;
 }
-nav a {
+.left-col-nav a {
   color: #333;
   text-decoration: none;
 }
 
 .feed_wall {
-  width: 780px;
+  width: 95%;
+  margin: 0 auto;
 }
 
 /* post */
@@ -167,8 +170,14 @@ nav a {
   text-decoration: underline;
 }
 
+.content-body {
+  flex: 1;
+}
+
 .sidebar {
-  width: 30%;
+  position: sticky;
+  top: 0;
+  width: 250px;
   background-color: #fff;
   max-height: 600px;
 }
@@ -198,10 +207,6 @@ footer {
 .dropdown-menu-open {
   display: block;
   position: absolute;
-}
-
-.content-body {
-  width: 70%;
 }
 
 .no_post {
@@ -242,12 +247,52 @@ footer {
   font-variation-settings: "FILL" 1, "wght" 700;
 }
 
+/* mini profile */
+.mini-profile-wrapper {
+  position: relative;
+}
+
+.mini-profile {
+  display: flex;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.mini-profile .username-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+  position: relative;
+}
+.mini-profile .username-wrapper .display-username {
+  font-size: 1.3em;
+}
+.mini-profile .username-wrapper .username {
+  color: #727272;
+  cursor: pointer;
+}
+.mini-profile .username-wrapper .tooltip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 16px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 4px;
+  z-index: 9999;
+  display: none;
+}
+
 /* account authentication */
 #account {
-  top: 20px;
   background-color: #fff;
   padding: 7px 10px;
   box-shadow: 0px 0px 4px 1px #d5d5d5;
+  z-index: 1;
+  bottom: 110%;
+  width: 100%;
 }
 
 #account > li {
@@ -278,7 +323,8 @@ footer {
 
 /* user profile */
 .profile-page {
-  width: 780px;
+  width: 95%;
+  margin: 0 auto;
 }
 
 .profile-avatar {
@@ -303,6 +349,11 @@ footer {
   background: #fff;
   padding: 10px;
 }
+.profile .verified {
+  color: #73b0b0;
+  font-variation-settings: "FILL" 1;
+  cursor: default;
+}
 
 .profile-username {
   font-size: 22px;
@@ -326,10 +377,10 @@ footer {
   padding: 10px;
   /* 	.following {
 
-  	}
-  	.followed-by {
+  }
+  .followed-by {
 
-  	} */
+  } */
 }
 .profile-info > * {
   background-color: #ccc;

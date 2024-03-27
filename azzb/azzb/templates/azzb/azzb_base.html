@@ -1,113 +1,93 @@
 <!DOCTYPE html>
 <html lang="ru">
 	<head>
-		<title>{% block title %}AzzB{% endblock title %}</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta name="description" content="{% block meta_description %}AzzB.ru - социальная сеть. Данный проект находится в стадии активной разработки, но вы уже можете присоединиться к этому сообществу!{% endblock meta_description %}">
-		{% load static %}
-		<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
-		<link rel="stylesheet" href="{% static 'css/main.css' %}">
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400..700,0..1">
-		<link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
-		<script src="{% static 'js/jquery-3.7.1/jquery-3.7.1.min.js' %}"></script>
-		<script src="{% static 'js/common.js' %}"></script>
-		{% block metatags %}{% endblock metatags %}
-		{% block scripts %}{% endblock scripts %}
+	<title>{% block title %}AzzB{% endblock title %}</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="{% block meta_description %}AzzB.ru - социальная сеть. Данный проект находится в стадии активной разработки, но вы уже можете присоединиться к этому сообществу!{% endblock meta_description %}">
+	{% load static %}
+	<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+	<link rel="stylesheet" href="{% static 'css/main.css' %}">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400..700,0..1">
+	<link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
+	<script src="{% static 'js/jquery-3.7.1/jquery-3.7.1.min.js' %}"></script>
+	<script src="{% static 'js/common.js' %}"></script>
+	{% block metatags %}{% endblock metatags %}
+	{% block scripts %}{% endblock scripts %}
 	</head>
 	<body>
-		<header>
-			<div class="page-width">
-				<div class="header">
-					<div class="logocap">
-						<div class="site_caption"><h2>{% if request.path != '/' %}<a href="/">AzzB</a>{% else %}<p>AzzB</p>{% endif %}</h2></div>
-					</div>
-				</div>
+	<header>
+		<div class="page-width">
+		<div class="header">
+			<div class="logocap">
+			<div class="site_caption"><h2>{% if request.path != '/' %}<a href="/">AzzB</a>{% else %}<p>AzzB</p>{% endif %}</h2></div>
 			</div>
-		</header>
-		<nav>
-			<div class="page-width">
-				<div class="underheader_menu">
-					<ul class="hot-categories">
-						<li><a href="#">Горячее</a></li>
-						<li><a href="#">Интересное</a></li>
-						<li><a href="{% url "follows-updates" %}">Новое от подписок</a></li>
-					</ul>
-					<ul class="auth-search">
-						<li class="search"><a href="#">Поиск</a></li>
-						{% if user.is_authenticated %}
-							<li class="new-post"><a href="{% url 'profile' user %}">Новый пост</a></li>
-						{% endif %}
-						<li class="auth-account">
-							{% if user.is_authenticated%}
-								<a href="#" data-target="dropdown_menu">{{ user }}</a>
-								<ul id="account" class="dropdown-menu">
-									<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
-									<li class="header-profile"><a href="{% url 'profile' user %}">Профиль</a></li>
-									{% comment %} <li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li> {% endcomment %}
-									<li class="logout">
-										<form id="logout-form" method="post" action="{% url 'logout' %}?next={{ request.path|urlencode }}">
-											{% csrf_token %}
-											<button type="submit"><a>Выйти</a></button>
-										</form>
-									</li>
-								</ul>
-							{% else %}
-								<a href="#" data-target="dropdown_menu">Авторизация</a>
-								<ul id="account" class="dropdown-menu">	
-									<li class="login"><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a></li>
-									<li class="register"><a href="{% url 'signup' %}">Регистрация</a></li>
-								</ul>
-							{% endif %}
-							
-						</li>
-					</ul>
-				</div>
-			</div>
-		</nav>
-		<div class="content">
-			<div class="page-width">
-				<div class="content-wrapper">
-					<div class="content-body">
-						{% block content %}
-						{% endblock content %}
-					</div>
-					<div class="sidebar">
-						{% block sidebar %}
-						{% endblock sidebar %}
-					</div>
-				</div>
-			</div>	
 		</div>
-		<footer>
-			<div class="page-width">
-				<div class="footer-menu">
-					<div class="footer-menu__block">
-						<p>Аккаунт</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
-					</div>
-					<div class="footer-menu__block">
-						<p>Разделы</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
-					</div>
-					<div class="footer-menu__block">
-						<p>О сайте</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
+		</div>
+	</header>
+	<div class="content">
+		<div class="page-width">
+		<div class="content-wrapper">
+			<aside class="sidebar sidebar-left">
+			<nav class="left-col-nav">
+				<a href="#"><div>Поиск</div></a>
+				<a href="/hot-news">
+				<div>Горячее</div>
+				</a>
+				<a href="/explore">
+				<div>Интересное</div>
+				</a>
+				<a href="{% url "follows-updates" %}">
+				<div>Новое от подписок</div>
+				<a href="{% url "profile" user %}">
+				<div></div>
+				</a>
+			</nav>
+			{% block sidebar_left %}{% endblock sidebar_left %}
+			{% if user.is_authenticated%}
+			<div class="mini-profile-wrapper">
+				<div class="mini-profile dropdown" data-target="dropdown_menu">			
+					<img class="avatar" src="{{ user.profile.avatar.url }}" />
+					<div class="username-wrapper">
+						<span class="display-username">{{ user.profile}}</span>
+						<div class="tooltip">Скопировано!</div>
+						<span class="username" data-url="{% url 'profile' user %}" onclick="copyToClipboard('{{ request.scheme }}://{{ request.get_host }}{% url 'profile' user %}')">@{{ user.username }}</span>
 					</div>
 				</div>
+				<ul id="account" class="dropdown-menu">
+					<li class="logout">
+						<form id="logout-form" method="post" action="{% url 'logout' %}?next={{ request.path|urlencode }}">
+						{% csrf_token %}
+						<button type="submit"><a>Выйти</a></button>
+						</form>
+					</li>
+				</ul>
 			</div>
-		</footer>
+			{% else %}
+				<a href="#" data-target="dropdown_menu">Авторизация</a>
+				<ul id="account" class="dropdown-menu">
+					<li class="login"><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a></li>
+					<li class="register"><a href="{% url 'signup' %}">Регистрация</a></li>
+				</ul>
+			{% endif %}
+			
+			</aside>
+			<main class="content-body">
+			{% block content %}{% endblock content %}
+			</main>
+			<aside class="sidebar sidebar-right">
+			{% block sidebar_right %}{% endblock sidebar_right %} {% comment %}
+			<nav class="info">
+				<a href="#">Условия предоставления услуг</a>
+				<a href="#">Политика конфиденциальности</a>
+				<a href="#">Политика в отношении файлов cookie</a>
+				<a href="#">О нас</a>
+				<div class="copyright">&copy; 2024 azzb.ru</div>
+			</nav>
+			{% endcomment %}
+			</aside>
+		</div>
+		</div>
+	</div>
 	</body>
 </html>

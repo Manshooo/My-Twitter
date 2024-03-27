@@ -8,25 +8,22 @@
 {% endblock scripts %}
 {% block content %}
 	<div class="profile-page">
-		<div class="profile">
-			<div class="profile-header">
-				<img src="{{ profile.avatar.url }}" alt="" class="profile-avatar">
+		<section class="profile">
+			<article class="profile-header">
+				<img src="{{profile.avatar.url}}" class="profile-avatar">
 				<div class="wrapper-profile-header-info">
 					<div class="profile-username">
-						{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}
-						{% if profile.user.isStaff %}
-							<span class></span>
+						<span>{{profile.user.username}}</span>
+						{% if profile.user.username != profile.username %}
+							<span class="aka">aka</span>
+							<span>{{profile.username}}</span>
 						{% endif %}
-					</div>
-					<div class="profile-bio">
-						{% if profile.bio %}
-							{{profile.bio}}
-						{% else %}
-							No bio...
-						{% endif %}
-					</div>
+						{% if profile.user.is_staff %}
+							<span class="material-symbols-outlined verified">verified</span>
+						{% endif %}</div>
+					<div class="profile-bio">{% if profile.bio %}{{profile.bio}}{% else %}No bio...{% endif %}</div>
 				</div>
-			</div>
+			</article>
 			<div class="profile-body">
 				{% if request.user == profile.user %}
 				<div class="new-post-form">
@@ -43,7 +40,7 @@
 				{% endif %}
 			</div>
 			{% comment %} <hr class="hr-profile"> {% endcomment %}
-		</div>
+		</section>
 		<div id="profile-feed">
 			{% if profile_posts %}
 				{% block posts %}
@@ -58,9 +55,8 @@
 			{% endif %}
 		</div>
 	</div>
-	
 {% endblock content %}
-{% block sidebar %}
+{% block sidebar_right %}
 	<div class="profile-info">
 		<ul class="profile-statistics">
 			<li>{% if profile.user.last_login %}Последний визит: {% if not profile.user.last_visit %}
@@ -92,4 +88,4 @@
 			</div>
 		{% endif %}
 	</div>
-{% endblock sidebar %}
+{% endblock sidebar_right %}
