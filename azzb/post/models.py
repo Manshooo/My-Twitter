@@ -10,7 +10,7 @@ class Post(models.Model):
 	updated = models.DateTimeField("Дата обновления", auto_now=True)
 	created_at = models.DateTimeField("Дата публикации", auto_now_add=True)
 	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked')
-
+	# Лайкам нужно ставить временную метку, когда он был поставлен, нужно для метрик
 	def get_likes(self):
 		return self.likes.all()
 	@property

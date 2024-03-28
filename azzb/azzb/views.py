@@ -1,5 +1,7 @@
 from django.conf import settings
+from django.db.models import Count
 from django.shortcuts import render
+from django.db import transaction
 from django.views.generic.detail import DetailView
 
 from operator import attrgetter
@@ -10,7 +12,11 @@ from post.models import Post
 #from .serializers import PostSerializer
 
 def index(request):
-	latest_posts = Post.objects.order_by("-created_at")[:10].select_related("author")
+	latest_posts = Post.objects.order_by("-created_at")[:10]
+	#with transaction.atomic():
+	#	most_liked_posts = Post.objects.annotate(num_likes=Count('likes')).order_by('-num_likes')
+	#	relative_posts = most_liked_posts[:10]
+	#	relative_posts = sorted(relative_posts, key=lambda x: x.created_at, reverse=True)
 	context = {"latest_posts": latest_posts}
 	return render(request, "azzb/azzb_indexPage.html", context)
 

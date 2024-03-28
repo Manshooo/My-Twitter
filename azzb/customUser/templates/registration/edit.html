@@ -1,0 +1,28 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Редактирование профиля{% endblock title %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="profle-edit">
+	{% csrf_token %}
+	<div class="input-pair">
+		{{ form.username.label_tag }}
+		{{ form.username }}
+	</div>
+	<div class="input-pair">
+		{{ form.bio.label_tag }}
+		{{ form.bio }}
+	</div>
+	<div class="input-pair">
+		{{ form.email.label_tag }}
+		{{ form.email }}
+	</div>
+	<div class="input-pair">
+		{{ form.first_name.label_tag }}
+		{{ form.first_name }}
+	</div>
+	<div class="input-pair">
+		{{ form.last_name.label_tag }}
+		{{ form.last_name }}
+	</div>
+	<button id="submit" type="submit">Сохранить</button>
+</form>
+{% endblock content %}

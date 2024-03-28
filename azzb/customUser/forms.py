@@ -16,9 +16,12 @@ class CustomUserCreationForm(UserCreationForm):
 		model = CustomUser
 		fields = ('username', 'email', 'password1', 'password2')
 class UpdateUserForm(forms.ModelForm):
+	class Meta:
+		model = CustomUser
+		fields = ['email', 'first_name', 'last_name']
 
 	username = forms.CharField(
-		label=("Логин"),
+		label=("Отображаемое имя"),
 		max_length=100,
 		required=True,
 		widget=forms.TextInput,
@@ -28,15 +31,40 @@ class UpdateUserForm(forms.ModelForm):
 		required=True,
 		widget=forms.EmailInput(),
 	)
-	
-	class Meta:
-		model = CustomUser
-		fields = ['username', 'email']
-
-class UpdateProfileForm():
-
-	username = forms.CharField(
-		label=("Отображаемое имя пользователя"),
+	first_name = forms.CharField(
+		label=("Имя"),
 		max_length=50,
-		widget=forms.TextInput()
+		required=False,
+		widget=forms.TextInput
 	)
+	last_name = forms.CharField(
+		label=("Фамилия"),
+		max_length=50,
+		required=False,
+		widget=forms.TextInput
+	)
+	bio = forms.CharField(
+		label=("О себе"),
+		max_length=250,
+		required=False,
+		widget=forms.Textarea
+	)
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		if 'instance' in kwargs:
+			instance = kwargs['instance']
+			if hasattr(instance, 'profile'):
+				self.fields['bio'].initial = instance.profile.bio
+				self.fields['username'].initial = instance.profile.username
+
+	def save(self, commit=True):
+		user = super().save(commit=False)
+		if commit:
+			user.save()
+			if hasattr(user, 'profile'):
+				profile = user.profile
+				profile.bio = self.cleaned_data['bio']
+				profile.username = self.cleaned_data['username']
+				profile.save()
+		return user

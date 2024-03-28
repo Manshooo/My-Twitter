@@ -44,6 +44,7 @@
 								<ul id="account" class="dropdown-menu">
 									<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
 									<li class="header-profile"><a href="{% url 'profile' user %}">Профиль</a></li>
+									<li class="header-settings"><a href="{% url 'edit-profile' %}">Редактировать</a></li>
 									{% comment %} <li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li> {% endcomment %}
 									<li class="logout">
 										<form id="logout-form" method="post" action="{% url 'logout' %}?next={{ request.path|urlencode }}">

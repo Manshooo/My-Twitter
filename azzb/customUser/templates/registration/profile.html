@@ -10,13 +10,11 @@
 	<div class="profile-page">
 		<div class="profile">
 			<div class="profile-header">
-				<img src="{{ profile.avatar.url }}" alt="" class="profile-avatar">
+				<img src="{{ profile.avatar.url }}" class="profile-avatar">
 				<div class="wrapper-profile-header-info">
 					<div class="profile-username">
-						{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div> {{profile.username}}{% endif %}
-						{% if profile.user.isStaff %}
-							<span class></span>
-						{% endif %}
+						{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div>{{profile.username}}{% endif %}
+						{% if profile.user.is_staff %}<span class="material-symbols-outlined verified">verified</span>{% endif %}
 					</div>
 					<div class="profile-bio">
 						{% if profile.bio %}
@@ -63,12 +61,7 @@
 {% block sidebar %}
 	<div class="profile-info">
 		<ul class="profile-statistics">
-			<li>{% if profile.user.last_login %}Последний визит: {% if not profile.user.last_visit %}
-				{{profile.user.last_login}}
-				{% else %}
-				{{profile.user.last_visit}}
-				{% endif %}
-				{% endif %}</li>
+			<li>{% if profile.user.last_login %}Последний визит: {% if not profile.user.last_visit %}{{profile.user.last_login}}{% else %}{{profile.user.last_visit}}{% endif %}{% endif %}</li>
 			<li>Дата регистрации: {{profile.user.date_joined|date:"d.m.Y"}}</li>
 		</ul>
 		{% if profile.follows != profile %}

@@ -1,9 +1,11 @@
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import authenticate, login
+from django.db.models.base import Model as Model
+from django.db.models.query import QuerySet
 from django.shortcuts import render, HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic.detail import DetailView
-from django.views.generic.edit import CreateView
+from django.views.generic.edit import CreateView, UpdateView
 
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -11,7 +13,7 @@ from rest_framework import status
 
 from post.models import Post
 
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, UpdateUserForm
 from .models import Profile
 from .serializers import *
 
@@ -35,6 +37,20 @@ class CustomSignUp(CreateView):
 			form = CustomUserCreationForm()
 		return render(request, 'registration/signup.html', {'form': form})
 
+class ChangeProfileView(UpdateView):
+	model = Profile
+	form_class = UpdateUserForm
+	template_name = 'registration/edit.html'
+	
+	def get_object(self, queryset=None) -> Model:
+		return self.request.user.profile
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['instance'] = self.request.user  # Передаем текущего пользователя в качестве instance для формы
+		return kwargs
+	def get_success_url(self):
+		return reverse_lazy('profile', kwargs={'slug': self.request.user})
+	
 class UserProfileDetailView(DetailView):
 	template_name = "registration/profile.html"
 	model = Profile
