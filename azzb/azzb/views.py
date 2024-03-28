@@ -33,6 +33,10 @@ def follows_updates(request):
 	#	follows_posts = None
 	#	return render(request, "azzb/followed_updates.html", {"follows_posts": follows_posts})
 
+def hot_news(request):
+	hot_posts = Post.objects.order_by("-created_at").annotate(num_likes=Count('likes')).order_by('-num_likes')
+	context = {"posts": hot_posts}
+	return render(request, "azzb/hot_news.html", context)
 
 #class PostListAPIView(APIView):
 #	def get(self, request, id):

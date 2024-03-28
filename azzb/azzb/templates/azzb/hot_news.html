@@ -1,18 +1,18 @@
 {% extends "azzb/azzb_base.html" %}
 {% load static %}
 {% load show_posts %}
-{% block title %}Обновления подписок{% endblock title %}
+{% block title %}Горячее{% endblock title %}
 {% block content %}
-	{% if follows_posts %}
+	{% if posts %}
 		<div class="feed_wall">
 			{% block posts%}
-				{% for post in follows_posts %}
+				{% for post in posts %}
 					{% show_posts %}
 				{% endfor %}
 			{% endblock posts %}
 		</div>
 	{% else %}
-		<div class="warning no_post">У вас нет либо подписок, либо у них нет постов!</div>
+		<div class="warning no_post">А псоты-то, закончились!</div>
 	{% endif %}
 {% endblock content %}
 {% block sidebar %}

@@ -4,11 +4,12 @@ from django.urls import include, path, re_path
 from django.conf.urls.static import static
 from django.conf import settings
 
-from .views import index, follows_updates
+from .views import index, follows_updates, hot_news
 from customUser.views import UserProfileDetailView, ChangeProfileView
 
 urlpatterns = [
 	path('', index, name='index'),
+	path("hot/", hot_news, name="hot-news"),
 	path('admin/', admin.site.urls),
 	path('auth/', include('customUser.urls')),
 	path('auth/', include('django.contrib.auth.urls')),
