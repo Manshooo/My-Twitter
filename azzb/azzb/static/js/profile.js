@@ -19,6 +19,9 @@ $(document).ready(function () {
 			success: function (data) {
 				loadingIndicator();
 				$("#profile-feed").prepend(data);
+				if ($(".no_post")) {
+					$(".no_post").remove()
+				}
 			},
 			error: function (data) {
 				loadingIndicator();

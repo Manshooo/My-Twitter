@@ -1,7 +1,5 @@
 from django import template
 
-from post.models import Post
-
 register = template.Library()
 
 @register.inclusion_tag(filename='post/post.html', name="show_posts", takes_context=True)

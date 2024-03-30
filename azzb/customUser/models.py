@@ -24,7 +24,7 @@ def create_profile(sender, instance, created, **kwargs):
 
 @deconstructible
 class UsernameValidator(validators.RegexValidator):
-	regex = r"^[a-zA-Z.@+-0-9]+\Z"
+	regex = r"^[a-zA-Z.@0-9+-]+\Z"
 	message = _(
 		"Введите верное имя пользователя. Доступные символы буквы a-Z, цифры 0-9, ./@/+/-."
 	)

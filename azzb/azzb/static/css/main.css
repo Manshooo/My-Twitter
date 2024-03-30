@@ -320,6 +320,13 @@ footer {
   display: flex;
 }
 
+.profile-names {
+  display: flex;
+  gap: 5px;
+  font-size: 0.9em;
+  color: #868585;
+}
+
 .aka {
   display: inline-block;
   background: #e9e9e9;
