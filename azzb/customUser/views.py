@@ -1,20 +1,16 @@
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import authenticate, login
 from django.db.models.base import Model as Model
-from django.db.models.query import QuerySet
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import redirect, render, HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView, UpdateView
 
-from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from rest_framework import status
 
 from post.models import Post
 
 from .forms import CustomUserCreationForm, UpdateUserForm
-from .models import Profile
+from .models import FollowThrough, Profile
 from .serializers import *
 
 class CustomSignUp(CreateView):
@@ -50,7 +46,7 @@ class ChangeProfileView(UpdateView):
 		return kwargs
 	def get_success_url(self):
 		return reverse_lazy('profile', kwargs={'slug': self.request.user})
-	
+
 class UserProfileDetailView(DetailView):
 	template_name = "registration/profile.html"
 	model = Profile
@@ -58,9 +54,23 @@ class UserProfileDetailView(DetailView):
 	pk_url_kwarg = "username"
 	slug_field = "user__username"
 
-	def	get_context_data(self, **kwargs):
+	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
+		profile_user = self.get_object().user
 		profile_posts = Post.objects.select_related("author").filter(author=self.get_object())
 		if profile_posts:
 			context["profile_posts"] = profile_posts
+		context["is_subscribed"] = FollowThrough.objects.filter(follower=self.request.user.profile, followee=profile_user.profile).exists()
 		return context
+
+	def post(self, request, *args, **kwargs):
+		profile_user = self.get_object().user
+		current_user_profile = request.user.profile
+
+		if 'subscribe' in request.POST:
+			FollowThrough.objects.get_or_create(follower=current_user_profile, followee=profile_user.profile)
+
+		elif 'unsubscribe' in request.POST:
+			FollowThrough.objects.filter(follower=current_user_profile, followee=profile_user.profile).delete()
+
+		return redirect('profile', slug=profile_user.username)

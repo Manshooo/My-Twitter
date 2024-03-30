@@ -1,7 +1,7 @@
 "use strict";
 $(document).ready(function () {
 	let action_buttons = $(".wrapper-form-actions");
-	$('#submit').click(function (e) {
+	$('#submit[name=post]').click(function (e) {
 		e.preventDefault();
 		const csrftoken = getCookie('csrftoken');
 		let data = {
@@ -13,14 +13,14 @@ $(document).ready(function () {
 			url: "/api/new-post/",
 			contentType: "application/json; charset=utf-8",
 			data: JSON.stringify(data),
-			headers:{"X-CSRFToken": csrftoken },
+			headers: { "X-CSRFToken": csrftoken },
 			dataType: "html",
 			beforeSend: loadingIndicator(),
 			success: function (data) {
 				loadingIndicator();
 				$("#profile-feed").prepend(data);
 			},
-			error: function(data){
+			error: function (data) {
 				loadingIndicator();
 				console.log(data);
 			},
@@ -36,7 +36,7 @@ $(document).ready(function () {
 			text.addClass("in-process")
 		}
 	}
-	document.addEventListener("click", function(e) {
+	document.addEventListener("click", function (e) {
 		switch (e.target.getAttribute("name")) {
 			case "new_post":
 				return;

@@ -313,6 +313,11 @@ footer {
 
 .profile-header {
   display: flex;
+  justify-content: space-between;
+}
+
+.avatar-info {
+  display: flex;
 }
 
 .aka {

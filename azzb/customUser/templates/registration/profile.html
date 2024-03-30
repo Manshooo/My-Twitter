@@ -10,20 +10,37 @@
 	<div class="profile-page">
 		<div class="profile">
 			<div class="profile-header">
-				<img src="{{ profile.avatar.url }}" class="profile-avatar">
-				<div class="wrapper-profile-header-info">
-					<div class="profile-username">
-						{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div>{{profile.username}}{% endif %}
-						{% if profile.user.is_staff %}<span class="material-symbols-outlined verified">verified</span>{% endif %}
-					</div>
-					<div class="profile-bio">
-						{% if profile.bio %}
-							{{profile.bio}}
-						{% else %}
-							No bio...
-						{% endif %}
+				<div class="avatar-info">
+					<img src="{{ profile.avatar.url }}" class="profile-avatar">
+					<div class="wrapper-profile-header-info">
+						<div class="profile-username">
+							{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div>{{profile.username}}{% endif %}
+							{% if profile.user.is_staff %}<span class="material-symbols-outlined verified">verified</span>{% endif %}
+						</div>
+						<div class="profile-bio">
+							{% if profile.bio %}
+								{{profile.bio}}
+							{% else %}
+								No bio...
+							{% endif %}
+						</div>
 					</div>
 				</div>
+				{% if request.user != profile.user %}
+					<div class="subscribe">
+						{% if not is_subscribed %}
+							<form action="{% url 'profile' profile %}" method="post">
+								{% csrf_token %}
+								<button id="submit" type="submit" name="subscribe">Подписаться</button>
+							</form>
+						{% else %}
+							<form action="{% url 'profile' profile %}" method="post">
+								{% csrf_token %}
+								<button id="submit" type="submit" name="unsubscribe">Отписаться</button>
+							</form>
+						{% endif %}
+					</div>
+				{% endif %}
 			</div>
 			<div class="profile-body">
 				{% if request.user == profile.user %}
@@ -34,7 +51,7 @@
 					</div>
 					<div class="wrapper-form-actions">
 						<div class="form-actions">
-							<button name="form_actions" type="submit" id="submit">Постим?</button>
+							<button name="post" type="submit" id="submit">Постим?</button>
 						</div>
 					</div>
 				</div>
