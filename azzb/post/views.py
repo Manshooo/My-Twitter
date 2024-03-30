@@ -37,7 +37,7 @@ def delete(request):
 	data = request.data
 	id = data['id']
 	post = get_object_or_404(Post, pk=id)
-	if request.user.id == post.author.id:
+	if request.user.id == post.author.user.id:
 		post.delete()
 		return Response(status=status.HTTP_200_OK)
 	else:
