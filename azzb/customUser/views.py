@@ -73,4 +73,4 @@ class UserProfileDetailView(DetailView):
 		elif 'unsubscribe' in request.POST:
 			FollowThrough.objects.filter(follower=current_user_profile, followee=profile_user.profile).delete()
 
-		return redirect('profile', slug=profile_user.username)
+		return redirect('profile', slug=profile_user)
