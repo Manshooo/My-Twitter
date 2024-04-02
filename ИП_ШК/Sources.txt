@@ -2,9 +2,7 @@ https://azzb.com
 
 https://developer.mozilla.org/ru/docs/Learn/Server-side/Django
 https://docs.djangoproject.com/en/4.1/
-https://flask.palletsprojects.com/en/2.2.x/
-https://nodejs.org/en/docs/
-https://www.sqlalchemy.org/
+https://docs.djangoproject.com/en/5.0/
 https://docs.python.org/3/
 https://github.com/Manshooo/Manshoo
 

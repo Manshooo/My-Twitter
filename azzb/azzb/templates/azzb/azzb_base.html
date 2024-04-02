@@ -30,11 +30,11 @@
 				<div class="underheader_menu">
 					<ul class="hot-categories">
 						<li><a href="{% url 'hot-news'%}">Горячее</a></li>
-						<li><a href="#">Интересное</a></li>
+						{% comment %} <li><a href="#">Интересное</a></li> {% endcomment %}
 						<li><a href="{% url "follows-updates" %}">Новое от подписок</a></li>
 					</ul>
 					<ul class="auth-search">
-						<li class="search"><a href="#">Поиск</a></li>
+						{% comment %} <li class="search"><a href="#">Поиск</a></li> {% endcomment %}
 						{% if user.is_authenticated %}
 							<li class="new-post"><a href="{% url 'profile' user %}">Новый пост</a></li>
 						{% endif %}
