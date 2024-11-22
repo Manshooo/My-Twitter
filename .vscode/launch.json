@@ -1,35 +1,31 @@
 {
-	// Используйте IntelliSense, чтобы узнать о возможных атрибутах.
-	// Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
-	// Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Client: React.js",
-			"request": "launch",
-			"type": "node",
-			"cwd":"${workspaceFolder}\\azzb\\frontend",
-			"runtimeExecutable": "npm",
-			"runtimeArgs": [
-				"start"
-			]
-		},
-		{
-			"name": "Server: Django",
-			"type": "python",
-			"request": "launch",
-			"program": "${workspaceFolder}\\azzb\\manage.py",
-			"args": [
-				"runserver"
-			],
-			"django": true,
-			"justMyCode": true
-		}
-	],
-	"compounds": [
-		{
-			"name": "Server/Client",
-			"configurations": ["Server: Django", "Client: React.js"]
-		}
-	  ]
+  // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
+  // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
+  // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Client: React.js",
+      "request": "launch",
+      "type": "node",
+      "cwd": "${workspaceFolder}\\azzb\\frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"]
+    },
+    {
+      "name": "Server: Django",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\azzb\\manage.py",
+      "args": ["runserver"],
+      "django": true,
+      "justMyCode": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Server/Client",
+      "configurations": ["Server: Django", "Client: React.js"]
+    }
+  ]
 }
