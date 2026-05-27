@@ -1,13 +1,13 @@
 "use strict";
 $(document).ready(function () {
 	let action_buttons = $(".wrapper-form-actions");
-	$('#submit[name=post]').click(function (e) {
+	$("#submit[name=post]").click(function (e) {
 		e.preventDefault();
-		const csrftoken = getCookie('csrftoken');
+		const csrftoken = getCookie("csrftoken");
 		let data = {
-			"text": $("#id__post-text").text(),
-		}
-		$("#id__post-text").text("");
+			text: $("#id__post-text").val(),
+		};
+		$("#id__post-text").val("");
 		$.ajax({
 			type: "POST",
 			url: "/api/new-post/",
@@ -20,7 +20,7 @@ $(document).ready(function () {
 				loadingIndicator();
 				$("#profile-feed").prepend(data);
 				if ($(".no_post")) {
-					$(".no_post").remove()
+					$(".no_post").remove();
 				}
 			},
 			error: function (data) {
@@ -36,7 +36,7 @@ $(document).ready(function () {
 			text.removeClass("in-process");
 		} else {
 			text.attr("disabled");
-			text.addClass("in-process")
+			text.addClass("in-process");
 		}
 	}
 	document.addEventListener("click", function (e) {

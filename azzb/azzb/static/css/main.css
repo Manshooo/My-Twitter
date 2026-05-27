@@ -50,12 +50,14 @@ p {
 
 a {
   color: #437272;
-  /* &:visited {
-  	color: $a-color-visited;
-  } */
 }
 a:hover {
   color: #333;
+}
+a {
+  /* &:visited {
+  	color: $a-color-visited;
+  } */
 }
 
 button {
@@ -118,12 +120,12 @@ nav {
   position: sticky;
   top: 0;
 }
+nav a:hover {
+  text-decoration: underline;
+}
 nav a {
   color: #333;
   text-decoration: none;
-}
-nav a:hover {
-  text-decoration: underline;
 }
 
 .feed_wall {
@@ -143,6 +145,8 @@ nav a:hover {
 
 .post_text {
   margin-top: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .post_date {
@@ -427,7 +431,6 @@ button#submit {
   margin-bottom: 0;
   transition: background-color 0.3s, color 0.3s;
   -webkit-transition: background-color 0.3s, color 0.3s;
-  width: -moz-max-content;
   width: max-content;
 }
 button#submit:hover {
@@ -521,4 +524,6 @@ button#submit:hover {
 .material-symbols-outlined.verified {
   color: #6fadad;
   font-variation-settings: "FILL" 1;
-}/*# sourceMappingURL=main.css.map */
+}
+
+/*# sourceMappingURL=main.css.map */

@@ -127,6 +127,8 @@ nav {
 }
 .post_text {
 	margin-top: 10px;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 .post_date {
 	text-align: right;
