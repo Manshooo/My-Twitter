@@ -12,18 +12,44 @@ concurrency:
 
 jobs:
   django:
+    name: django (py ${{ matrix.python-version }}, ${{ matrix.db }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # 3.11 — как на сервере, 3.14 — самая новая версия, которую поддерживает Django 5.2.
         python-version: ["3.11", "3.14"]
+        # На проде PostgreSQL; SQLite проверяем, потому что на нём идёт локальная разработка.
+        db: [postgres]
+        include:
+          - python-version: "3.14"
+            db: sqlite
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: azzb
+          POSTGRES_PASSWORD: azzb
+          POSTGRES_DB: azzb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U azzb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: azzb
     env:
       DJANGO_SECRET_KEY: ci-only-not-secret
       DJANGO_DEBUG: "false"
+      # Пустой POSTGRES_DB переключает настройки на SQLite.
+      POSTGRES_DB: ${{ matrix.db == 'postgres' && 'azzb' || '' }}
+      POSTGRES_USER: azzb
+      POSTGRES_PASSWORD: azzb
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
@@ -36,11 +62,17 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r ../requirements.txt
 
+      - name: Show database backend
+        run: python -c "import django, os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'azzb.settings'); django.setup(); from django.db import connection; print(connection.vendor)"
+
       - name: Django system checks
         run: python manage.py check --fail-level WARNING
 
       - name: Migrations are up to date
         run: python manage.py makemigrations --check --dry-run
+
+      - name: Migrations apply to an empty database
+        run: python manage.py migrate --noinput
 
       - name: Run tests
         run: python -W default::DeprecationWarning manage.py test azzb api customUser post

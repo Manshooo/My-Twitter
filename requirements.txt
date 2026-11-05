@@ -1,10 +1,13 @@
 # Python 3.11+ (Django 5.2 LTS поддерживает Python 3.10–3.14).
+# Linux: glibc 2.28+ (Debian 10+, Ubuntu 20.04+) — тогда Pillow и psycopg ставятся готовыми сборками.
 # Установка: python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 Django==5.2.19
 djangorestframework==3.18.3
 django-cors-headers==4.9.0
 Pillow==13.0.0
 python-dotenv==1.2.4
+# Драйвер PostgreSQL с готовыми бинарными сборками (не нужен libpq-dev на сервере).
+psycopg[binary]==3.3.8
 
 # Только для разработки: подключается в settings.py при DJANGO_DEBUG=true.
 django-debug-toolbar==8.0.0

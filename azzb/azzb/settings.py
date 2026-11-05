@@ -96,12 +96,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'azzb.wsgi.application'
 
-DATABASES = {
-	'default': {
-		'ENGINE': 'django.db.backends.sqlite3',
-		'NAME': BASE_DIR / 'db.sqlite3',
+# На проде — PostgreSQL (задаётся переменными POSTGRES_*, см. .env.example).
+# Без POSTGRES_DB — SQLite: удобно для локальной разработки и как откат при переезде.
+if os.getenv('POSTGRES_DB'):
+	DATABASES = {
+		'default': {
+			'ENGINE': 'django.db.backends.postgresql',
+			'NAME': os.getenv('POSTGRES_DB'),
+			'USER': os.getenv('POSTGRES_USER', ''),
+			'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+			'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+			'PORT': os.getenv('POSTGRES_PORT', '5432'),
+			# Держим соединение между запросами, но проверяем, что оно живо.
+			'CONN_MAX_AGE': int(os.getenv('POSTGRES_CONN_MAX_AGE', '60')),
+			'CONN_HEALTH_CHECKS': True,
+		}
 	}
-}
+else:
+	DATABASES = {
+		'default': {
+			'ENGINE': 'django.db.backends.sqlite3',
+			'NAME': BASE_DIR / 'db.sqlite3',
+		}
+	}
 
 
 # Password validation
