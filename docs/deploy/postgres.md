@@ -1,15 +1,14 @@
 # Переезд прода с SQLite на PostgreSQL
 
-Сайт выбирает базу по переменной `POSTGRES_DB`: если она задана, используется PostgreSQL, если пустая — SQLite (`azzb/db.sqlite3`). Поэтому откат — это просто убрать `POSTGRES_*` из `.env` и перезапустить сайт.
+Сайт работает **только на PostgreSQL**: без переменной `POSTGRES_DB` он не запустится. Поэтому выкладка новой версии и переезд базы — одна операция. Пока она не сделана, на сервере остаётся старый код.
 
-Команды ниже рассчитаны на Debian 12 и запуск из каталога `azzb/` (где лежит `manage.py`) в виртуальном окружении проекта. Пути и имя сервиса (`azzb`) замените на свои.
+Старая база `azzb/db.sqlite3` после этого доступна только через отдельные настройки `azzb.settings_sqlite`: ими делается дамп, и ими же можно временно запустить сайт, если переезд придётся откатить.
 
-## 0. Подготовка
+Команды рассчитаны на Debian 12 и запуск из каталога `azzb/` (где лежит `manage.py`) в виртуальном окружении проекта. Пути и имя сервиса (`azzb`) замените на свои.
 
-1. Выкатите текущий `main` и обновите зависимости: `pip install -r ../requirements.txt` (нужен драйвер `psycopg`).
-2. Примените миграции **на старой SQLite**: `python manage.py migrate`. Дамп и новая база должны быть на одной версии схемы.
+## 0. Заранее: установить PostgreSQL и создать базу
 
-## 1. Установить PostgreSQL и создать базу
+Сайт в это время работает как обычно.
 
 ```bash
 sudo apt install postgresql
@@ -17,21 +16,29 @@ sudo -u postgres createuser --pwprompt azzb
 sudo -u postgres createdb --owner azzb --encoding UTF8 --template template0 azzb
 ```
 
-## 2. Остановить запись и сделать резервные копии
+В Debian 12 это PostgreSQL 15 — на нём же гоняются тесты в CI.
 
-Остановите сайт, чтобы за время переезда никто ничего не написал:
+## 1. Остановить сайт и сделать резервную копию
 
 ```bash
 sudo systemctl stop azzb
 cp db.sqlite3 ~/db.sqlite3.before-postgres
 ```
 
-## 3. Выгрузить данные из SQLite
-
-Переменные `POSTGRES_*` пока **не** задаём — команда работает со старой базой.
+## 2. Выложить новый код
 
 ```bash
-python manage.py dumpdata --natural-foreign \
+git pull
+pip install -r ../requirements.txt
+```
+
+## 3. Довести старую базу до текущей схемы и выгрузить данные
+
+Дамп и новая база должны быть на одной версии схемы, поэтому сначала миграции на SQLite:
+
+```bash
+python manage.py migrate --settings=azzb.settings_sqlite
+python manage.py dumpdata --settings=azzb.settings_sqlite --natural-foreign \
   --exclude contenttypes --exclude auth.permission \
   --exclude admin.logentry --exclude sessions \
   --indent 2 --output ~/azzb-data.json
@@ -58,19 +65,23 @@ python manage.py sqlsequencereset customUser auth post | python manage.py dbshel
 
 ## 5. Проверить
 
+Сравните количество записей в новой и старой базе:
+
 ```bash
-python manage.py shell -c "from customUser.models import CustomUser, Profile; from post.models import Post; print(CustomUser.objects.count(), Profile.objects.count(), Post.objects.count())"
+python manage.py shell -c "from customUser.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
+python manage.py shell --settings=azzb.settings_sqlite -c "from customUser.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
 ```
 
-Сравните числа с теми же командами на SQLite (без `POSTGRES_*`). Затем запустите сайт (`sudo systemctl start azzb`), войдите, опубликуйте и удалите пост, поставьте лайк.
+Числа должны совпасть. Затем запустите сайт (`sudo systemctl start azzb`), войдите, опубликуйте и удалите пост, поставьте лайк.
 
 ## 6. Если что-то пошло не так
 
-Уберите `POSTGRES_*` из `.env` и перезапустите сайт: он снова работает на `db.sqlite3`, который не менялся. Копия лежит в `~/db.sqlite3.before-postgres`.
+Запустите сайт на старой базе: добавьте в unit-файл сервиса `Environment=DJANGO_SETTINGS_MODULE=azzb.settings_sqlite`, затем `sudo systemctl daemon-reload && sudo systemctl start azzb`. `db.sqlite3` после шага 3 содержит все данные; исходная копия лежит в `~/db.sqlite3.before-postgres`.
 
-## После переезда: резервные копии
+## После переезда
 
-Ежедневный дамп с хранением 14 дней. Добавьте в `crontab -e` пользователя `postgres`:
+- Удалите `azzb/azzb/settings_sqlite.py` и `db.sqlite3`, когда убедитесь, что всё работает (копию лучше сохранить где-нибудь ещё).
+- Ежедневный дамп с хранением 14 дней. Добавьте в `crontab -e` пользователя `postgres`:
 
 ```cron
 30 3 * * * pg_dump --format=custom azzb > /var/backups/azzb/azzb-$(date +\%F).dump && find /var/backups/azzb -name '*.dump' -mtime +14 -delete

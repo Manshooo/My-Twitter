@@ -12,21 +12,17 @@ concurrency:
 
 jobs:
   django:
-    name: django (py ${{ matrix.python-version }}, ${{ matrix.db }})
+    name: django (py ${{ matrix.python-version }}, postgres)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # 3.11 — как на сервере, 3.14 — самая новая версия, которую поддерживает Django 5.2.
         python-version: ["3.11", "3.14"]
-        # На проде PostgreSQL; SQLite проверяем, потому что на нём идёт локальная разработка.
-        db: [postgres]
-        include:
-          - python-version: "3.14"
-            db: sqlite
     services:
       postgres:
-        image: postgres:17
+        # 15 — то, что ставит `apt install postgresql` в Debian 12 на сервере.
+        image: postgres:15
         env:
           POSTGRES_USER: azzb
           POSTGRES_PASSWORD: azzb
@@ -44,8 +40,7 @@ jobs:
     env:
       DJANGO_SECRET_KEY: ci-only-not-secret
       DJANGO_DEBUG: "false"
-      # Пустой POSTGRES_DB переключает настройки на SQLite.
-      POSTGRES_DB: ${{ matrix.db == 'postgres' && 'azzb' || '' }}
+      POSTGRES_DB: azzb
       POSTGRES_USER: azzb
       POSTGRES_PASSWORD: azzb
       POSTGRES_HOST: localhost

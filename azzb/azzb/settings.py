@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -96,29 +98,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'azzb.wsgi.application'
 
-# На проде — PostgreSQL (задаётся переменными POSTGRES_*, см. .env.example).
-# Без POSTGRES_DB — SQLite: удобно для локальной разработки и как откат при переезде.
-if os.getenv('POSTGRES_DB'):
-	DATABASES = {
-		'default': {
-			'ENGINE': 'django.db.backends.postgresql',
-			'NAME': os.getenv('POSTGRES_DB'),
-			'USER': os.getenv('POSTGRES_USER', ''),
-			'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-			'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-			'PORT': os.getenv('POSTGRES_PORT', '5432'),
-			# Держим соединение между запросами, но проверяем, что оно живо.
-			'CONN_MAX_AGE': int(os.getenv('POSTGRES_CONN_MAX_AGE', '60')),
-			'CONN_HEALTH_CHECKS': True,
-		}
+# Только PostgreSQL — и на проде, и локально, и в CI. Параметры — переменные POSTGRES_*
+# (см. .env.example). Для разового дампа старой SQLite-базы есть azzb/settings_sqlite.py.
+if not os.getenv('POSTGRES_DB'):
+	raise ImproperlyConfigured(
+		'Не задан POSTGRES_DB. Пропишите POSTGRES_* в azzb/.env (образец — azzb/.env.example).'
+	)
+
+DATABASES = {
+	'default': {
+		'ENGINE': 'django.db.backends.postgresql',
+		'NAME': os.getenv('POSTGRES_DB'),
+		'USER': os.getenv('POSTGRES_USER', ''),
+		'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+		'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+		'PORT': os.getenv('POSTGRES_PORT', '5432'),
+		# Держим соединение между запросами, но проверяем, что оно живо.
+		'CONN_MAX_AGE': int(os.getenv('POSTGRES_CONN_MAX_AGE', '60')),
+		'CONN_HEALTH_CHECKS': True,
 	}
-else:
-	DATABASES = {
-		'default': {
-			'ENGINE': 'django.db.backends.sqlite3',
-			'NAME': BASE_DIR / 'db.sqlite3',
-		}
-	}
+}
 
 
 # Password validation
