@@ -5,19 +5,20 @@
 {% block metatags %}
 	{# Превью ссылки в мессенджерах и соцсетях. #}
 	<meta property="og:type" content="article">
-	<meta property="og:site_name" content="AzzB">
 	<meta property="og:title" content="{{ post.author.username }} (@{{ post.author.user.username }})">
 	<meta property="og:description" content="{{ post.text|truncatechars:200 }}">
 	<meta property="og:url" content="{{ request.build_absolute_uri }}">
+	{% with first=post.images.all|first %}
+		<meta name="twitter:card" content="{% if first and first.file %}summary_large_image{% else %}summary{% endif %}">
+	{% endwith %}
+	<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+{% endblock metatags %}
+{% block og_image %}
 	{% with first=post.images.all|first %}{% if first and first.file %}
 		<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ first.file.url }}">
 		{% if first.alt %}<meta property="og:image:alt" content="{{ first.alt }}">{% endif %}
-		<meta name="twitter:card" content="summary_large_image">
-	{% else %}
-		<meta name="twitter:card" content="summary">
-	{% endif %}{% endwith %}
-	<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
-{% endblock metatags %}
+	{% else %}{{ block.super }}{% endif %}{% endwith %}
+{% endblock og_image %}
 {% block content %}
 	<div style="display: flex; align-items: center; gap: 8px" data-post-page>
 		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>

@@ -419,3 +419,48 @@ class HtmxActionsTests(TestCase):
 		self.assertContains(page, 'vendor/htmx-2.0.4.min.js')
 		self.assertContains(page, '<body hx-headers=')
 		self.assertContains(page, '"X-CSRFToken": "')
+
+
+@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+class PageChromeTests(TestCase):
+	"""Превью ссылок (og:image) и скелетоны подгрузки ленты (C4, C6)."""
+
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+
+	def test_post_page_og_image(self):
+		plain = Post.objects.create(author=self.alice.profile, text='Без картинки')
+		response = self.client.get(f'/p/{plain.pk}/')
+		self.assertContains(response, 'og-default.png', count=1)
+		self.assertContains(response, 'property="og:image"', count=1)
+		self.assertContains(response, 'property="og:site_name"', count=1)
+		self.client.force_login(self.alice)
+		self.client.post('/compose/', {'text': 'С фото', 'images': [make_upload()]}, headers=HTMX)
+		with_photo = Post.objects.get(text='С фото')
+		response = self.client.get(f'/p/{with_photo.pk}/')
+		self.assertNotContains(response, 'og-default.png')
+		self.assertContains(response, 'property="og:image"', count=1)
+		self.assertContains(response, with_photo.images.first().file.url)
+
+	def test_load_more_has_skeletons(self):
+		from .pagination import PAGE_SIZE
+		for i in range(PAGE_SIZE + 1):
+			Post.objects.create(author=self.alice.profile, text=f'Пост {i}')
+		response = self.client.get('/')
+		self.assertContains(response, 'class="skel-cards"', count=1)
+		self.assertContains(response, 'hx-target="closest .load-more"')
+		self.assertContains(response, 'hx-indicator="closest .load-more"')
+		self.assertNotContains(response, "{#")
+
+	def test_templates_have_no_multiline_hash_comments(self):
+		# {# … #} в Django только однострочный: многострочный попадает на страницу как текст.
+		import re
+		from pathlib import Path
+		from django.conf import settings
+		root = Path(settings.BASE_DIR)
+		bad = [
+			str(path.relative_to(root)) for app in ('azzb', 'post', 'customUser', 'api')
+			for path in (root / app).rglob('*.html')
+			if re.search(r'\{#(?:(?!#\}).)*\n', path.read_text(encoding='utf-8'), flags=re.S)
+		]
+		self.assertEqual(bad, [])

@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 from .views import index, follows_updates, hot_news
-from customUser.views import UserProfileDetailView, ChangeProfileView
+from customUser.views import ChangeProfileView, UserProfileDetailView, set_theme
 from post.views import compose, delete_post, like_post, post_detail
 
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
 	path('auth/', include('django.contrib.auth.urls')),
 	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='profile'),
 	path("edit/", login_required(ChangeProfileView.as_view()), name="edit-profile"),
+	path("settings/theme/", set_theme, name="set-theme"),
 	path('api/', include('api.urls')),
 	path('follows-updates/', login_required(follows_updates), name="follows-updates"),
 ]

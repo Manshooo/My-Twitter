@@ -4,11 +4,12 @@
 		<title>{% block title %}AzzB{% endblock title %} · AzzB</title>
 		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов.{% endblock meta_description %}">
 		{% include "azzb/includes/head.html" %}
+		{% include "azzb/includes/og_default.html" %}
 	</head>
 	<body>
 		{% include "azzb/includes/icons.html" %}
 		<div class="auth">
-			<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+			{% include "azzb/includes/logo.html" %}
 			<main class="card auth-card">
 				{% block content %}{% endblock content %}
 			</main>

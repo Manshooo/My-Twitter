@@ -34,6 +34,13 @@ class UsernameValidator(validators.RegexValidator):
 		"Введите верное имя пользователя. Доступны латинские буквы, цифры и символы _ . -"
 	)
 	flags = 0
+class Theme(models.TextChoices):
+	# Пустое значение — как в системе (prefers-color-scheme).
+	SYSTEM = '', 'Как в системе'
+	LIGHT = 'light', 'Светлая'
+	DARK = 'dark', 'Тёмная'
+
+
 class CustomUser(AbstractUser):
 	username_validator = UsernameValidator()
 	username = models.CharField(
@@ -50,6 +57,9 @@ class CustomUser(AbstractUser):
 		},
 	)
 	last_visit = models.DateTimeField("Последний раз в сети", default=None, null=True)
+	# Тема хранится в аккаунте, а не только в cookie: выбор переезжает на все устройства.
+	# Поле у пользователя, а не у Profile, — request.user уже загружен, лишнего запроса нет.
+	theme = models.CharField("Тема оформления", max_length=5, choices=Theme.choices, blank=True, default=Theme.SYSTEM)
 
 class FollowThrough(models.Model):
 	follower = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='following_set')

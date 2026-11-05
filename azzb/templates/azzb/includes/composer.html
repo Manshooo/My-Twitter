@@ -6,8 +6,8 @@
 				<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
 			</button>
 		</div>
-		{# Отправляет htmx (hx-post). Картинки с описаниями добавляет azzb.js в htmx:configRequest,
-		   а вставляет готовую карточку на место тоже он: куда — зависит от режима (пост, ответ, правка). #}
+		{% comment %} Отправляет htmx (hx-post). Картинки с описаниями добавляет azzb.js в htmx:configRequest,
+		   а вставляет готовую карточку на место тоже он: куда — зависит от режима (пост, ответ, правка). {% endcomment %}
 		<form class="composer-form" id="composer-form" action="{% url 'compose' %}" method="post" enctype="multipart/form-data"
 			hx-post="{% url 'compose' %}" hx-swap="none"
 			data-composer-form data-draft-key="azzb-draft-{{ user.pk }}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">

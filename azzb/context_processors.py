@@ -1,12 +1,21 @@
 from django.db.models import Count
 from django.utils.functional import SimpleLazyObject
 
-from customUser.models import Profile
+from customUser.models import Profile, Theme
 from post.media import ACCEPT, MAX_UPLOAD_MB
 from post.models import ALT_MAX_LENGTH, MAX_IMAGES
 from post.serializer import POST_MAX_LENGTH
 
-THEMES = ('light', 'dark')
+THEMES = (Theme.LIGHT, Theme.DARK)
+
+
+def current_theme(request):
+	"""Тема страницы: выбор из аккаунта, иначе из cookie (гости и те, кто ещё не выбирал). '' — как в системе."""
+	user = getattr(request, 'user', None)
+	if user is not None and user.is_authenticated and user.theme:
+		return user.theme
+	theme = request.COOKIES.get('theme', '')
+	return theme if theme in THEMES else ''
 
 
 def _who_to_follow(request):
@@ -18,13 +27,12 @@ def _who_to_follow(request):
 
 
 def ui(request):
-	"""Общий контекст оболочки: тема из cookie и блок «Кого почитать».
+	"""Общий контекст оболочки: тема и блок «Кого почитать».
 
 	«Кого почитать» вычисляется лениво — запросы идут, только если шаблон его выводит.
 	"""
-	theme = request.COOKIES.get('theme', '')
 	return {
-		'theme': theme if theme in THEMES else '',
+		'theme': current_theme(request),
 		'who_to_follow': SimpleLazyObject(lambda: _who_to_follow(request)),
 		'post_max_length': POST_MAX_LENGTH,
 		'image_accept': ACCEPT,

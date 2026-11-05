@@ -61,12 +61,19 @@
 		const dark = String(isDark());
 		document.querySelectorAll('[data-theme-toggle]').forEach((el) => el.setAttribute('aria-checked', dark));
 	}
+	function applyTheme(theme) {
+		if (theme) document.documentElement.dataset.theme = theme;
+		else delete document.documentElement.dataset.theme; // как в системе
+		syncThemeToggles();
+	}
 	function toggleTheme() {
 		const next = isDark() ? 'light' : 'dark';
-		document.documentElement.dataset.theme = next;
+		applyTheme(next);
 		// Cookie нужна серверу, чтобы сразу отдать страницу в нужной теме, без мигания.
 		document.cookie = 'theme=' + next + '; path=/; max-age=31536000; SameSite=Lax';
-		syncThemeToggles();
+		// Вошедшим — ещё и в аккаунт, чтобы выбор был на всех устройствах.
+		const url = document.body.dataset.themeUrl;
+		if (url && window.htmx) htmx.ajax('POST', url, { source: document.body, values: { theme: next }, swap: 'none' });
 	}
 	darkQuery.addEventListener('change', syncThemeToggles);
 
@@ -768,6 +775,8 @@
 
 	document.addEventListener('change', (event) => {
 		if (event.target.matches('[data-crop-input]')) { openCropper(event.target); return; }
+		// В настройках тема меняется сразу, для примерки; сохранится вместе с формой.
+		if (event.target.matches('[data-theme-choice] input')) { applyTheme(event.target.value); return; }
 		if (event.target.matches('[data-composer-file]')) {
 			addFiles(event.target.form, event.target.files);
 			event.target.value = ''; // чтобы тот же файл можно было выбрать снова

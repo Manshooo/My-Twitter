@@ -5,13 +5,14 @@
 		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов. Проект в активной разработке, но вы уже можете присоединиться!{% endblock meta_description %}">
 		{% include "azzb/includes/head.html" %}
 		{% block metatags %}{% endblock metatags %}
+		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}"{% endif %}>
 		{% include "azzb/includes/icons.html" %}
 		{% with url_name=request.resolver_match.url_name %}
 		<header class="topbar">
-			<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+			{% include "azzb/includes/logo.html" %}
 			<div class="topbar-actions">
 				<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
 					<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
@@ -27,7 +28,7 @@
 		<div class="shell">
 			<nav class="side" aria-label="Основное меню">
 				<div class="side-logo">
-					<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+					{% include "azzb/includes/logo.html" %}
 				</div>
 				<a class="nav-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'hot-news' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
 					<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная

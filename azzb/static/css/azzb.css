@@ -7,6 +7,7 @@
 	--text: #13302f; --text-2: #4e6867;
 	--brand: #b6dfdf; --brand-soft: #dff0f0; --brand-ink: #13302f;
 	--accent: #1d6464; --primary: #13302f; --on-primary: #ffffff;
+	--logo-bg: #13302f; --logo-ink: #b6dfdf;
 	--like: #b23a26; --like-soft: #fbe9e4; --repost: #1f6b4a; --repost-soft: #e2f2e9; --bookmark: #8a5300;
 	--danger: #b3261e; --danger-soft: #fde8e6; --warn: #8a5300;
 	--badge: #c2410c; --on-badge: #ffffff; --verified: #2a8a8a; --staff: #2f2470;
@@ -28,6 +29,7 @@
 		--text: #e6f3f3; --text-2: #a3bfbe;
 		--brand: #b6dfdf; --brand-soft: #1d3a3a; --brand-ink: #13302f;
 		--accent: #8fd3d3; --primary: #b6dfdf; --on-primary: #102828;
+		--logo-bg: #b6dfdf; --logo-ink: #13302f;
 		--like: #ff8f7a; --like-soft: #3a201b; --repost: #7fd6a8; --repost-soft: #183a2a; --bookmark: #f2c46b;
 		--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
 		--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
@@ -45,6 +47,7 @@
 	--text: #e6f3f3; --text-2: #a3bfbe;
 	--brand: #b6dfdf; --brand-soft: #1d3a3a; --brand-ink: #13302f;
 	--accent: #8fd3d3; --primary: #b6dfdf; --on-primary: #102828;
+	--logo-bg: #b6dfdf; --logo-ink: #13302f;
 	--like: #ff8f7a; --like-soft: #3a201b; --repost: #7fd6a8; --repost-soft: #183a2a; --bookmark: #f2c46b;
 	--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
 	--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
@@ -99,13 +102,11 @@ img { max-width: 100%; }
 
 .logo {
 	display: inline-flex; align-items: center; gap: 10px; min-height: 48px; color: var(--text);
-	font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.5px;
+	font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em;
 }
 .logo:hover { text-decoration: none; }
-.logo-mark {
-	width: 36px; height: 36px; border-radius: 11px; background: var(--brand); color: var(--brand-ink);
-	display: grid; place-items: center; font-size: 18px;
-}
+/* Знак «Круг» (docs/brand). Зазор до надписи ≈ 0.28 высоты знака; меньше 16 px не уменьшать. */
+.logo-mark { width: 36px; height: 36px; flex: none; }
 .side-logo { padding: 0 6px 10px; }
 
 .nav-item {
@@ -126,8 +127,8 @@ img { max-width: 100%; }
 	position: sticky; top: 0; z-index: 20; align-items: center; justify-content: space-between; gap: 8px;
 	padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.topbar .logo { font-size: 20px; min-height: 44px; }
-.topbar .logo-mark { width: 30px; height: 30px; font-size: 15px; border-radius: 9px; }
+.topbar .logo { font-size: 20px; min-height: 44px; gap: 8px; }
+.topbar .logo-mark { width: 30px; height: 30px; }
 .topbar-actions { display: flex; align-items: center; gap: 4px; }
 .tabbar {
 	position: sticky; bottom: 0; z-index: 20; justify-content: space-around; align-items: stretch; height: 64px;
@@ -318,6 +319,15 @@ img { max-width: 100%; }
 .skel { background: var(--skeleton); animation: az-pulse 1.4s ease-in-out infinite; }
 @keyframes az-pulse { 50% { opacity: .5; } }
 @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+/* Подгрузка ленты: кнопка «Показать ещё», а пока идёт запрос — скелетоны карточек. */
+.load-more { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.load-more.htmx-request { align-items: stretch; }
+.load-more.htmx-request .load-more-btn, .skel-cards { display: none; }
+.load-more.htmx-request .skel-cards { display: flex; flex-direction: column; gap: 14px; }
+.skel-card { display: flex; gap: 12px; padding: 16px 18px; }
+.skel-avatar { width: 44px; height: 44px; border-radius: 50%; flex: none; }
+.skel-lines { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+.skel-line { height: 12px; border-radius: 6px; }
 .toast {
 	position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 60;
 	background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px;
@@ -404,6 +414,16 @@ body.modal-open { overflow: hidden; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
 .check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+/* Выбор из нескольких вариантов кнопками-«таблетками» (тема в настройках). */
+.choice-row { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.choice-row legend { padding: 0; margin-bottom: 10px; }
+.choice {
+	position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+	border: 1px solid var(--border-strong); border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice:has(input:checked) { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .prefix-input { display: flex; align-items: stretch; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface-2); overflow: hidden; }

@@ -27,7 +27,8 @@ class CustomUserCreationForm(UserCreationForm):
 class UpdateUserForm(forms.ModelForm):
 	class Meta:
 		model = CustomUser
-		fields = ['email', 'first_name', 'last_name']
+		fields = ['email', 'first_name', 'last_name', 'theme']
+		widgets = {'theme': forms.RadioSelect}
 
 	username = forms.CharField(
 		label=("Отображаемое имя"),

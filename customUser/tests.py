@@ -122,3 +122,98 @@ class AvatarAndBannerTests(TestCase):
 		)
 		self.assertEqual(response.status_code, 200)
 		self.assertFalse(Profile.objects.get(user=self.user).has_custom_avatar)
+
+
+HTMX = {'HX-Request': 'true'}
+
+
+class ThemeTests(TestCase):
+	"""C1: выбор темы хранится в аккаунте, cookie — для гостей и быстрого первого кадра."""
+
+	def setUp(self):
+		self.user = User.objects.create_user('dora', 'dora@example.com', 'pass-12345')
+
+	def html_tag(self, response):
+		content = response.content.decode()
+		return content[content.index('<html'):content.index('>', content.index('<html')) + 1]
+
+	def test_toggle_saves_theme_to_account_and_cookie(self):
+		self.client.force_login(self.user)
+		response = self.client.post('/settings/theme/', {'theme': 'dark'}, headers=HTMX)
+		self.assertEqual(response.status_code, 204)
+		self.assertEqual(response.cookies['theme'].value, 'dark')
+		self.user.refresh_from_db()
+		self.assertEqual(self.user.theme, 'dark')
+		# На другом устройстве (без cookie) страница сразу тёмная.
+		self.client.cookies.clear()
+		self.client.force_login(self.user)
+		self.assertIn('data-theme="dark"', self.html_tag(self.client.get('/')))
+
+	def test_account_choice_beats_cookie(self):
+		self.user.theme = 'light'
+		self.user.save()
+		self.client.force_login(self.user)
+		self.client.cookies['theme'] = 'dark'
+		self.assertIn('data-theme="light"', self.html_tag(self.client.get('/')))
+
+	def test_guest_uses_cookie_and_system_by_default(self):
+		self.assertNotIn('data-theme', self.html_tag(self.client.get('/')))
+		self.client.cookies['theme'] = 'dark'
+		self.assertIn('data-theme="dark"', self.html_tag(self.client.get('/')))
+		self.client.cookies['theme'] = 'purple'
+		self.assertNotIn('data-theme', self.html_tag(self.client.get('/')))
+
+	def test_toggle_needs_login_and_valid_theme(self):
+		self.assertEqual(self.client.post('/settings/theme/', {'theme': 'dark'}, headers=HTMX).status_code, 401)
+		self.client.force_login(self.user)
+		self.assertEqual(self.client.post('/settings/theme/', {'theme': 'purple'}, headers=HTMX).status_code, 400)
+		self.assertEqual(self.client.get('/settings/theme/').status_code, 405)
+		self.user.refresh_from_db()
+		self.assertEqual(self.user.theme, '')
+
+	def test_settings_page_saves_theme_and_system_drops_cookie(self):
+		self.client.force_login(self.user)
+		page = self.client.get('/edit/')
+		self.assertContains(page, 'data-theme-choice')
+		self.assertContains(page, 'Как в системе')
+		data = {'username': 'Дора', 'email': 'dora@example.com', 'first_name': '', 'last_name': '', 'bio': ''}
+		response = self.client.post('/edit/', {**data, 'theme': 'dark'})
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.cookies['theme'].value, 'dark')
+		self.user.refresh_from_db()
+		self.assertEqual(self.user.theme, 'dark')
+		response = self.client.post('/edit/', {**data, 'theme': ''})
+		self.assertEqual(response.cookies['theme'].value, '')  # delete_cookie
+		self.user.refresh_from_db()
+		self.assertEqual(self.user.theme, '')
+
+	def test_toggle_url_only_for_signed_in(self):
+		self.assertNotContains(self.client.get('/'), 'data-theme-url')
+		self.client.force_login(self.user)
+		self.assertContains(self.client.get('/'), 'data-theme-url="/settings/theme/"')
+
+
+class BrandTests(TestCase):
+	"""C6: знак «Круг» в вёрстке, иконки и превью ссылок."""
+
+	def test_logo_and_icons_on_pages(self):
+		for url in ('/', '/auth/login/'):
+			response = self.client.get(url)
+			self.assertContains(response, 'class="logo-mark"')
+			self.assertNotContains(response, '<span class="logo-mark"')
+			self.assertContains(response, 'favicon.svg')
+			self.assertContains(response, 'apple-touch-icon.png')
+			self.assertContains(response, 'site.webmanifest')
+			self.assertContains(response, 'og-default.png')
+
+	def test_icon_files_exist(self):
+		from django.contrib.staticfiles import finders
+		for name in ('favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
+				'icon-maskable-512.png', 'site.webmanifest', 'og-default.png'):
+			self.assertTrue(finders.find(name), name)
+		with PILImage.open(finders.find('favicon.ico')) as ico:
+			self.assertEqual(ico.info['sizes'], {(16, 16), (32, 32), (48, 48)})
+		with PILImage.open(finders.find('apple-touch-icon.png')) as icon:
+			self.assertEqual(icon.size, (180, 180))
+		with PILImage.open(finders.find('og-default.png')) as og:
+			self.assertEqual(og.size, (1200, 630))

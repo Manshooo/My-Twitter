@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AzzB">
+	<!-- Знак AzzB, вариант 1 «Круг»: буква A без перекладины, вместо неё точка. Светлая тема. -->
+	<circle cx="32" cy="32" r="32" fill="#13302f"/>
+	<path d="M19 47 L32 16 L45 47" fill="none" stroke="#b6dfdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.5"/>
+	<circle cx="32" cy="38" r="3.6" fill="#b6dfdf"/>
+</svg>

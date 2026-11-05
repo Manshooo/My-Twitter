@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render, HttpResponse
 from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.detail import DetailView
+from django.views.decorators.http import require_POST
 from django.views.generic.edit import CreateView, UpdateView
 
 from rest_framework.decorators import api_view
@@ -14,7 +15,9 @@ from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 from .forms import CustomUserCreationForm, UpdateUserForm
-from .models import FollowThrough, Profile
+from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
+
+from .models import FollowThrough, Profile, Theme
 from .serializers import *
 
 class CustomSignUp(CreateView):
@@ -37,6 +40,33 @@ class CustomSignUp(CreateView):
 			form = CustomUserCreationForm()
 		return render(request, 'registration/signup.html', {'form': form})
 
+THEME_COOKIE_AGE = 365 * 24 * 60 * 60
+
+
+def remember_theme(response, theme):
+	"""Cookie с темой: по ней сервер сразу отдаёт страницу в нужной теме — и гостям, и на этом
+	устройстве после выхода. «Как в системе» — cookie убираем."""
+	if theme:
+		response.set_cookie('theme', theme, max_age=THEME_COOKIE_AGE, samesite='Lax')
+	else:
+		response.delete_cookie('theme', samesite='Lax')
+	return response
+
+
+@require_POST
+@htmx_login_required
+def set_theme(request):
+	"""Переключатель темы: сохраняет выбор в аккаунте (C1). Гостям хватает cookie, её ставит azzb.js."""
+	theme = request.POST.get('theme', '')
+	if theme not in Theme.values:
+		return htmx_errors('Неизвестная тема.')
+	if request.user.theme != theme:
+		request.user.theme = theme
+		request.user.save(update_fields=['theme'])
+	response = HttpResponse(status=204) if is_htmx(request) else redirect('index')
+	return remember_theme(response, theme)
+
+
 class ChangeProfileView(UpdateView):
 	model = Profile
 	form_class = UpdateUserForm
@@ -50,6 +80,9 @@ class ChangeProfileView(UpdateView):
 		return kwargs
 	def get_success_url(self):
 		return reverse_lazy('profile', kwargs={'slug': self.request.user})
+
+	def form_valid(self, form):
+		return remember_theme(super().form_valid(form), form.cleaned_data['theme'])
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)

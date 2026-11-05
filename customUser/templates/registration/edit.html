@@ -50,6 +50,13 @@
 			{% include "azzb/includes/field.html" with field=form.bio %}
 			{% include "azzb/includes/field.html" with field=form.email %}
 
+			<fieldset class="choice-row" data-theme-choice>
+				<legend class="field-label">Тема оформления</legend>
+				{% for radio in form.theme %}
+					<label class="choice" for="{{ radio.id_for_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+				{% endfor %}
+			</fieldset>
+
 			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
 				<legend class="field-label" style="padding: 0; margin-bottom: 10px">Приватность</legend>
 				<label class="check" for="{{ form.likes_public.id_for_label }}">
