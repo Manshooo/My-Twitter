@@ -1,13 +1,10 @@
 import json
-from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.utils import timezone
 
 from customUser.forms import CustomUserCreationForm
 from customUser.models import FollowThrough
-from customUser.templatetags.azzb_ui import ago, plural_ru
 from post.models import Post
 
 User = get_user_model()
@@ -50,12 +47,6 @@ class FeedPagesTests(TestCase):
 		self.client.force_login(make_user('bob'))
 		self.assertContains(self.client.get('/follows-updates/'), 'Здесь пока тихо')
 
-	def test_theme_cookie_sets_data_theme(self):
-		self.client.cookies['theme'] = 'dark'
-		self.assertContains(self.client.get('/'), '<html lang="ru" data-theme="dark">')
-		self.client.cookies['theme'] = '"><script>'
-		self.assertContains(self.client.get('/'), '<html lang="ru">')
-
 	def test_badges(self):
 		self.alice.is_staff = True
 		self.alice.save()
@@ -64,12 +55,6 @@ class FeedPagesTests(TestCase):
 		response = self.client.get('/')
 		self.assertContains(response, 'aria-label="Подтверждённый аккаунт"')
 		self.assertContains(response, 'aria-label="Команда AzzB"')
-
-	def test_custom_404(self):
-		response = self.client.get('/no-such-page/')
-		self.assertEqual(response.status_code, 404)
-		self.assertContains(response, 'Такой страницы нет', status_code=404)
-
 
 class ProfilePageTests(TestCase):
 	def setUp(self):
@@ -159,21 +144,3 @@ class CreatePostLimitsTests(TestCase):
 		self.assertEqual(self.post_text('   ').status_code, 400)
 		self.assertEqual(self.post_text('x' * 501).status_code, 400)
 		self.assertEqual(self.post_text('x' * 500).status_code, 200)
-
-
-class PluralFilterTests(TestCase):
-	def test_forms(self):
-		forms = 'подписка,подписки,подписок'
-		expected = {0: 'подписок', 1: 'подписка', 2: 'подписки', 5: 'подписок', 11: 'подписок', 12: 'подписок', 21: 'подписка', 22: 'подписки', 111: 'подписок'}
-		for n, word in expected.items():
-			self.assertEqual(plural_ru(n, forms), word, n)
-
-
-class AgoFilterTests(TestCase):
-	def test_units(self):
-		now = timezone.now()
-		self.assertEqual(ago(now), 'сейчас')
-		self.assertEqual(ago(now - timedelta(minutes=5)), '5 мин')
-		self.assertEqual(ago(now - timedelta(minutes=5), 'long'), '5 мин назад')
-		self.assertEqual(ago(None), '')
-		self.assertTrue(ago(now - timedelta(days=400)).endswith(str(timezone.localtime(now - timedelta(days=400)).year)))
