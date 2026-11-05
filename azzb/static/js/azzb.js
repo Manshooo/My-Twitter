@@ -312,6 +312,137 @@
 		return true;
 	}
 
+	// ---------- Кадрирование аватара и баннера ----------
+	// Сам файл уходит на сервер как есть, а вместе с ним — выбранная область в долях
+	// (x, y, ширина, высота). Обрезает и сжимает сервер; без JS он берёт центр.
+	const crop = { input: null, name: '', natural: [1, 1], zoom: 1, ox: 0, oy: 0, drag: null, url: null };
+	const cropperEl = () => document.getElementById('cropper');
+	const CROP_PREVIEW = { avatar: [192, 192], banner: [900, 300] };
+
+	function cropMetrics() {
+		const frame = cropperEl().querySelector('[data-crop-frame]');
+		const W = frame.clientWidth;
+		const H = frame.clientHeight;
+		const [w, h] = crop.natural;
+		return { W: W, H: H, w: w, h: h, scale: Math.max(W / w, H / h) * crop.zoom };
+	}
+
+	function drawCrop() {
+		const m = cropMetrics();
+		crop.ox = Math.min(0, Math.max(m.W - m.w * m.scale, crop.ox));
+		crop.oy = Math.min(0, Math.max(m.H - m.h * m.scale, crop.oy));
+		const img = cropperEl().querySelector('[data-crop-img]');
+		img.style.width = m.w + 'px';
+		img.style.height = m.h + 'px';
+		img.style.transform = 'translate(' + crop.ox + 'px, ' + crop.oy + 'px) scale(' + m.scale + ')';
+	}
+
+	function setCropZoom(zoom) {
+		const before = cropMetrics();
+		// Приближаем относительно центра кадра, а не левого верхнего угла.
+		const cx = (before.W / 2 - crop.ox) / before.scale;
+		const cy = (before.H / 2 - crop.oy) / before.scale;
+		crop.zoom = Math.min(4, Math.max(1, zoom));
+		const after = cropMetrics();
+		crop.ox = after.W / 2 - cx * after.scale;
+		crop.oy = after.H / 2 - cy * after.scale;
+		cropperEl().querySelector('[data-crop-zoom]').value = String(crop.zoom);
+		drawCrop();
+	}
+
+	function openCropper(input) {
+		const modal = cropperEl();
+		const file = input.files && input.files[0];
+		if (!modal || !file) return;
+		const limit = input.closest('[data-max-mb]');
+		const maxMb = Number(limit ? limit.dataset.maxMb : 10);
+		if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type) || file.size > maxMb * 1024 * 1024) {
+			input.value = '';
+			toast('Нужна картинка JPEG, PNG, WebP или GIF до ' + maxMb + ' МБ');
+			return;
+		}
+		crop.input = input;
+		crop.name = input.dataset.cropInput;
+		if (crop.url) URL.revokeObjectURL(crop.url);
+		crop.url = URL.createObjectURL(file);
+		const img = modal.querySelector('[data-crop-img]');
+		const frame = modal.querySelector('[data-crop-frame]');
+		frame.dataset.shape = crop.name;
+		modal.querySelector('[data-crop-title]').textContent = crop.name === 'avatar' ? 'Аватар' : 'Баннер';
+		img.onload = () => {
+			crop.natural = [img.naturalWidth, img.naturalHeight];
+			crop.zoom = 1;
+			modal.querySelector('[data-crop-zoom]').value = '1';
+			const m = cropMetrics();
+			crop.ox = (m.W - m.w * m.scale) / 2;
+			crop.oy = (m.H - m.h * m.scale) / 2;
+			drawCrop();
+		};
+		img.onerror = () => { closeCropper(true); toast('Не удалось открыть картинку'); };
+		lastFocus = document.activeElement;
+		modal.hidden = false;
+		syncModalOpen();
+		img.src = crop.url;
+		frame.focus();
+	}
+
+	function closeCropper(cancel) {
+		const modal = cropperEl();
+		if (!modal || modal.hidden) return false;
+		if (cancel && crop.input) {
+			crop.input.value = '';
+			crop.input.form.querySelector('[name="' + crop.name + '_crop"]').value = '';
+		}
+		modal.hidden = true;
+		syncModalOpen();
+		if (crop.input) crop.input.focus();
+		return true;
+	}
+
+	function applyCrop() {
+		const m = cropMetrics();
+		const box = {
+			x: -crop.ox / (m.w * m.scale),
+			y: -crop.oy / (m.h * m.scale),
+			w: m.W / (m.w * m.scale),
+			h: m.H / (m.h * m.scale),
+		};
+		const form = crop.input.form;
+		form.querySelector('[name="' + crop.name + '_crop"]').value =
+			[box.x, box.y, box.w, box.h].map((v) => Math.min(1, Math.max(0, v)).toFixed(5)).join(',');
+		// Превью: как будет выглядеть после сохранения.
+		const [pw, ph] = CROP_PREVIEW[crop.name];
+		const canvas = document.createElement('canvas');
+		canvas.width = pw;
+		canvas.height = ph;
+		const img = cropperEl().querySelector('[data-crop-img]');
+		canvas.getContext('2d').drawImage(img, box.x * m.w, box.y * m.h, box.w * m.w, box.h * m.h, 0, 0, pw, ph);
+		const preview = form.querySelector('[data-crop-preview="' + crop.name + '"]');
+		const shot = document.createElement('img');
+		shot.src = canvas.toDataURL('image/jpeg', 0.9);
+		shot.alt = '';
+		if (crop.name === 'avatar') shot.className = 'avatar avatar-xl';
+		preview.classList.remove('ph');
+		preview.replaceChildren(shot);
+		const clear = form.querySelector('[name="' + crop.name + '_clear"]');
+		if (clear) clear.checked = false;
+		closeCropper(false);
+	}
+
+	function startCropDrag(event) {
+		const frame = event.target.closest('[data-crop-frame]');
+		if (!frame || event.button !== 0) return;
+		crop.drag = { x: event.clientX, y: event.clientY, ox: crop.ox, oy: crop.oy };
+		frame.setPointerCapture(event.pointerId);
+	}
+
+	function moveCropDrag(event) {
+		if (!crop.drag) return;
+		crop.ox = crop.drag.ox + event.clientX - crop.drag.x;
+		crop.oy = crop.drag.oy + event.clientY - crop.drag.y;
+		drawCrop();
+	}
+
 	// ---------- Посты ----------
 	async function like(btn) {
 		const post = btn.closest('[data-post-id]');
@@ -428,6 +559,8 @@
 		}
 		if (target.matches('[data-lightbox-close]')) { event.preventDefault(); closeLightbox(); return; }
 		if (target.matches('[data-lightbox-step]')) { event.preventDefault(); stepLightbox(Number(target.dataset.lightboxStep)); return; }
+		if (target.matches('[data-crop-cancel]')) { event.preventDefault(); closeCropper(true); return; }
+		if (target.matches('[data-crop-apply]')) { event.preventDefault(); applyCrop(); return; }
 		if (target.matches('[data-like]')) { event.preventDefault(); like(target); return; }
 		if (target.matches('[data-delete]')) { event.preventDefault(); removePost(target); return; }
 		if (target.matches('[data-copy]')) { event.preventDefault(); copyLink(target); return; }
@@ -449,6 +582,23 @@
 			if (event.key === 'ArrowRight') { event.preventDefault(); stepLightbox(1); return; }
 			if (event.key === 'Escape') { closeLightbox(); return; }
 		}
+		const cropper = cropperEl();
+		if (cropper && !cropper.hidden) {
+			if (event.key === 'Escape') { closeCropper(true); return; }
+			if (!event.target.matches('[data-crop-frame]')) return;
+			const moves = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] };
+			if (moves[event.key]) {
+				event.preventDefault();
+				crop.ox += moves[event.key][0];
+				crop.oy += moves[event.key][1];
+				drawCrop();
+			} else if (event.key === '+' || event.key === '=') {
+				setCropZoom(crop.zoom + 0.1);
+			} else if (event.key === '-') {
+				setCropZoom(crop.zoom - 0.1);
+			}
+			return;
+		}
 		if (event.key !== 'Escape') return;
 		closeMenus();
 		closeComposer();
@@ -456,9 +606,21 @@
 
 	document.addEventListener('input', (event) => {
 		if (event.target.matches('[data-composer-text]')) updateCounter(event.target.form);
+		if (event.target.matches('[data-crop-zoom]')) setCropZoom(Number(event.target.value));
 	});
 
+	document.addEventListener('pointerdown', startCropDrag);
+	document.addEventListener('pointermove', moveCropDrag);
+	document.addEventListener('pointerup', () => { crop.drag = null; });
+	document.addEventListener('pointercancel', () => { crop.drag = null; });
+	document.addEventListener('wheel', (event) => {
+		if (!event.target.closest('[data-crop-frame]')) return;
+		event.preventDefault();
+		setCropZoom(crop.zoom - Math.sign(event.deltaY) * 0.1);
+	}, { passive: false });
+
 	document.addEventListener('change', (event) => {
+		if (event.target.matches('[data-crop-input]')) { openCropper(event.target); return; }
 		if (event.target.matches('[data-composer-file]')) {
 			addFiles(event.target.form, event.target.files);
 			event.target.value = ''; // чтобы тот же файл можно было выбрать снова

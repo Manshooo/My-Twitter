@@ -51,6 +51,16 @@ class ChangeProfileView(UpdateView):
 	def get_success_url(self):
 		return reverse_lazy('profile', kwargs={'slug': self.request.user})
 
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		form = context['form']
+		profile = self.request.user.profile
+		context['media_fields'] = [
+			('avatar', form['avatar'], form['avatar_clear'], profile.has_custom_avatar),
+			('banner', form['banner'], form['banner_clear'], bool(profile.banner)),
+		]
+		return context
+
 PROFILE_TABS = ('posts', 'media', 'likes', 'following', 'followers')
 
 class UserProfileDetailView(DetailView):

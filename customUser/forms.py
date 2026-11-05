@@ -1,9 +1,13 @@
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
-from .models import USERNAME_MAX_LENGTH, CustomUser
+from post.media import ACCEPT, parse_crop, process_cropped_image
+
+from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser
 
 class CustomUserCreationForm(UserCreationForm):
 	email = forms.EmailField(
@@ -60,6 +64,15 @@ class UpdateUserForm(forms.ModelForm):
 		required=False,
 	)
 
+	# Картинки обрабатываются в post/media.py: обрезка по области из браузера (или по центру),
+	# уменьшение, WebP без EXIF. Поэтому здесь FileField, а не ImageField.
+	avatar = forms.FileField(label="Аватар", required=False, widget=forms.ClearableFileInput(attrs={'accept': ACCEPT}))
+	avatar_crop = forms.CharField(required=False, widget=forms.HiddenInput)
+	avatar_clear = forms.BooleanField(label="Убрать аватар", required=False)
+	banner = forms.FileField(label="Баннер", required=False, widget=forms.ClearableFileInput(attrs={'accept': ACCEPT}))
+	banner_crop = forms.CharField(required=False, widget=forms.HiddenInput)
+	banner_clear = forms.BooleanField(label="Убрать баннер", required=False)
+
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		if 'instance' in kwargs:
@@ -68,6 +81,42 @@ class UpdateUserForm(forms.ModelForm):
 				self.fields['bio'].initial = instance.profile.bio
 				self.fields['username'].initial = instance.profile.username
 				self.fields['likes_public'].initial = instance.profile.likes_public
+		# Обычный <input type=file> без «Очистить» от ClearableFileInput: для этого свои флажки.
+		for name in ('avatar', 'banner'):
+			self.fields[name].widget = forms.FileInput(attrs={'accept': ACCEPT, 'class': 'sr', 'data-crop-input': name})
+
+	def _process(self, name, size):
+		upload = self.cleaned_data.get(name)
+		if not upload:
+			return None
+		try:
+			return process_cropped_image(upload, size, parse_crop(self.cleaned_data.get(f'{name}_crop')))
+		except ValidationError as error:
+			self.add_error(name, error)
+			return None
+
+	def clean(self):
+		cleaned = super().clean()
+		self.processed = {
+			'avatar': self._process('avatar', AVATAR_SIZE),
+			'banner': self._process('banner', BANNER_SIZE),
+		}
+		return cleaned
+
+	def _replace_image(self, profile, name, empty):
+		"""Новая картинка или очистка поля. Старый файл удаляем после коммита."""
+		field = getattr(profile, name)
+		old_name = field.name if field and field.name != empty else None
+		processed = self.processed.get(name)
+		if processed:
+			field.save(processed.content.name, processed.content, save=False)
+		elif self.cleaned_data.get(f'{name}_clear'):
+			setattr(profile, name, empty)
+		else:
+			return
+		if old_name:
+			storage = field.storage
+			transaction.on_commit(lambda: storage.delete(old_name))
 
 	def save(self, commit=True):
 		user = super().save(commit=False)
@@ -78,5 +127,7 @@ class UpdateUserForm(forms.ModelForm):
 				profile.bio = self.cleaned_data['bio']
 				profile.username = self.cleaned_data['username']
 				profile.likes_public = self.cleaned_data['likes_public']
+				self._replace_image(profile, 'avatar', DEFAULT_AVATAR)
+				self._replace_image(profile, 'banner', '')
 				profile.save()
 		return user

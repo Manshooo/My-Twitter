@@ -8,4 +8,5 @@ class ProfileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Profile
 		fields = ['id', 'user', 'login', 'username', 'avatar', 'bio']
-		read_only_fields = ['id', 'user', 'login']
+		# Аватар меняется только через форму профиля: там картинка обрезается и чистится от EXIF.
+		read_only_fields = ['id', 'user', 'login', 'avatar']

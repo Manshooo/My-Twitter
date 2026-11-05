@@ -10,17 +10,38 @@
 			<h1 class="display" style="font-size: 22px">Редактирование профиля</h1>
 		</div>
 
-		<div class="who-row">
-			{% avatar user.profile %}
-			<div class="who">
-				<b>@{{ user.username }}</b>
-				<span class="hint">Адрес профиля: {{ request.get_host }}{% url 'profile' user.username %}</span>
-			</div>
-		</div>
-
-		<form method="post" class="form">
+		<form method="post" class="form" enctype="multipart/form-data">
 			{% csrf_token %}
 			{% if form.non_field_errors %}<div class="alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+			<fieldset class="media-edit" data-max-mb="{{ max_upload_mb }}">
+				<legend class="field-label">Фото профиля</legend>
+				<div class="media-edit-preview">
+					<div class="edit-banner{% if not user.profile.banner %} ph{% endif %}" data-crop-preview="banner">{% if user.profile.banner %}<img src="{{ user.profile.banner.url }}" alt="">{% endif %}</div>
+					<div class="edit-avatar" data-crop-preview="avatar">{% avatar user.profile 'xl' %}</div>
+				</div>
+				{% for name, field, clear, has_image in media_fields %}
+					<div class="media-edit-row">
+						<b>{{ field.label }}</b>
+						<span class="hint" style="flex: 1">{% if name == 'avatar' %}квадрат, от 400×400{% else %}3:1, от 1500×500{% endif %}</span>
+						{{ field }}
+						<label class="btn btn-outline btn-sm" for="{{ field.id_for_label }}">
+							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"></use></svg>Загрузить
+						</label>
+						{% if has_image %}
+							<label class="chip-check" for="{{ clear.id_for_label }}">{{ clear }}{{ clear.label }}</label>
+						{% endif %}
+					</div>
+					{% if field.errors %}{{ field.errors }}{% endif %}
+				{% endfor %}
+				<span class="hint">JPEG, PNG, WebP или GIF до {{ max_upload_mb }} МБ. После выбора можно подвинуть и приблизить кадр.</span>
+				{{ form.avatar_crop }}{{ form.banner_crop }}
+			</fieldset>
+
+			<div class="field">
+				<span class="field-label">Адрес профиля</span>
+				<span class="hint">{{ request.get_host }}{% url 'profile' user.username %} · логин @{{ user.username }} поменять нельзя</span>
+			</div>
 			{% include "azzb/includes/field.html" with field=form.username %}
 			<div class="field-row">
 				{% include "azzb/includes/field.html" with field=form.first_name %}
@@ -46,4 +67,29 @@
 			</div>
 		</form>
 	</section>
+
+	<div class="modal" id="cropper" hidden>
+		<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cropper-title">
+			<div class="dialog-head">
+				<h2 id="cropper-title" data-crop-title>Кадрирование</h2>
+				<button class="icon-btn" type="button" aria-label="Отменить" data-crop-cancel>
+					<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+				</button>
+			</div>
+			<div class="crop-body">
+				<div class="crop-frame" tabindex="0" aria-label="Кадр: перетащите картинку или используйте стрелки" data-crop-frame>
+					<img alt="" draggable="false" data-crop-img>
+				</div>
+				<label class="crop-zoom">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"></use></svg>
+					<span class="sr">Масштаб</span>
+					<input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom>
+				</label>
+				<div class="form-actions">
+					<button class="btn btn-outline" type="button" data-crop-cancel>Отмена</button>
+					<button class="btn" type="button" data-crop-apply>Готово</button>
+				</div>
+			</div>
+		</div>
+	</div>
 {% endblock content %}

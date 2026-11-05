@@ -13,6 +13,15 @@ def user_profile_avatar_path(instance, filename):
 	# файл загрузится в MEDIA_ROOT/users/user_<id>/<filename>
 	return f"users/user_{instance.user.id}/{filename}"
 
+
+def user_profile_banner_path(instance, filename):
+	return f"users/user_{instance.user.id}/banner-{filename}"
+
+
+AVATAR_SIZE = (400, 400)
+BANNER_SIZE = (1500, 500)
+DEFAULT_AVATAR = 'default/default_user_avatar.jpg'
+
 # Профиль создаётся сигналом в customUser/signals.py.
 
 USERNAME_MAX_LENGTH = 30
@@ -62,7 +71,9 @@ class Profile(models.Model):
 	id = models.BigAutoField(primary_key=True)
 	user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="profile")
 	username = models.CharField("Отображаемое имя пользователя", max_length=150, default=None, blank=True)
-	avatar = models.ImageField(default='default/default_user_avatar.jpg', upload_to=user_profile_avatar_path)
+	avatar = models.ImageField(default=DEFAULT_AVATAR, upload_to=user_profile_avatar_path)
+	# Обложка 3:1 над профилем. Как и аватар, загружается уже обрезанной и в WebP.
+	banner = models.ImageField("Баннер", upload_to=user_profile_banner_path, blank=True, default='')
 	bio = models.CharField("О себе", max_length=250, blank=True, default="")
 	# Галочка «подтверждённый аккаунт» ставится вручную в админке; значок staff — отдельно, по user.is_staff.
 	is_verified = models.BooleanField("Подтверждённый аккаунт", default=False)

@@ -5,7 +5,7 @@
 {% block content %}
 	{% url 'profile' profile.user.username as profile_url %}
 	<section class="card profile-card" aria-label="Профиль">
-		<div class="cover ph" aria-hidden="true"></div>
+		{% if profile.banner %}<img class="cover" src="{{ profile.banner.url }}" alt="">{% else %}<div class="cover ph" aria-hidden="true"></div>{% endif %}
 		<div class="profile-info">
 			<div class="profile-top">
 				{% avatar profile 'xl' %}
