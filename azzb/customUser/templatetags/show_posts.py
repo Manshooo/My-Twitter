@@ -6,8 +6,12 @@ register = template.Library()
 def show_posts(context):
 	post = context["post"]
 	request = context["request"]
-	liked = False
-	if request.user.is_authenticated:
-		# exists() вместо загрузки всех лайков поста ради одной проверки.
-		liked = post.likes.filter(pk=request.user.profile.pk).exists()
-	return {"post": post, "liked": liked, "request": request, "user": request.user}
+	# Лента приходит из Post.objects.for_feed(): там число лайков и «мой ли лайк» уже посчитаны
+	# в том же запросе. Запасной путь — для поста, загруженного без аннотаций.
+	liked = getattr(post, "is_liked", None)
+	if liked is None:
+		liked = request.user.is_authenticated and post.likes.filter(pk=request.user.profile.pk).exists()
+	likes_total = getattr(post, "likes_n", None)
+	if likes_total is None:
+		likes_total = post.likes.count()
+	return {"post": post, "liked": liked, "likes_total": likes_total, "request": request, "user": request.user}

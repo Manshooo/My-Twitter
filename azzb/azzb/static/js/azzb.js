@@ -176,6 +176,49 @@
 		}
 	}
 
+	// ---------- «Показать ещё» и бесконечная прокрутка ----------
+	// Кнопка — обычная ссылка на следующую страницу: без JS она просто открывает её.
+	// С JS подгружаем только порцию карточек и подменяем кнопку на неё.
+	async function loadMore(link) {
+		if (link.dataset.loading) return;
+		link.dataset.loading = '1';
+		link.setAttribute('aria-busy', 'true');
+		link.textContent = 'Загрузка…';
+		try {
+			const response = await fetch(link.href, {
+				headers: { 'X-Requested-With': 'azzb-load-more' },
+				credentials: 'same-origin',
+			});
+			if (!response.ok) throw new Error('status ' + response.status);
+			const html = await response.text();
+			link.insertAdjacentHTML('beforebegin', html);
+			if (loadMoreObserver) loadMoreObserver.unobserve(link);
+			link.remove();
+			observeLoadMore();
+		} catch (e) {
+			delete link.dataset.loading;
+			link.removeAttribute('aria-busy');
+			link.textContent = 'Показать ещё';
+			toast('Не удалось загрузить посты');
+		}
+	}
+
+	const loadMoreObserver = 'IntersectionObserver' in window
+		? new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) loadMore(entry.target);
+			});
+		}, { rootMargin: '600px 0px' })
+		: null;
+
+	function observeLoadMore() {
+		if (!loadMoreObserver) return;
+		document.querySelectorAll('[data-load-more]:not([data-observed])').forEach((link) => {
+			link.dataset.observed = '1';
+			loadMoreObserver.observe(link);
+		});
+	}
+
 	// ---------- Делегирование событий ----------
 	document.addEventListener('click', (event) => {
 		const target = event.target.closest('button, a');
@@ -192,6 +235,7 @@
 		if (target.matches('[data-like]')) { event.preventDefault(); like(target); return; }
 		if (target.matches('[data-delete]')) { event.preventDefault(); removePost(target); return; }
 		if (target.matches('[data-copy]')) { event.preventDefault(); copyLink(target); return; }
+		if (target.matches('[data-load-more]')) { event.preventDefault(); loadMore(target); return; }
 		if (!target.closest('[role="menu"]')) closeMenus();
 	});
 
@@ -212,5 +256,8 @@
 		}
 	});
 
-	document.addEventListener('DOMContentLoaded', syncThemeToggles);
+	document.addEventListener('DOMContentLoaded', () => {
+		syncThemeToggles();
+		observeLoadMore();
+	});
 })();

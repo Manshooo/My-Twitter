@@ -1,5 +1,5 @@
 {% extends "azzb/azzb_base.html" %}
-{% load azzb_ui show_posts %}
+{% load azzb_ui %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
 {% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}Профиль @{{ profile.user.username }} на AzzB{% endif %}{% endblock meta_description %}
 {% block content %}
@@ -88,9 +88,9 @@
 		</section>
 	{% else %}
 		<div id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
-			{% for post in profile_posts %}
-				{% show_posts %}
-			{% empty %}
+			{% if posts %}
+				{% include "azzb/includes/post_page.html" %}
+			{% else %}
 				<div class="card empty" data-feed-empty>
 					{% if tab == 'likes' and not likes_visible %}
 						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
@@ -105,7 +105,7 @@
 						{% endif %}
 					{% endif %}
 				</div>
-			{% endfor %}
+			{% endif %}
 		</div>
 	{% endif %}
 {% endblock content %}

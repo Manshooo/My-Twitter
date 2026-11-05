@@ -21,12 +21,12 @@
 				{% if user.is_authenticated %}
 					<button class="action{% if liked %} liked{% endif %}" type="button" aria-pressed="{% if liked %}true{% else %}false{% endif %}" data-like>
 						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-						<span class="sr">Нравится:</span><span data-like-count>{% if post.likes_count %}{{ post.likes_count }}{% endif %}</span>
+						<span class="sr">Нравится:</span><span data-like-count>{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</button>
 				{% else %}
 					<a class="action" href="{% url 'login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
 						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-						<span class="sr">Нравится:</span><span>{% if post.likes_count %}{{ post.likes_count }}{% endif %}</span>
+						<span class="sr">Нравится:</span><span>{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</a>
 				{% endif %}
 			</div>

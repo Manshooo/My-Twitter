@@ -13,7 +13,7 @@ def create_post(request):
 	serializer = PostSerializer(data=request.data)
 	if serializer.is_valid():
 		new_post = serializer.save(author=request.user.profile)
-		return render(request, "post/post.html", {"post": new_post})
+		return render(request, "post/post.html", {"post": new_post, "liked": False, "likes_total": 0})
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])

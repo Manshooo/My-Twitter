@@ -20,7 +20,8 @@ def _post_from_request(request):
 		post_id = uuid.UUID(str(request.data['id']))
 	except (KeyError, TypeError, ValueError, AttributeError):
 		return None
-	return get_object_or_404(Post, pk=post_id)
+	# Лайкнуть или удалить можно только пост, который пользователю вообще виден.
+	return get_object_or_404(Post.objects.visible_to(request.user), pk=post_id)
 
 @api_view(['POST'])
 def like(request):

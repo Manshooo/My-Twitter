@@ -1,30 +1,34 @@
-from django.db.models import Count
 from django.shortcuts import render
 
 from post.models import Post
+from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, number_page, page_url
+
+FEED_TEMPLATE = "azzb/feed.html"
 
 
-def _feed_posts():
-	return Post.objects.select_related("author__user").prefetch_related("images")
-
-
-def _render_feed(request, feed, posts, **extra):
-	context = {"feed": feed, "posts": posts, **extra}
-	return render(request, "azzb/feed.html", context)
+def render_posts(request, template, context, posts, next_params):
+	context.update({
+		"posts": posts,
+		"next_url": page_url(request, **next_params) if next_params else None,
+	})
+	return render(request, PAGE_TEMPLATE if is_load_more(request) else template, context)
 
 
 def index(request):
-	latest_posts = _feed_posts().order_by("-created_at")[:10]
+	posts, cursor = cursor_page(Post.objects.for_feed(request.user), request.GET.get("cursor"))
 	# Свой новый пост из composer логично показать сверху именно «Свежего».
-	return _render_feed(request, "latest", latest_posts, prepend=True)
+	context = {"feed": "latest", "prepend": True}
+	return render_posts(request, FEED_TEMPLATE, context, posts, cursor and {"cursor": cursor})
 
 
 def follows_updates(request):
 	follows = request.user.profile.follows.all()
-	follows_posts = _feed_posts().filter(author__in=follows)
-	return _render_feed(request, "following", follows_posts)
+	queryset = Post.objects.for_feed(request.user).filter(author__in=follows)
+	posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
+	return render_posts(request, FEED_TEMPLATE, {"feed": "following"}, posts, cursor and {"cursor": cursor})
 
 
 def hot_news(request):
-	hot_posts = _feed_posts().annotate(num_likes=Count('likes')).order_by('-num_likes', '-created_at')
-	return _render_feed(request, "hot", hot_posts)
+	queryset = Post.objects.for_feed(request.user).order_by("-likes_n", "-created_at", "-id")
+	posts, next_page = number_page(queryset, request.GET.get("page"))
+	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})

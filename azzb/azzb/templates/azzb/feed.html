@@ -1,5 +1,5 @@
 {% extends "azzb/azzb_base.html" %}
-{% load azzb_ui show_posts %}
+{% load azzb_ui %}
 {% block title %}{% if feed == 'hot' %}Горячее{% elif feed == 'following' %}Подписки{% else %}Главная{% endif %}{% endblock title %}
 {% block metatags %}
 	{% if feed == 'latest' %}
@@ -36,9 +36,9 @@
 	{% endif %}
 
 	<div class="feed" id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if prepend %} data-feed-prepend{% endif %}>
-		{% for post in posts %}
-			{% show_posts %}
-		{% empty %}
+		{% if posts %}
+			{% include "azzb/includes/post_page.html" %}
+		{% else %}
 			<div class="card empty" data-feed-empty>
 				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people"></use></svg></span>
 				{% if feed == 'following' %}
@@ -50,6 +50,6 @@
 					<p>Станьте первым, кто что-нибудь напишет.</p>
 				{% endif %}
 			</div>
-		{% endfor %}
+		{% endif %}
 	</div>
 {% endblock content %}

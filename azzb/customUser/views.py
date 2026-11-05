@@ -8,7 +8,10 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from rest_framework.decorators import api_view
 
-from post.models import Post
+from django.db.models import Exists, OuterRef
+
+from post.models import Image, Post
+from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 from .forms import CustomUserCreationForm, UpdateUserForm
 from .models import FollowThrough, Profile
@@ -60,6 +63,9 @@ class UserProfileDetailView(DetailView):
 	def get_queryset(self):
 		return Profile.objects.select_related("user")
 
+	def get_template_names(self):
+		return [PAGE_TEMPLATE] if is_load_more(self.request) else [self.template_name]
+
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		profile = self.object
@@ -72,24 +78,29 @@ class UserProfileDetailView(DetailView):
 		if tab not in PROFILE_TABS:
 			tab = "posts"
 
-		posts = Post.objects.select_related("author__user").prefetch_related("images")
+		posts = Post.objects.for_feed(self.request.user)
 		people = None
 		if tab == "posts":
 			items = posts.filter(author=profile)
 		elif tab == "media":
-			items = posts.filter(author=profile, images__isnull=False).distinct()
-		elif tab == "likes":
-			items = posts.filter(likes=profile) if likes_visible else posts.none()
+			items = posts.filter(author=profile).filter(Exists(Image.objects.filter(post=OuterRef("pk"))))
+		elif tab == "likes" and likes_visible:
+			liked_by_profile = Post.likes.through.objects.filter(post_id=OuterRef("pk"), profile_id=profile.pk)
+			items = posts.filter(Exists(liked_by_profile))
 		else:
 			items = posts.none()
-			related = profile.follows if tab == "following" else profile.followed_by
-			people = related.select_related("user").order_by("username")
+			if tab in ("following", "followers"):
+				related = profile.follows if tab == "following" else profile.followed_by
+				people = related.select_related("user").order_by("username")
+
+		page, cursor = cursor_page(items, self.request.GET.get("cursor"))
 
 		context.update({
 			"tab": tab,
 			"is_own": is_own,
 			"likes_visible": likes_visible,
-			"profile_posts": items,
+			"posts": page,
+			"next_url": page_url(self.request, cursor=cursor) if cursor else None,
 			"people": people,
 			"following_count": profile.follows.count(),
 			"followers_count": profile.followed_by.count(),
