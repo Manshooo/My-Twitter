@@ -17,6 +17,10 @@ class FollowThroughInlineAdmin(admin.TabularInline):
 class UserProfileAdmin(admin.ModelAdmin):
 	model = Profile
 	inlines = [FollowThroughInlineAdmin]
+	list_display = ["username", "user", "is_verified", "likes_public"]
+	list_editable = ["is_verified"]
+	list_filter = ["is_verified"]
+	search_fields = ["username", "user__username"]
 
 class UserAdmin(admin.ModelAdmin):
 	model = CustomUser

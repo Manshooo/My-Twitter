@@ -1,28 +1,49 @@
 {% extends "azzb/azzb_base.html" %}
+{% load azzb_ui %}
 {% block title %}Редактирование профиля{% endblock title %}
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="profle-edit">
-	{% csrf_token %}
-	<div class="input-pair">
-		{{ form.username.label_tag }}
-		{{ form.username }}
-	</div>
-	<div class="input-pair">
-		{{ form.bio.label_tag }}
-		{{ form.bio }}
-	</div>
-	<div class="input-pair">
-		{{ form.email.label_tag }}
-		{{ form.email }}
-	</div>
-	<div class="input-pair">
-		{{ form.first_name.label_tag }}
-		{{ form.first_name }}
-	</div>
-	<div class="input-pair">
-		{{ form.last_name.label_tag }}
-		{{ form.last_name }}
-	</div>
-	<button id="submit" type="submit">Сохранить</button>
-</form>
+	<section class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 20px">
+		<div style="display: flex; align-items: center; gap: 8px; margin-left: -10px">
+			<a class="icon-btn" href="{% url 'profile' user.username %}" aria-label="Назад к профилю">
+				<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+			</a>
+			<h1 class="display" style="font-size: 22px">Редактирование профиля</h1>
+		</div>
+
+		<div class="who-row">
+			{% avatar user.profile %}
+			<div class="who">
+				<b>@{{ user.username }}</b>
+				<span class="hint">Адрес профиля: {{ request.get_host }}{% url 'profile' user.username %}</span>
+			</div>
+		</div>
+
+		<form method="post" class="form">
+			{% csrf_token %}
+			{% if form.non_field_errors %}<div class="alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+			{% include "azzb/includes/field.html" with field=form.username %}
+			<div class="field-row">
+				{% include "azzb/includes/field.html" with field=form.first_name %}
+				{% include "azzb/includes/field.html" with field=form.last_name %}
+			</div>
+			{% include "azzb/includes/field.html" with field=form.bio %}
+			{% include "azzb/includes/field.html" with field=form.email %}
+
+			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+				<legend class="field-label" style="padding: 0; margin-bottom: 10px">Приватность</legend>
+				<label class="check" for="{{ form.likes_public.id_for_label }}">
+					{{ form.likes_public }}
+					<span style="display: flex; flex-direction: column; gap: 2px">
+						<b style="font-size: 15px">{{ form.likes_public.label }}</b>
+						<span class="hint">{{ form.likes_public.help_text }}</span>
+					</span>
+				</label>
+			</fieldset>
+
+			<div class="form-actions">
+				<a class="btn btn-outline" href="{% url 'profile' user.username %}">Отмена</a>
+				<button class="btn" type="submit">Сохранить</button>
+			</div>
+		</form>
+	</section>
 {% endblock content %}

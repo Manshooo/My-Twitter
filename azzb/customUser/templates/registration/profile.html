@@ -1,109 +1,111 @@
 {% extends "azzb/azzb_base.html" %}
-{% block title %}{{profile.username}}{% endblock title %}
-{% block meta_description %}Крутой юзер!{% endblock meta_description %}
-{% load static %}
-{% load show_posts %}
-{% block scripts %}
-	<script src="{% static 'js/profile.js' %}"></script>
-{% endblock scripts %}
+{% load azzb_ui show_posts %}
+{% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
+{% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}Профиль @{{ profile.user.username }} на AzzB{% endif %}{% endblock meta_description %}
 {% block content %}
-	<div class="profile-page">
-		<div class="profile">
-			<div class="profile-header">
-				<div class="avatar-info">
-					<img src="{{ profile.avatar.url }}" class="profile-avatar">
-					<div class="wrapper-profile-header-info">
-						<div class="profile-username">
-							{{profile.user.username}}{% if profile.user.username != profile.username %}<div class="aka">aka</div>{{profile.username}}{% endif %}
-							{% if profile.user.is_staff %}<span class="material-symbols-outlined verified">verified</span>{% endif %}
+	{% url 'profile' profile.user.username as profile_url %}
+	<section class="card profile-card" aria-label="Профиль">
+		<div class="cover ph" aria-hidden="true"></div>
+		<div class="profile-info">
+			<div class="profile-top">
+				{% avatar profile 'xl' %}
+				<div class="profile-buttons">
+					<div class="menu-wrap">
+						<button class="icon-btn" type="button" style="border: 1.5px solid var(--border-strong)" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu" aria-label="Ещё действия с профилем" data-menu-toggle>
+							<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
+						</button>
+						<div class="menu" id="profile-menu" role="menu" hidden>
+							<button class="menu-item" type="button" role="menuitem" data-copy="{{ profile_url }}">
+								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"></use></svg>Скопировать ссылку
+							</button>
 						</div>
-						<div class="profile-names">
-							<div class="last-name">{{profile.user.last_name}}</div>
-							<div class="first-name">{{profile.user.first_name}}</div>
-						</div>
-						<div class="profile-bio">
-							{% if profile.bio %}
-								{{profile.bio}}
+					</div>
+					{% if is_own %}
+						<a class="btn btn-outline" href="{% url 'edit-profile' %}">
+							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать профиль
+						</a>
+					{% else %}
+						<form method="post" action="{{ profile_url }}">
+							{% csrf_token %}
+							{% if is_subscribed %}
+								<button class="btn btn-outline" type="submit" name="unsubscribe" aria-pressed="true" title="Отписаться">Вы подписаны</button>
 							{% else %}
-								No bio...
+								<button class="btn" type="submit" name="subscribe" aria-pressed="false">Подписаться</button>
 							{% endif %}
-						</div>
-					</div>
+						</form>
+					{% endif %}
 				</div>
-				{% if request.user != profile.user %}
-					<div class="subscribe">
-						{% if not is_subscribed %}
-							<form action="{% url 'profile' profile.user %}" method="post">
-								{% csrf_token %}
-								<button id="submit" type="submit" name="subscribe">Подписаться</button>
-							</form>
-						{% else %}
-							<form action="{% url 'profile' profile.user %}" method="post">
-								{% csrf_token %}
-								<button id="submit" type="submit" name="unsubscribe">Отписаться</button>
-							</form>
+			</div>
+
+			<div style="display: flex; flex-direction: column; gap: 2px">
+				<div class="profile-name">
+					<h1>{{ profile.username }}</h1>{% badges profile %}
+				</div>
+				<span class="muted" style="font-size: 15px">@{{ profile.user.username }}</span>
+				{% if profile.user.first_name or profile.user.last_name %}
+					<span style="font-size: 15px">{{ profile.user.first_name }} {{ profile.user.last_name }}</span>
+				{% endif %}
+			</div>
+
+			{% if profile.bio %}<p class="post-text">{{ profile.bio }}</p>{% endif %}
+
+			<div class="profile-meta">
+				<span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"></use></svg>На AzzB с {{ profile.user.date_joined|date:"E Y" }}</span>
+				{% if profile.user.last_visit or profile.user.last_login %}
+					<span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"></use></svg>В сети {% firstof profile.user.last_visit|ago:'long' profile.user.last_login|ago:'long' %}</span>
+				{% endif %}
+			</div>
+
+			<div class="profile-counts">
+				<a href="{{ profile_url }}?tab=following"><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</a>
+				<a href="{{ profile_url }}?tab=followers"><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</a>
+			</div>
+		</div>
+	</section>
+
+	<nav class="tabs" aria-label="Публикации">
+		<a class="tab" href="{{ profile_url }}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
+		<a class="tab" href="{{ profile_url }}?tab=media"{% if tab == 'media' %} aria-current="page"{% endif %}>Медиа</a>
+		{% if likes_visible %}
+			<a class="tab" href="{{ profile_url }}?tab=likes"{% if tab == 'likes' %} aria-current="page"{% endif %}>Лайки</a>
+		{% endif %}
+	</nav>
+
+	{% if people is not None %}
+		<section class="card card-pad people" aria-labelledby="people-title">
+			<h2 id="people-title" class="section-title">{% if tab == 'following' %}Подписки{% else %}Подписчики{% endif %}</h2>
+			{% for person in people %}
+				<a class="who-row nu" href="{% url 'profile' person.user.username %}" style="color: var(--text)">
+					{% avatar person 'sm' %}
+					<span class="who">
+						<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
+						<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
+					</span>
+				</a>
+			{% empty %}
+				<p class="muted">{% if tab == 'following' %}Пока ни на кого не подписан(а).{% else %}Подписчиков пока нет.{% endif %}</p>
+			{% endfor %}
+		</section>
+	{% else %}
+		<div id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
+			{% for post in profile_posts %}
+				{% show_posts %}
+			{% empty %}
+				<div class="card empty" data-feed-empty>
+					{% if tab == 'likes' and not likes_visible %}
+						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
+						<h2>Лайки скрыты</h2>
+						<p>@{{ profile.user.username }} показывает свои лайки только себе.</p>
+					{% else %}
+						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-{% if tab == 'media' %}image{% elif tab == 'likes' %}heart{% else %}edit{% endif %}"></use></svg></span>
+						<h2>{% if tab == 'media' %}Картинок пока нет{% elif tab == 'likes' %}Лайков пока нет{% else %}Постов пока нет{% endif %}</h2>
+						{% if is_own and tab == 'posts' %}
+							<p>Расскажите, что у вас нового.</p>
+							<button class="btn" type="button" style="margin-top: 6px" data-composer-open>Написать пост</button>
 						{% endif %}
-					</div>
-				{% endif %}
-			</div>
-			<div class="profile-body">
-				{% if request.user == profile.user %}
-				<div class="new-post-form">
-					{% csrf_token %}
-					<div class="wrapper-post-text">
-						<div name="new_post" id="id__post-text" role="textbox" contenteditable="true" data-placeholder="Хммм..." onfocus="showEditPost()" aria-multiline="true"></div>
-					</div>
-					<div class="wrapper-form-actions">
-						<div class="form-actions">
-							<button name="post" type="submit" id="submit">Постим?</button>
-						</div>
-					</div>
+					{% endif %}
 				</div>
-				{% endif %}
-			</div>
-			{% comment %} <hr class="hr-profile"> {% endcomment %}
+			{% endfor %}
 		</div>
-		<div id="profile-feed">
-			{% if profile_posts %}
-				{% block posts %}
-					{% for post in profile_posts %}
-						{% show_posts %}
-					{% endfor %}
-				{% endblock posts %}
-			{% else %}
-				<div class="no_post">
-					Нема...
-				</div>
-			{% endif %}
-		</div>
-	</div>
-	
+	{% endif %}
 {% endblock content %}
-{% block sidebar %}
-	<div class="profile-info">
-		<ul class="profile-statistics">
-			<li>{% if profile.user.last_login %}Последний визит: {% if not profile.user.last_visit %}{{profile.user.last_login}}{% else %}{{profile.user.last_visit}}{% endif %}{% endif %}</li>
-			<li>Дата регистрации: {{profile.user.date_joined|date:"d.m.Y"}}</li>
-		</ul>
-		{% if profile.follows != profile %}
-			<div class="following">
-				<h3>Подписан на</h3>
-				<ul class="following__profiles-list">
-					{% for following in profile.follows.all %}
-					<li><a href="{% url 'profile' following.user %}">{{following}}</a></li>
-					{% endfor %}
-				</ul>
-			</div>
-		{% endif %}
-		{% if profile.follows != profile %}
-			<div class="followed-by">
-				<h3>Папищики</h3>
-				<ul class="followed-by__profiles-list">
-					{% for following in profile.followed_by.all %}
-					<li><a href="{% url 'profile' following.user %}">{{following}}</a></li>
-					{% endfor %}
-				</ul>
-			</div>
-		{% endif %}
-	</div>
-{% endblock sidebar %}

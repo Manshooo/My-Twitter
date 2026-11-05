@@ -1,114 +1,124 @@
-<!DOCTYPE html>
-<html lang="ru">
+{% load azzb_ui %}<!DOCTYPE html>
+<html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 	<head>
-		<title>{% block title %}AzzB{% endblock title %}</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta name="description" content="{% block meta_description %}AzzB.ru - социальная сеть. Данный проект находится в стадии активной разработки, но вы уже можете присоединиться к этому сообществу!{% endblock meta_description %}">
-		{% load static %}
-		<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
-		<link rel="stylesheet" href="{% static 'css/main.css' %}">
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400..700,0..1">
-		<link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
-		<script src="{% static 'js/jquery-3.7.1/jquery-3.7.1.min.js' %}"></script>
-		<script src="{% static 'js/common.js' %}"></script>
+		<title>{% block title %}AzzB{% endblock title %} · AzzB</title>
+		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов. Проект в активной разработке, но вы уже можете присоединиться!{% endblock meta_description %}">
+		{% include "azzb/includes/head.html" %}
 		{% block metatags %}{% endblock metatags %}
-		{% block scripts %}{% endblock scripts %}
 	</head>
 	<body>
-		<header>
-			<div class="page-width">
-				<div class="header">
-					<div class="logocap">
-						<div class="site_caption"><h2>{% if request.path != '/' %}<a href="/">AzzB</a>{% else %}<p>AzzB</p>{% endif %}</h2></div>
-					</div>
-				</div>
+		{% include "azzb/includes/icons.html" %}
+		{% with url_name=request.resolver_match.url_name %}
+		<header class="topbar">
+			<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+			<div class="topbar-actions">
+				<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
+					<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
+				</button>
+				{% if user.is_authenticated %}
+					<a class="nu" href="{% url 'profile' user.username %}" aria-label="Мой профиль">{% avatar user.profile 'xs' %}</a>
+				{% else %}
+					<a class="btn btn-sm" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+				{% endif %}
 			</div>
 		</header>
-		<nav>
-			<div class="page-width">
-				<div class="underheader_menu">
-					<ul class="hot-categories">
-						<li><a href="{% url 'hot-news'%}">Горячее</a></li>
-						{% comment %} <li><a href="#">Интересное</a></li> {% endcomment %}
-						<li><a href="{% url "follows-updates" %}">Новое от подписок</a></li>
-					</ul>
-					<ul class="auth-search">
-						{% comment %} <li class="search"><a href="#">Поиск</a></li> {% endcomment %}
+
+		<div class="shell">
+			<nav class="side" aria-label="Основное меню">
+				<div class="side-logo">
+					<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+				</div>
+				<a class="nav-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'hot-news' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
+				</a>
+				{% if user.is_authenticated %}
+					<a class="nav-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
+						<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль
+					</a>
+				{% endif %}
+				<div class="menu-wrap">
+					<button class="nav-item" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu" data-menu-toggle>
+						<svg class="icon" aria-hidden="true"><use href="#i-more"></use></svg>Ещё
+					</button>
+					<div class="menu menu-left" id="more-menu" role="menu" hidden>
+						<button class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false" data-theme-toggle>
+							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-moon"></use></svg>
+							<span style="flex: 1">Тёмная тема</span>
+							<span class="switch" aria-hidden="true"></span>
+						</button>
 						{% if user.is_authenticated %}
-							<li class="new-post"><a href="{% url 'profile' user %}">Новый пост</a></li>
+							<a class="menu-item" role="menuitem" href="{% url 'edit-profile' %}">
+								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки профиля
+							</a>
+							<form method="post" action="{% url 'logout' %}">
+								{% csrf_token %}
+								<button class="menu-item" role="menuitem" type="submit">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"></use></svg>Выйти
+								</button>
+							</form>
 						{% endif %}
-						<li class="auth-account">
-							{% if user.is_authenticated%}
-								<a href="#" data-target="dropdown_menu">{{ user }}</a>
-								<ul id="account" class="dropdown-menu">
-									<li class="header-avatar"><img class="avatar" src="{{ user.profile.avatar.url }}"></li>
-									<li class="header-profile"><a href="{% url 'profile' user %}">Профиль</a></li>
-									<li class="header-settings"><a href="{% url 'edit-profile' %}">Редактировать</a></li>
-									{% comment %} <li class="logout"><a href="{% url 'logout' %}?next={{ request.path|urlencode }}">Выйти</a></li> {% endcomment %}
-									<li class="logout">
-										<form id="logout-form" method="post" action="{% url 'logout' %}?next={{ request.path|urlencode }}">
-											{% csrf_token %}
-											<button type="submit"><a>Выйти</a></button>
-										</form>
-									</li>
-								</ul>
-							{% else %}
-								<a href="#" data-target="dropdown_menu">Авторизация</a>
-								<ul id="account" class="dropdown-menu">	
-									<li class="login"><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a></li>
-									<li class="register"><a href="{% url 'signup' %}">Регистрация</a></li>
-								</ul>
-							{% endif %}
-							
-						</li>
-					</ul>
-				</div>
-			</div>
-		</nav>
-		<div class="content">
-			<div class="page-width">
-				<div class="content-wrapper">
-					<div class="content-body">
-						{% block content %}
-						{% endblock content %}
-					</div>
-					<div class="sidebar">
-						{% block sidebar %}
-						{% endblock sidebar %}
 					</div>
 				</div>
-			</div>	
+				{% if user.is_authenticated %}
+					<button class="btn btn-lg" type="button" style="margin-top: 12px" data-composer-open>
+						<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Новый пост
+					</button>
+					<a class="me-card" href="{% url 'profile' user.username %}">
+						{% avatar user.profile 'sm' %}
+						<span class="who">
+							<b class="clip1">{{ user.profile.username }}</b>
+							<span class="muted clip1" style="font-size: 13px">@{{ user.username }}</span>
+						</span>
+					</a>
+				{% else %}
+					<div class="card" style="margin-top: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+						<b style="font-size: 16px">Впервые на AzzB?</b>
+						<span class="muted" style="font-size: 14px; line-height: 1.45">Зарегистрируйтесь, чтобы писать посты, ставить лайки и подписываться.</span>
+						<a class="btn" href="{% url 'signup' %}">Зарегистрироваться</a>
+						<a class="btn btn-outline" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+					</div>
+				{% endif %}
+			</nav>
+
+			<main class="main" id="main">
+				{% block content %}{% endblock content %}
+			</main>
+
+			<aside class="rail" aria-label="Дополнительно">
+				{% block rail %}{% include "azzb/includes/rail.html" %}{% endblock rail %}
+			</aside>
 		</div>
-		<footer>
-			<div class="page-width">
-				<div class="footer-menu">
-					<div class="footer-menu__block">
-						<p>Аккаунт</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
-					</div>
-					<div class="footer-menu__block">
-						<p>Разделы</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
-					</div>
-					<div class="footer-menu__block">
-						<p>О сайте</p>
-						<ul>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-							<li><a href="#">AAA</a></li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</footer>
+
+		<nav class="tabbar" aria-label="Основное меню">
+			<a class="tab-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
+				<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
+			</a>
+			<a class="tab-item" href="{% url 'hot-news' %}"{% if url_name == 'hot-news' %} aria-current="page"{% endif %}>
+				<svg class="icon" aria-hidden="true"><use href="#i-flame"></use></svg>Горячее
+			</a>
+			{% if user.is_authenticated %}
+				<a class="tab-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль
+				</a>
+				<a class="tab-item" href="{% url 'edit-profile' %}"{% if url_name == 'edit-profile' %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки
+				</a>
+			{% else %}
+				<a class="tab-item" href="{% url 'login' %}?next={{ request.path|urlencode }}">
+					<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Войти
+				</a>
+			{% endif %}
+		</nav>
+		{% endwith %}
+
+		{% if user.is_authenticated %}
+			{% if request.resolver_match.url_name != 'edit-profile' %}
+				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
+					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+				</button>
+			{% endif %}
+			{% include "azzb/includes/composer.html" %}
+		{% endif %}
+		<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 	</body>
 </html>

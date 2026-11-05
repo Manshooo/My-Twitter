@@ -15,23 +15,27 @@ def user_profile_avatar_path(instance, filename):
 
 # Профиль создаётся сигналом в customUser/signals.py.
 
+USERNAME_MAX_LENGTH = 30
+
 @deconstructible
 class UsernameValidator(validators.RegexValidator):
-	regex = r"^[a-zA-Z.@0-9+-]+\Z"
+	# Логин попадает в адрес профиля (/users/<логин>/), поэтому только безопасные для URL символы.
+	regex = r"^[a-zA-Z0-9_.-]+\Z"
 	message = _(
-		"Введите верное имя пользователя. Доступные символы буквы a-Z, цифры 0-9, ./@/+/-."
+		"Введите верное имя пользователя. Доступны латинские буквы, цифры и символы _ . -"
 	)
 	flags = 0
 class CustomUser(AbstractUser):
 	username_validator = UsernameValidator()
 	username = models.CharField(
 		_("username"),
+		# Колонку не сужаем: у старых аккаунтов логин может быть длиннее. Лимит 30 — валидатором.
 		max_length=150,
 		unique=True,
 		help_text=_(
-			"Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
+			"До 30 символов: латинские буквы, цифры и _ . -"
 		),
-		validators=[username_validator],
+		validators=[username_validator, validators.MaxLengthValidator(USERNAME_MAX_LENGTH)],
 		error_messages={
 			"unique": _("A user with that username already exists."),
 		},
@@ -59,6 +63,9 @@ class Profile(models.Model):
 	username = models.CharField("Отображаемое имя пользователя", max_length=150, default=None, blank=True)
 	avatar = models.ImageField(default='default/default_user_avatar.jpg', upload_to=user_profile_avatar_path)
 	bio = models.CharField("О себе", max_length=250, blank=True, default="")
+	# Галочка «подтверждённый аккаунт» ставится вручную в админке; значок staff — отдельно, по user.is_staff.
+	is_verified = models.BooleanField("Подтверждённый аккаунт", default=False)
+	likes_public = models.BooleanField("Показывать лайки всем", default=False)
 	follows = models.ManyToManyField(
 		"self",
 		verbose_name="Подписчики",
@@ -71,6 +78,21 @@ class Profile(models.Model):
 	
 	def __str__(self):
 		return self.username
+
+	@property
+	def has_custom_avatar(self):
+		return bool(self.avatar) and self.avatar.name != self._meta.get_field('avatar').default
+
+	@property
+	def avatar_tone(self):
+		# Цвет буквенного аватара из 5 пар токенов --avN-bg/--avN-ink, стабильный для пользователя.
+		return (self.user_id or 0) % 5 + 1
+
+	@property
+	def initial(self):
+		name = (self.username or self.user.username or '?').strip()
+		return name[:1].upper() or '?'
+
 	def save(self,  *args, **kwargs):
 		if not self.username:
 			self.username = self.user.username

@@ -1,31 +1,48 @@
-<div class="post" data-postId="{{post.id}}">
-	{% if post.image %}
-		<div class="post_thumbs">
-			<img src="/media/{{ post.image }}" class="post_thumb">
-		</div>
-	{% endif %}
-	<div class="post_text">{{post.text}}</div>
-	<div class="post-footer">
-		<div class="post-footer-actions">
-			<div class="like">
-				{% if liked %}
-					<span class="material-symbols-outlined post__like liked" onclick="post_like(event)">favorite</span>
+{% load azzb_ui %}{% with author=post.author images=post.images.all %}
+<article class="card post" data-post-id="{{ post.id }}">
+	<div class="post-row">
+		<a class="nu" href="{% url 'profile' author.user.username %}" tabindex="-1" aria-hidden="true">{% avatar author %}</a>
+		<div class="post-body">
+			<div class="post-head">
+				<a class="post-name" href="{% url 'profile' author.user.username %}">{{ author.username }}</a>{% badges author %}
+				<span class="muted">@{{ author.user.username }}</span>
+				<span class="muted" aria-hidden="true">·</span>
+				<time class="muted" datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j E Y, H:i' }}">{{ post.created_at|ago }}</time>
+			</div>
+			{% if post.text %}<p class="post-text">{{ post.text }}</p>{% endif %}
+			{% if images %}
+				<div class="media media-{% if images|length > 4 %}4{% else %}{{ images|length }}{% endif %}">
+					{% for image in images|slice:":4" %}
+						<div class="media-cell">{% if image.file %}<img src="{{ image.file.url }}" alt="Картинка {{ forloop.counter }} без описания" loading="lazy">{% else %}<div class="ph" style="width: 100%; height: 100%"></div>{% endif %}</div>
+					{% endfor %}
+				</div>
+			{% endif %}
+			<div class="actions" role="group" aria-label="Действия с постом">
+				{% if user.is_authenticated %}
+					<button class="action{% if liked %} liked{% endif %}" type="button" aria-pressed="{% if liked %}true{% else %}false{% endif %}" data-like>
+						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
+						<span class="sr">Нравится:</span><span data-like-count>{% if post.likes_count %}{{ post.likes_count }}{% endif %}</span>
+					</button>
 				{% else %}
-					<span class="material-symbols-outlined post__like" onclick="post_like(event)">favorite</span>
+					<a class="action" href="{% url 'login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
+						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
+						<span class="sr">Нравится:</span><span>{% if post.likes_count %}{{ post.likes_count }}{% endif %}</span>
+					</a>
 				{% endif %}
-				<span class="like__count">{{post.likes_count}}</span>
 			</div>
-			{% comment %}
-			<div class="comment"></div>
-			<div class="reply"></div>
-			{% endcomment %}
-		</div>
-		<div class="post-footer-info">
-			<div class="author-delete-wrap">
-				<div class="post_author"><a href="{% url "profile" post.author.user %}">{{post.author}}</a></div>
-				{% if user == post.author.user %}<div class="post_delete" onclick="post_delete(event)">удалить</div>{% endif %}
-			</div>
-			<div class="post_date">{{post.created_at}}</div>
 		</div>
 	</div>
-</div>
+	{% if user.is_authenticated and user.pk == author.user_id %}
+		<div class="post-menu menu-wrap">
+			<button class="icon-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="post-menu-{{ post.id }}" aria-label="Действия с постом" data-menu-toggle>
+				<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
+			</button>
+			<div class="menu" id="post-menu-{{ post.id }}" role="menu" hidden>
+				<button class="menu-item danger" type="button" role="menuitem" data-delete>
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"></use></svg>Удалить
+				</button>
+			</div>
+		</div>
+	{% endif %}
+</article>
+{% endwith %}

@@ -1,44 +1,33 @@
-{% extends "azzb/azzb_base.html" %}
-
-{% block title %}Авторизация{% endblock title %}
-{% block meta_description %}Авторизация для доступа к основным функциям сайта{% endblock meta_description %}
+{% extends "registration/auth_base.html" %}
+{% block title %}Вход{% endblock title %}
+{% block meta_description %}Вход в AzzB{% endblock meta_description %}
 {% block content %}
+	<h1>Вход</h1>
 	{% if user.is_authenticated %}
-		<p>Вы уже авторизованы!</p>
+		<p class="lead">Вы уже вошли как @{{ user.username }}.</p>
+		<a class="btn" href="{% url 'index' %}">На главную</a>
 	{% else %}
 		{% if form.errors %}
-			<div class="login-error">
-				<p>Имя пользователя и/или пароль не подходят. Попробуйте ещё раз.</p>
-			</div> 
+			<div class="alert" role="alert">
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>Логин или пароль не подходят. Попробуйте ещё раз.
+			</div>
 		{% endif %}
-		{% if next %}
-			{% if user.is_authenticated %}
-				<div class="login-error">
-					<p>У вашего аккаунта нет доступа к этой странице. Чтобы продолжить, пожалуйста водите в другой аккаунт.</p>
-				</div>
-			{% endif %}
-		{% endif %}
-		<div class="login-form">
-			<form method="post">
-				{% csrf_token %}
-				{{ form.username.label_tag }}
+		<form method="post" class="form">
+			{% csrf_token %}
+			<div class="field">
+				<label for="{{ form.username.id_for_label }}">Логин</label>
 				{{ form.username }}
-				{{ form.password.label_tag }}
+			</div>
+			<div class="field">
+				<label for="{{ form.password.id_for_label }}">Пароль</label>
 				{{ form.password }}
-
-				<button type="submit" id="submit" >Войти</button>
-				<input type="hidden" name="next" value="{{ next }}">
-			</form>
-
-			<p class="forgot-password"><a href="{% url 'password_reset' %}">Забыли пароль?</a></p>
+			</div>
+			<input type="hidden" name="next" value="{{ next }}">
+			<button class="btn btn-lg btn-block" type="submit">Войти</button>
+		</form>
+		<div class="auth-links">
+			<a href="{% url 'password_reset' %}">Забыли пароль?</a>
+			<a href="{% url 'signup' %}">Зарегистрироваться</a>
 		</div>
 	{% endif %}
 {% endblock content %}
-{% comment %}
-	{% block sidebar %}
-	{% if user.is_authenticated %}
-		do smth...
-	{% else %}
-	{% endif %}
-{% endcomment %}
-

@@ -1,45 +1,30 @@
-from django.conf import settings
 from django.db.models import Count
 from django.shortcuts import render
-from django.db import transaction
-from django.views.generic.detail import DetailView
 
-from operator import attrgetter
-from itertools import chain
-
-from .models import Profile
 from post.models import Post
-#from .serializers import PostSerializer
+
+
+def _feed_posts():
+	return Post.objects.select_related("author__user").prefetch_related("images")
+
+
+def _render_feed(request, feed, posts, **extra):
+	context = {"feed": feed, "posts": posts, **extra}
+	return render(request, "azzb/feed.html", context)
+
 
 def index(request):
-	latest_posts = Post.objects.order_by("-created_at")[:10]
-	#with transaction.atomic():
-	#	most_liked_posts = Post.objects.annotate(num_likes=Count('likes')).order_by('-num_likes')
-	#	relative_posts = most_liked_posts[:10]
-	#	relative_posts = sorted(relative_posts, key=lambda x: x.created_at, reverse=True)
-	context = {"latest_posts": latest_posts}
-	return render(request, "azzb/azzb_indexPage.html", context)
+	latest_posts = _feed_posts().order_by("-created_at")[:10]
+	# Свой новый пост из composer логично показать сверху именно «Свежего».
+	return _render_feed(request, "latest", latest_posts, prepend=True)
+
 
 def follows_updates(request):
-	#try:
-	profile = request.user.profile
-	follows = profile.follows.all()
-	follows_ids = [follow.pk for follow in follows]
-	
-	follows_posts = Post.objects.filter(author__id__in=follows_ids)
-	context = {"follows_posts": follows_posts}
-	return render(request, "azzb/followed_updates.html", context)
-	#except:
-	#	follows_posts = None
-	#	return render(request, "azzb/followed_updates.html", {"follows_posts": follows_posts})
+	follows = request.user.profile.follows.all()
+	follows_posts = _feed_posts().filter(author__in=follows)
+	return _render_feed(request, "following", follows_posts)
+
 
 def hot_news(request):
-	hot_posts = Post.objects.order_by("-created_at").annotate(num_likes=Count('likes')).order_by('-num_likes')
-	context = {"posts": hot_posts}
-	return render(request, "azzb/hot_news.html", context)
-
-#class PostListAPIView(APIView):
-#	def get(self, request, id):
-#		posts = Post.objects.filter(author=id)
-#		serializer = PostSerializer(posts, many=True)
-#		return response({"data": serializer.data}, status=status.HTTP_200_OK)
+	hot_posts = _feed_posts().annotate(num_likes=Count('likes')).order_by('-num_likes', '-created_at')
+	return _render_feed(request, "hot", hot_posts)

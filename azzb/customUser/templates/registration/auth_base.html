@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 	<head>
-		<title>{% block title %}AzzB{% endblock title %}</title>
-		<meta charset="utf-8">
-		{% load static %}
-		<link rel="stylesheet" href="{% static 'css/main.css' %}" type="text/css" />
-		<link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
-		<script src="{% static 'js/common.js' %}"></script>
+		<title>{% block title %}AzzB{% endblock title %} · AzzB</title>
+		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов.{% endblock meta_description %}">
+		{% include "azzb/includes/head.html" %}
 	</head>
-	<body class="login-page">
-		<header>
-			<div class="page-width">
-				<a href="/">AzzB</a>
-			</div>
-		</header>
-		{% block content %}
-		{% endblock content %}
+	<body>
+		{% include "azzb/includes/icons.html" %}
+		<div class="auth">
+			<a class="logo" href="{% url 'index' %}"><span class="logo-mark" aria-hidden="true">a</span>AzzB</a>
+			<main class="card auth-card">
+				{% block content %}{% endblock content %}
+			</main>
+		</div>
 	</body>
 </html>

@@ -1,7 +1,7 @@
-{% extends "azzb/azzb_base.html" %}
-
+{% extends "registration/auth_base.html" %}
+{% block title %}Вы вышли{% endblock title %}
 {% block content %}
-	<p>Успешный выход.</p>
-
-	<p>Жмайте <a href="{% url 'login'%}">здесь</a>, чтобы снова войти.</p>
+	<h1>Вы вышли</h1>
+	<p class="lead">Возвращайтесь скорее.</p>
+	<a class="btn" href="{% url 'login' %}">Войти снова</a>
 {% endblock content %}

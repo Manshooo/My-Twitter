@@ -1,0 +1,1 @@
+{% if profile.has_custom_avatar %}<img class="avatar{% if size %} avatar-{{ size }}{% endif %}" src="{{ profile.avatar.url }}" alt="" loading="lazy">{% else %}<span class="avatar{% if size %} avatar-{{ size }}{% endif %} tone-{{ profile.avatar_tone }}" aria-hidden="true">{{ profile.initial }}</span>{% endif %}

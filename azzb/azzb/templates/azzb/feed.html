@@ -1,0 +1,55 @@
+{% extends "azzb/azzb_base.html" %}
+{% load azzb_ui show_posts %}
+{% block title %}{% if feed == 'hot' %}Горячее{% elif feed == 'following' %}Подписки{% else %}Главная{% endif %}{% endblock title %}
+{% block metatags %}
+	{% if feed == 'latest' %}
+		<meta name="yandex-verification" content="461141e64faf3f9b">
+		<meta name="mailru-domain" content="6mUzAjqGDGUqpJ3y">
+	{% endif %}
+{% endblock metatags %}
+{% block content %}
+	<h1 class="sr">{% if feed == 'hot' %}Горячее{% elif feed == 'following' %}Подписки{% else %}Главная{% endif %}</h1>
+	<nav class="seg" aria-label="Лента">
+		<a class="seg-item" href="{% url 'index' %}"{% if feed == 'latest' %} aria-current="page"{% endif %}>
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"></use></svg>Свежее
+		</a>
+		<a class="seg-item" href="{% url 'hot-news' %}"{% if feed == 'hot' %} aria-current="page"{% endif %}>
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flame"></use></svg>Горячее
+		</a>
+		{% if user.is_authenticated %}
+			<a class="seg-item" href="{% url 'follows-updates' %}"{% if feed == 'following' %} aria-current="page"{% endif %}>
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-people"></use></svg>Подписки
+			</a>
+		{% endif %}
+	</nav>
+
+	{% if user.is_authenticated %}
+		<div class="card composer-start">
+			{% avatar user.profile %}
+			<button class="fake-input" type="button" data-composer-open>Что нового, {{ user.username }}?</button>
+		</div>
+	{% elif feed == 'hot' %}
+		<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 18px; border-radius: 20px; background: var(--brand); color: var(--brand-ink)">
+			<p style="flex: 1 1 280px; font-size: 15px; line-height: 1.5"><b>Горячее</b>: самое обсуждаемое на AzzB прямо сейчас. Войдите, чтобы читать подписки и писать посты.</p>
+			<a class="btn" href="{% url 'login' %}?next={{ request.path|urlencode }}" style="border: 0; background: var(--brand-ink); color: var(--brand)">Войти</a>
+		</div>
+	{% endif %}
+
+	<div class="feed" id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if prepend %} data-feed-prepend{% endif %}>
+		{% for post in posts %}
+			{% show_posts %}
+		{% empty %}
+			<div class="card empty" data-feed-empty>
+				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people"></use></svg></span>
+				{% if feed == 'following' %}
+					<h2>Здесь пока тихо</h2>
+					<p>Подпишитесь на людей, и их посты появятся в этой ленте.</p>
+					<a class="btn" href="{% url 'hot-news' %}" style="margin-top: 6px">Найти, кого почитать</a>
+				{% else %}
+					<h2>Постов пока нет</h2>
+					<p>Станьте первым, кто что-нибудь напишет.</p>
+				{% endif %}
+			</div>
+		{% endfor %}
+	</div>
+{% endblock content %}

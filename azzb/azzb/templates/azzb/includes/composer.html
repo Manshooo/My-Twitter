@@ -1,0 +1,26 @@
+{% load azzb_ui %}<div class="modal" id="composer" hidden>
+	<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="composer-title">
+		<div class="dialog-head">
+			<h2 id="composer-title">Новый пост</h2>
+			<button class="icon-btn" type="button" aria-label="Закрыть" data-composer-close>
+				<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+			</button>
+		</div>
+		<form class="composer-form" action="{% url 'create_post_api' %}" method="post" data-composer-form>
+			<div class="post-row">
+				{% avatar user.profile %}
+				<div style="flex: 1; min-width: 0">
+					<label for="composer-text" class="sr">Текст поста</label>
+					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-composer-text></textarea>
+				</div>
+			</div>
+			<div class="alert" role="alert" data-composer-error hidden>
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>Пост не отправлен. Попробуйте ещё раз.
+			</div>
+			<div class="composer-foot">
+				<span class="counter" data-counter>0 / {{ post_max_length }}</span>
+				<button class="btn" type="submit" disabled>Опубликовать</button>
+			</div>
+		</form>
+	</div>
+</div>

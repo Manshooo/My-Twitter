@@ -3,7 +3,7 @@ from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 from django.core.validators import validate_email
 from django.utils.translation import gettext_lazy as _
 
-from .models import CustomUser
+from .models import USERNAME_MAX_LENGTH, CustomUser
 
 class CustomUserCreationForm(UserCreationForm):
 	email = forms.EmailField(
@@ -15,6 +15,11 @@ class CustomUserCreationForm(UserCreationForm):
 	class Meta:
 		model = CustomUser
 		fields = ('username', 'email', 'password1', 'password2')
+		labels = {'username': 'Логин'}
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['username'].widget.attrs.update({'maxlength': USERNAME_MAX_LENGTH, 'autocomplete': 'username'})
 class UpdateUserForm(forms.ModelForm):
 	class Meta:
 		model = CustomUser
@@ -47,7 +52,12 @@ class UpdateUserForm(forms.ModelForm):
 		label=("О себе"),
 		max_length=250,
 		required=False,
-		widget=forms.Textarea
+		widget=forms.Textarea(attrs={'rows': 4, 'maxlength': 250}),
+	)
+	likes_public = forms.BooleanField(
+		label="Показывать мои лайки всем",
+		help_text="Иначе вкладку «Лайки» в профиле видите только вы.",
+		required=False,
 	)
 
 	def __init__(self, *args, **kwargs):
@@ -57,6 +67,7 @@ class UpdateUserForm(forms.ModelForm):
 			if hasattr(instance, 'profile'):
 				self.fields['bio'].initial = instance.profile.bio
 				self.fields['username'].initial = instance.profile.username
+				self.fields['likes_public'].initial = instance.profile.likes_public
 
 	def save(self, commit=True):
 		user = super().save(commit=False)
@@ -66,5 +77,6 @@ class UpdateUserForm(forms.ModelForm):
 				profile = user.profile
 				profile.bio = self.cleaned_data['bio']
 				profile.username = self.cleaned_data['username']
+				profile.likes_public = self.cleaned_data['likes_public']
 				profile.save()
 		return user
