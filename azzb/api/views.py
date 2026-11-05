@@ -1,88 +1,70 @@
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import render
-from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from customUser.serializers import ProfileSerializer
 from customUser.models import Profile
 from post.serializer import PostSerializer
 
-# @login_required()
-#def create_post(request):
-#	if request.method == 'POST':
-#		user = request.user.username
-#		text = request.POST['text']
-#
-#		new_post = Post.objects.create(user=user, text=text)
-#		new_post.save()
-#	else:
-#		pass
 @api_view(['POST'])
 def create_post(request):
-	serializer = PostSerializer(data={**request.data, "author": request.user.id})
+	serializer = PostSerializer(data=request.data)
 	if serializer.is_valid():
-		new_post = serializer.save()
+		new_post = serializer.save(author=request.user.profile)
 		return render(request, "post/post.html", {"post": new_post})
-	return HttpResponse(data=serializer.errors, status=400)
+	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 def profiles_list(request):
 	"""
 	List profiles.
 	"""
-	if request.method == 'GET':
-		data = []
-		nextPage = 1
-		previousPage = 1
-		profiles = Profile.objects.all()
-		page = request.GET.get('page', 1)
-		paginator = Paginator(profiles, 10)
-		try:
-			data = paginator.page(page)
-		except PageNotAnInteger:
-			data = paginator.page(1)
-		except EmptyPage:
-			data = paginator.page(paginator.num_pages)
-		serializer = ProfileSerializer(data, context={'request': request}, many=True)
-		if data.has_next():
-			nextPage = data.next_page_number()
-		if data.has_previous():
-			previousPage = data.previous_page_number()
-		return Response({'data': serializer.data , 'count': paginator.count, 'numpages' : paginator.num_pages, 'nextlink': '/api/profiles/?page=' + str(nextPage), 'prevlink': '/api/profiles/?page=' + str(previousPage)})
+	nextPage = 1
+	previousPage = 1
+	profiles = Profile.objects.select_related('user').order_by('pk')
+	page = request.GET.get('page', 1)
+	paginator = Paginator(profiles, 10)
+	try:
+		data = paginator.page(page)
+	except PageNotAnInteger:
+		data = paginator.page(1)
+	except EmptyPage:
+		data = paginator.page(paginator.num_pages)
+	serializer = ProfileSerializer(data, context={'request': request}, many=True)
+	if data.has_next():
+		nextPage = data.next_page_number()
+	if data.has_previous():
+		previousPage = data.previous_page_number()
+	return Response({'data': serializer.data , 'count': paginator.count, 'numpages' : paginator.num_pages, 'nextlink': '/api/profiles/?page=' + str(nextPage), 'prevlink': '/api/profiles/?page=' + str(previousPage)})
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'PUT', 'PATCH'])
 def profile_details(request, pk):
 	"""
-	Retrieve, update or delete profile by id/pk.
+	Retrieve profile by id/pk; update — only your own.
 	"""
+	# DELETE убран: удаление профиля без пользователя ломало сайт для этого аккаунта
+	# (везде используется request.user.profile). Удаление аккаунта — отдельная задача (E6).
 	try:
-		profile = Profile.objects.get(pk=pk)
+		profile = Profile.objects.select_related('user').get(pk=pk)
 	except Profile.DoesNotExist:
 		return Response(status=status.HTTP_404_NOT_FOUND)
+
 	if request.method == 'GET':
 		serializer = ProfileSerializer(profile, context={'request': request})
 		return Response(serializer.data)
-	
-	elif request.method == 'PUT':
-		serializer = ProfileSerializer(profile, data=request.data,context={'request': request})
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-	elif request.method == 'DELETE':
-		profile.delete()
-		return Response(status=status.HTTP_204_NO_CONTENT)
+	if profile.user_id != request.user.id:
+		return Response(status=status.HTTP_403_FORBIDDEN)
 
-
-#class PostAPIView(APIView):
-#	def get(self, request):
-#		pass
-#	def post(self, request):
-#		serializer = PostSerializer(data={**request.data, "author": request.user.id})
-#		if serializer.is_valid():
-#			serializer.save()
-#			return JsonResponse(serializer.data, status=201)
-#		return JsonResponse(serializer.errors, status=400)
+	serializer = ProfileSerializer(
+		profile,
+		data=request.data,
+		partial=request.method == 'PATCH',
+		context={'request': request},
+	)
+	if serializer.is_valid():
+		serializer.save()
+		return Response(serializer.data)
+	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

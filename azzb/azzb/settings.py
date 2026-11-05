@@ -6,7 +6,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
-DEBUG = os.getenv('DJANGO_DEBUG', False)
+# os.getenv возвращает строку, и раньше даже DJANGO_DEBUG=False включало отладку.
+DEBUG = os.getenv('DJANGO_DEBUG', '').strip().lower() in ('1', 'true', 'yes', 'on')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
@@ -62,10 +63,14 @@ REST_FRAMEWORK = {
 	'DEFAULT_RENDERER_CLASSES': [
 		'rest_framework.renderers.JSONRenderer',
 	],
+	# BasicAuthentication убрана: она позволяла перебирать пароли через API без лимитов.
 	'DEFAULT_AUTHENTICATION_CLASSES': [
-		'rest_framework.authentication.BasicAuthentication',
 		'rest_framework.authentication.SessionAuthentication',
-	]
+	],
+	# Без этого DRF по умолчанию использует AllowAny — любой аноним мог менять и удалять профили.
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
 }
 ALLOWED_HOSTS = [
 	'localhost',
