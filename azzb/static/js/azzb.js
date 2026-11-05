@@ -1,29 +1,16 @@
 'use strict';
-// Общий JS AzzB: меню, тема, composer, картинки, лайки, удаление, тосты. Без зависимостей.
+// Общий JS AzzB: меню, тема, composer, картинки, кадрирование, тосты.
+// Запросы к серверу (лайк, удаление, публикация, подгрузка) делает htmx — см. атрибуты hx-* в шаблонах.
 
 (function () {
 	const POST_MAX = 500;
 
-	function getCookie(name) {
-		const match = document.cookie.split(';').map((c) => c.trim()).find((c) => c.startsWith(name + '='));
-		return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
-	}
-
-	async function api(url, data) {
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') || '' },
-			body: JSON.stringify(data),
-			credentials: 'same-origin',
-		});
-		return response;
-	}
-
 	// Сообщения об ошибке из ответа сервера: {"errors": [...]} или запасной текст.
-	async function errorsOf(response, fallback) {
-		if (response.status === 413) return ['Файлы слишком тяжёлые для отправки.'];
+	function errorsOf(xhr, fallback) {
+		if (!xhr || !xhr.status) return ['Нет связи с сервером. Попробуйте ещё раз.'];
+		if (xhr.status === 413) return ['Файлы слишком тяжёлые для отправки.'];
 		try {
-			const data = await response.json();
+			const data = JSON.parse(xhr.responseText);
 			if (Array.isArray(data.errors) && data.errors.length) return data.errors;
 		} catch (e) { /* не JSON */ }
 		return [fallback];
@@ -179,6 +166,7 @@
 		switchComposerMode(form, mode, text);
 		const labels = COMPOSER_TEXT[mode.kind];
 		form.querySelector('[data-composer-reply-to]').value = mode.kind === 'reply' ? mode.id : '';
+		form.querySelector('[data-composer-edit]').value = mode.kind === 'edit' ? mode.id : '';
 		form.querySelector('[data-composer-replying]').hidden = mode.kind !== 'reply';
 		form.querySelector('[data-composer-replying-name]').textContent = mode.name || '';
 		// У правки картинки не меняются — прячем всё, что про вложения.
@@ -252,9 +240,23 @@
 		page.innerHTML = html;
 		page.content.querySelectorAll('[data-post-id]').forEach((fresh) => {
 			document.querySelectorAll('[data-post-id="' + fresh.dataset.postId + '"]').forEach((card) => {
-				card.querySelector('.post-body').replaceWith(fresh.querySelector('.post-body').cloneNode(true));
+				const body = fresh.querySelector('.post-body').cloneNode(true);
+				card.querySelector('.post-body').replaceWith(body);
+				htmx.process(body);
 			});
 		});
+	}
+
+	// Вставить карточки из ответа сервера. htmx сам обрабатывает только то, что вставил сам,
+	// поэтому новые кнопки (лайк, удаление) подключаем к нему явно.
+	function insertCards(anchor, position, html) {
+		const page = document.createElement('template');
+		page.innerHTML = html;
+		const nodes = Array.from(page.content.children);
+		if (position === 'before') anchor.before(page.content);
+		else if (position === 'prepend') anchor.prepend(page.content);
+		else anchor.append(page.content);
+		nodes.forEach((node) => htmx.process(node));
 	}
 
 	function bumpReplyCount(postId, delta) {
@@ -365,26 +367,6 @@
 		showComposerError(form, null);
 	}
 
-	function sendComposer(form, mode) {
-		const textarea = form.querySelector('textarea');
-		if (mode.kind === 'edit') {
-			return api(form.dataset.editUrl, { id: mode.id, text: textarea.value });
-		}
-		const body = new FormData();
-		body.append('text', textarea.value);
-		if (mode.kind === 'reply') body.append('reply_to', mode.id);
-		filesOf(form).forEach((item) => {
-			body.append('images', item.file, item.file.name);
-			body.append('alt', item.alt || '');
-		});
-		return fetch(form.action, {
-			method: 'POST',
-			headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
-			body: body,
-			credentials: 'same-origin',
-		});
-	}
-
 	function showPublished(mode, html) {
 		if (mode.kind === 'edit') {
 			replaceCardBodies(html);
@@ -394,9 +376,9 @@
 			if (thread) {
 				const empty = thread.querySelector('[data-feed-empty]');
 				if (empty) empty.remove();
-				const more = thread.querySelector('[data-load-more]');
-				if (more) more.insertAdjacentHTML('beforebegin', html);
-				else thread.insertAdjacentHTML('beforeend', html);
+				const more = thread.querySelector('.load-more');
+				if (more) insertCards(more, 'before', html);
+				else insertCards(thread, 'append', html);
 			}
 			bumpReplyCount(mode.id, 1);
 		} else {
@@ -404,43 +386,65 @@
 			if (feed) {
 				const empty = feed.querySelector('[data-feed-empty]');
 				if (empty) empty.remove();
-				feed.insertAdjacentHTML('afterbegin', html);
+				insertCards(feed, 'prepend', html);
 			}
 		}
 	}
 
-	async function submitComposer(form) {
-		const mode = composerMode;
-		const labels = COMPOSER_TEXT[mode.kind];
-		const fallback = mode.kind === 'edit' ? 'Изменения не сохранены. Попробуйте ещё раз.' : 'Пост не отправлен. Попробуйте ещё раз.';
+	// Отправляет composer htmx (hx-post на форме). Здесь только то, чего htmx сам не знает.
+	function composerOf(event) {
+		const elt = event.detail && event.detail.elt;
+		return elt && elt.matches && elt.matches('[data-composer-form]') ? elt : null;
+	}
+
+	// Картинки живут в списке JS (их можно вставить, перетащить, убрать), поэтому
+	// в запрос их кладём сами — вместе с описаниями, в том же порядке.
+	document.addEventListener('htmx:configRequest', (event) => {
+		const form = composerOf(event);
+		if (!form) return;
 		collectAlts(form);
+		form._mode = composerMode;
+		const data = event.detail.formData;
+		data.delete('images');
+		data.delete('alt');
+		if (composerMode.kind !== 'edit') {
+			filesOf(form).forEach((item) => {
+				data.append('images', item.file, item.file.name);
+				data.append('alt', item.alt || '');
+			});
+		}
+	});
+
+	document.addEventListener('htmx:beforeRequest', (event) => {
+		closeMenus();
+		const form = composerOf(event);
+		if (!form) return;
 		form.dataset.busy = '1';
-		updateCounter(form);
+		updateCounter(form); // кнопка неактивна, пока идёт запрос
 		showComposerError(form, null);
-		const button = form.querySelector('[type="submit"]');
-		button.textContent = labels.busy;
-		try {
-			let response;
-			try {
-				response = await sendComposer(form, mode);
-			} catch (e) {
-				throw ['Нет связи с сервером. Попробуйте ещё раз.'];
-			}
-			if (!response.ok) throw await errorsOf(response, fallback);
-			showPublished(mode, await response.text());
+		form.querySelector('[type="submit"]').textContent = COMPOSER_TEXT[composerMode.kind].busy;
+	});
+
+	document.addEventListener('htmx:afterRequest', (event) => {
+		const form = composerOf(event);
+		if (!form) return;
+		const mode = form._mode || composerMode;
+		const labels = COMPOSER_TEXT[mode.kind];
+		delete form.dataset.busy;
+		form.querySelector('[type="submit"]').textContent = labels.submit;
+		if (event.detail.successful) {
+			showPublished(mode, event.detail.xhr.responseText);
 			clearTimeout(draftTimer);
 			if (mode.kind !== 'edit') writeSavedDraft(form, modeKey(mode), '');
 			resetComposer(form);
 			closeComposer();
 			toast(labels.done);
-		} catch (messages) {
-			showComposerError(form, Array.isArray(messages) ? messages : [fallback]);
-		} finally {
-			delete form.dataset.busy;
-			button.textContent = labels.submit;
-			updateCounter(form);
+		} else {
+			const fallback = mode.kind === 'edit' ? 'Изменения не сохранены. Попробуйте ещё раз.' : 'Пост не отправлен. Попробуйте ещё раз.';
+			showComposerError(form, errorsOf(event.detail.xhr, fallback));
 		}
-	}
+		updateCounter(form);
+	});
 
 	// ---------- Просмотр картинок ----------
 	const lightbox = { items: [], index: 0, opener: null };
@@ -627,42 +631,33 @@
 	}
 
 	// ---------- Посты ----------
-	async function like(btn) {
-		const post = btn.closest('[data-post-id]');
-		btn.disabled = true;
-		try {
-			const response = await api('/api/like-post/', { id: post.dataset.postId });
-			if (!response.ok) throw new Error('status ' + response.status);
-			const data = await response.json();
-			btn.classList.toggle('liked', data.liked);
-			btn.setAttribute('aria-pressed', String(data.liked));
-			btn.querySelector('[data-like-count]').textContent = data.likes_count || '';
-		} catch (e) {
-			toast('Не удалось поставить лайк');
-		} finally {
-			btn.disabled = false;
-		}
-	}
+	// Лайк, удаление и «Показать ещё» — атрибуты hx-* в шаблонах. Сервер дополняет их
+	// событиями в заголовке HX-Trigger: azzb:toast и azzb:post-deleted.
+	document.addEventListener('azzb:toast', (event) => toast(event.detail.value));
 
-	async function removePost(btn) {
-		const post = btn.closest('[data-post-id]');
-		closeMenus();
-		if (!window.confirm('Удалить пост? Это нельзя отменить.')) return;
-		try {
-			const response = await api('/api/delete-post/', { id: post.dataset.postId });
-			if (!response.ok) throw new Error('status ' + response.status);
-			// На странице самого поста после удаления смотреть не на что — уводим на главную.
-			if (post.matches('[data-main-post]')) {
-				window.location.href = '/';
-				return;
-			}
-			document.querySelectorAll('[data-post-id="' + post.dataset.postId + '"]').forEach((el) => el.remove());
-			if (post.dataset.replyOf) bumpReplyCount(post.dataset.replyOf, -1);
-			toast('Пост удалён');
-		} catch (e) {
-			toast('Не удалось удалить пост');
-		}
+	document.addEventListener('azzb:post-deleted', (event) => {
+		const { id, replyOf } = event.detail;
+		document.querySelectorAll('[data-post-id="' + id + '"]').forEach((card) => card.remove());
+		if (replyOf) bumpReplyCount(replyOf, -1);
+	});
+
+	// Ошибка запроса не из composer (у него свой блок ошибок) — короткий тост.
+	function requestFailed(event) {
+		if (composerOf(event)) return;
+		const elt = event.detail.elt;
+		toast(errorsOf(event.detail.xhr, (elt && elt.dataset.error) || 'Что-то пошло не так. Попробуйте ещё раз.')[0]);
 	}
+	document.addEventListener('htmx:responseError', requestFailed);
+	document.addEventListener('htmx:sendError', requestFailed);
+
+	// Подгруженная порция могла принести карточку, которая уже есть на странице
+	// (например, свой свежий ответ в ветке) — второй раз её не показываем.
+	document.addEventListener('htmx:load', (event) => {
+		const card = event.detail.elt;
+		if (!card.matches || !card.matches('[data-post-id]') || !card.parentElement) return;
+		const twins = card.parentElement.querySelectorAll(':scope > [data-post-id="' + card.dataset.postId + '"]');
+		if (twins.length > 1 && twins[0] !== card) card.remove();
+	});
 
 	async function copyLink(btn) {
 		closeMenus();
@@ -673,54 +668,6 @@
 		} catch (e) {
 			window.prompt('Скопируйте ссылку', url);
 		}
-	}
-
-	// ---------- «Показать ещё» и бесконечная прокрутка ----------
-	// Кнопка — обычная ссылка на следующую страницу: без JS она просто открывает её.
-	// С JS подгружаем только порцию карточек и подменяем кнопку на неё.
-	async function loadMore(link) {
-		if (link.dataset.loading) return;
-		link.dataset.loading = '1';
-		link.setAttribute('aria-busy', 'true');
-		link.textContent = 'Загрузка…';
-		try {
-			const response = await fetch(link.href, {
-				headers: { 'X-Requested-With': 'azzb-load-more' },
-				credentials: 'same-origin',
-			});
-			if (!response.ok) throw new Error('status ' + response.status);
-			const page = document.createElement('template');
-			page.innerHTML = await response.text();
-			// Свой свежий ответ мог уже попасть на страницу — не показываем его дважды.
-			page.content.querySelectorAll('[data-post-id]').forEach((card) => {
-				if (document.querySelector('[data-post-id="' + card.dataset.postId + '"]')) card.remove();
-			});
-			link.before(page.content);
-			if (loadMoreObserver) loadMoreObserver.unobserve(link);
-			link.remove();
-			observeLoadMore();
-		} catch (e) {
-			delete link.dataset.loading;
-			link.removeAttribute('aria-busy');
-			link.textContent = 'Показать ещё';
-			toast('Не удалось загрузить посты');
-		}
-	}
-
-	const loadMoreObserver = 'IntersectionObserver' in window
-		? new IntersectionObserver((entries) => {
-			entries.forEach((entry) => {
-				if (entry.isIntersecting) loadMore(entry.target);
-			});
-		}, { rootMargin: '600px 0px' })
-		: null;
-
-	function observeLoadMore() {
-		if (!loadMoreObserver) return;
-		document.querySelectorAll('[data-load-more]:not([data-observed])').forEach((link) => {
-			link.dataset.observed = '1';
-			loadMoreObserver.observe(link);
-		});
 	}
 
 	// ---------- Делегирование событий ----------
@@ -752,10 +699,7 @@
 		if (target.matches('[data-lightbox-step]')) { event.preventDefault(); stepLightbox(Number(target.dataset.lightboxStep)); return; }
 		if (target.matches('[data-crop-cancel]')) { event.preventDefault(); closeCropper(true); return; }
 		if (target.matches('[data-crop-apply]')) { event.preventDefault(); applyCrop(); return; }
-		if (target.matches('[data-like]')) { event.preventDefault(); like(target); return; }
-		if (target.matches('[data-delete]')) { event.preventDefault(); removePost(target); return; }
 		if (target.matches('[data-copy]')) { event.preventDefault(); copyLink(target); return; }
-		if (target.matches('[data-load-more]')) { event.preventDefault(); loadMore(target); return; }
 		// «Назад» возвращает туда, откуда пришли с этого же сайта (с той же позицией в ленте);
 		// если пришли по внешней ссылке — обычный переход на главную.
 		if (target.matches('[data-back]') && document.referrer.startsWith(window.location.origin + '/') && window.history.length > 1) {
@@ -863,16 +807,8 @@
 		addFiles(form, imageFiles(event.dataTransfer.files));
 	});
 
-	document.addEventListener('submit', (event) => {
-		if (event.target.matches('[data-composer-form]')) {
-			event.preventDefault();
-			submitComposer(event.target);
-		}
-	});
-
 	document.addEventListener('DOMContentLoaded', () => {
 		syncThemeToggles();
-		observeLoadMore();
 		// Недописанный пост из прошлого визита ждёт в composer.
 		const form = document.querySelector('#composer [data-composer-form]');
 		if (form) {

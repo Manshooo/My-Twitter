@@ -51,10 +51,7 @@
 					</a>
 				{% endif %}
 				{% if user.is_authenticated %}
-					<button class="action{% if liked %} liked{% endif %}" type="button" aria-pressed="{% if liked %}true{% else %}false{% endif %}" data-like>
-						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-						<span class="sr">Нравится:</span><span data-like-count>{% if likes_total %}{{ likes_total }}{% endif %}</span>
-					</button>
+					{% include "post/_like.html" %}
 				{% else %}
 					<a class="action" href="{% url 'login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
 						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
@@ -76,7 +73,9 @@
 				<button class="menu-item" type="button" role="menuitem" data-edit{% if images %} data-has-images{% endif %}>
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать
 				</button>
-				<button class="menu-item danger" type="button" role="menuitem" data-delete>
+				<button class="menu-item danger" type="button" role="menuitem"
+					hx-post="{% url 'post-delete' post.id %}" hx-swap="none" hx-confirm="Удалить пост? Это нельзя отменить."{% if variant == "main" %} hx-vals='{"main": "1"}'{% endif %}
+					data-error="Не удалось удалить пост">
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"></use></svg>Удалить
 				</button>
 			</div>

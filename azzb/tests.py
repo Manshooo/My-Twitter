@@ -36,12 +36,12 @@ class FeedPagesTests(TestCase):
 		self.client.force_login(self.alice)
 		response = self.client.get('/')
 		self.assertContains(response, 'id="composer"')
-		self.assertContains(response, 'data-delete')
+		self.assertContains(response, '/delete/"')
 		self.assertContains(response, 'data-feed-prepend')
 
 	def test_other_users_post_has_no_delete_menu(self):
 		self.client.force_login(make_user('bob'))
-		self.assertNotContains(self.client.get('/'), 'data-delete')
+		self.assertNotContains(self.client.get('/'), '/delete/"')
 
 	def test_following_feed_empty_state(self):
 		self.client.force_login(make_user('bob'))

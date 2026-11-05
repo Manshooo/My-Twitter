@@ -201,7 +201,7 @@ class RepliesTests(TestCase):
 		self.assertContains(page, 'ответ №00')
 		self.assertNotContains(page, f'ответ №{PAGE_SIZE:02d}')
 		next_url = page.context['next_url']
-		more = self.client.get(next_url, headers={'X-Requested-With': 'azzb-load-more'})
+		more = self.client.get(next_url, headers={'HX-Request': 'true'})
 		self.assertContains(more, f'ответ №{PAGE_SIZE + 2:02d}')
 		self.assertNotContains(more, 'ответ №00')
 
@@ -304,3 +304,118 @@ class EditPostTests(TestCase):
 		self.assertContains(self.client.get('/'), 'role="menuitem" data-edit')
 		self.client.force_login(self.bob)
 		self.assertNotContains(self.client.get('/'), 'role="menuitem" data-edit')
+
+
+HTMX = {'HX-Request': 'true'}
+
+
+class HtmxActionsTests(TestCase):
+	"""Действия на страницах через htmx: лайк, удаление, composer, подгрузка лент."""
+
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.post = Post.objects.create(author=self.alice.profile, text='Пост Алисы')
+
+	def test_like_returns_new_button(self):
+		self.client.force_login(self.bob)
+		url = f'/p/{self.post.pk}/like/'
+		response = self.client.post(url, headers=HTMX)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'aria-pressed="true"')
+		self.assertContains(response, 'data-like-count>1<')
+		self.assertContains(response, f'hx-post="{url}"')
+		response = self.client.post(url, headers=HTMX)
+		self.assertContains(response, 'aria-pressed="false"')
+		self.assertEqual(self.post.likes.count(), 0)
+
+	def test_like_needs_login_and_post(self):
+		url = f'/p/{self.post.pk}/like/'
+		response = self.client.post(url, headers=HTMX)
+		self.assertEqual(response.status_code, 401)
+		self.assertIn('errors', response.json())
+		self.assertEqual(self.client.post(url).status_code, 302)  # без htmx — на страницу входа
+		self.client.force_login(self.bob)
+		self.assertEqual(self.client.get(url).status_code, 405)
+
+	def test_cannot_like_hidden_post(self):
+		self.alice.is_active = False
+		self.alice.save()
+		self.client.force_login(self.bob)
+		self.assertEqual(self.client.post(f'/p/{self.post.pk}/like/', headers=HTMX).status_code, 404)
+
+	def test_delete_triggers_event_with_parent(self):
+		reply = Post.objects.create(author=self.bob.profile, text='ответ', reply_to=self.post, is_reply=True)
+		self.client.force_login(self.bob)
+		response = self.client.post(f'/p/{reply.pk}/delete/', headers=HTMX)
+		self.assertEqual(response.status_code, 200)
+		events = json.loads(response['HX-Trigger'])
+		self.assertEqual(list(events), ['azzb:toast', 'azzb:post-deleted'])  # тост до удаления карточки
+		self.assertEqual(events['azzb:post-deleted'], {'id': str(reply.pk), 'replyOf': str(self.post.pk)})
+		self.assertEqual(events['azzb:toast'], 'Пост удалён')
+		self.assertFalse(Post.objects.filter(pk=reply.pk).exists())
+
+	def test_delete_main_post_redirects_home(self):
+		self.client.force_login(self.alice)
+		response = self.client.post(f'/p/{self.post.pk}/delete/', {'main': '1'}, headers=HTMX)
+		self.assertEqual(response['HX-Redirect'], '/')
+
+	def test_only_author_deletes(self):
+		self.client.force_login(self.bob)
+		self.assertEqual(self.client.post(f'/p/{self.post.pk}/delete/', headers=HTMX).status_code, 403)
+		self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
+
+	@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+	def test_compose_new_post_with_images(self):
+		self.client.force_login(self.bob)
+		response = self.client.post('/compose/', {
+			'text': 'Через htmx', 'images': [make_upload()], 'alt': ['Описание'], 'reply_to': '', 'edit': '',
+		}, headers=HTMX)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Через htmx')
+		self.assertContains(response, 'alt="Описание"')
+
+	def test_compose_reply_and_errors(self):
+		self.client.force_login(self.bob)
+		response = self.client.post('/compose/', {'text': 'Ответ', 'reply_to': str(self.post.pk)}, headers=HTMX)
+		self.assertContains(response, 'В ответ')
+		self.assertTrue(Post.objects.get(text='Ответ').is_reply)
+		response = self.client.post('/compose/', {'text': '  '}, headers=HTMX)
+		self.assertEqual(response.status_code, 400)
+		self.assertIn('errors', response.json())
+		response = self.client.post('/compose/', {'text': 'x', 'reply_to': '00000000-0000-0000-0000-000000000000'}, headers=HTMX)
+		self.assertEqual(response.status_code, 404)
+
+	def test_compose_edit_own_only(self):
+		self.client.force_login(self.bob)
+		response = self.client.post('/compose/', {'text': 'Взлом', 'edit': str(self.post.pk)}, headers=HTMX)
+		self.assertEqual(response.status_code, 403)
+		self.client.force_login(self.alice)
+		response = self.client.post('/compose/', {'text': 'Исправлено', 'edit': str(self.post.pk)}, headers=HTMX)
+		self.assertContains(response, 'Исправлено')
+		self.assertContains(response, '· изменено')
+		self.assertEqual(self.client.post('/compose/', {'text': 'x', 'edit': 'мусор'}, headers=HTMX).status_code, 400)
+
+	def test_compose_expired_session_is_401_not_login_page(self):
+		response = self.client.post('/compose/', {'text': 'x'}, headers=HTMX)
+		self.assertEqual(response.status_code, 401)
+		self.assertFalse(Post.objects.filter(text='x').exists())
+
+	def test_feed_page_vs_htmx_portion(self):
+		from .pagination import PAGE_SIZE
+		for i in range(PAGE_SIZE + 1):
+			Post.objects.create(author=self.alice.profile, text=f'пост {i}')
+		page = self.client.get('/')
+		self.assertContains(page, '<html')
+		self.assertIn('HX-Request', page['Vary'])
+		self.assertContains(page, 'hx-trigger="click, revealed"')
+		portion = self.client.get(page.context['next_url'], headers=HTMX)
+		self.assertNotContains(portion, '<html')
+		self.assertContains(portion, 'data-post-id')
+
+	def test_pages_load_htmx_and_send_csrf_header(self):
+		self.client.force_login(self.bob)
+		page = self.client.get('/')
+		self.assertContains(page, 'vendor/htmx-2.0.4.min.js')
+		self.assertContains(page, '<body hx-headers=')
+		self.assertContains(page, '"X-CSRFToken": "')

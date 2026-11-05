@@ -6,12 +6,15 @@ from django.conf import settings
 
 from .views import index, follows_updates, hot_news
 from customUser.views import UserProfileDetailView, ChangeProfileView
-from post.views import post_detail
+from post.views import compose, delete_post, like_post, post_detail
 
 urlpatterns = [
 	path('', index, name='index'),
 	path("hot/", hot_news, name="hot-news"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
+	path('p/<uuid:pk>/like/', like_post, name='post-like'),
+	path('p/<uuid:pk>/delete/', delete_post, name='post-delete'),
+	path('compose/', compose, name='compose'),
 	path('admin/', admin.site.urls),
 	path('auth/', include('customUser.urls')),
 	path('auth/', include('django.contrib.auth.urls')),

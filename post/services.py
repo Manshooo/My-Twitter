@@ -1,11 +1,13 @@
-"""Создание постов и ответов. Одна точка для composer и формы ответа."""
+"""Создание, правка постов и лайки. Одна точка и для страниц (HTMX), и для API."""
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .media import process_post_image
 from django.utils import timezone
 
-from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Post, PostRevision
+from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision
 from .serializer import POST_MAX_LENGTH
 
 
@@ -81,3 +83,27 @@ def edit_post(post, text):
 		current.save(update_fields=['text', 'edited_at', 'updated'])
 	post.text, post.edited_at = current.text, current.edited_at
 	return True
+
+
+def toggle_like(post, profile):
+	"""Поставить или снять лайк. Возвращает (лайк стоит?, сколько лайков теперь)."""
+	deleted, _ = Like.objects.filter(post=post, profile=profile).delete()
+	if not deleted:
+		# Двойной клик или два запроса разом: второй не должен упасть на уникальном индексе.
+		Like.objects.get_or_create(post=post, profile=profile)
+	return not deleted, Like.objects.filter(post=post).count()
+
+
+def find_reply_target(user, raw_id):
+	"""Пост, на который отвечают, по id из формы. None — это не ответ.
+	ValidationError с code="invalid" (мусор вместо id) или "not_found" (поста нет или он не виден)."""
+	if not raw_id:
+		return None
+	try:
+		post_id = uuid.UUID(str(raw_id))
+	except ValueError:
+		raise ValidationError('Пост, на который вы отвечаете, не найден.', code='invalid')
+	post = Post.objects.visible_to(user).filter(pk=post_id).first()
+	if post is None:
+		raise ValidationError('Пост, на который вы отвечаете, удалён или недоступен.', code='not_found')
+	return post

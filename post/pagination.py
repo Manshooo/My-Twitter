@@ -17,7 +17,8 @@ PAGE_TEMPLATE = "azzb/includes/post_page.html"
 
 
 def is_load_more(request):
-	return request.headers.get("X-Requested-With") == "azzb-load-more"
+	"""«Показать ещё» и бесконечная прокрутка ходят через htmx: ему нужна только порция карточек."""
+	return request.headers.get("HX-Request") == "true"
 
 
 def page_url(request, **params):

@@ -6,7 +6,8 @@
 		{% include "azzb/includes/head.html" %}
 		{% block metatags %}{% endblock metatags %}
 	</head>
-	<body>
+	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 		{% include "azzb/includes/icons.html" %}
 		{% with url_name=request.resolver_match.url_name %}
 		<header class="topbar">

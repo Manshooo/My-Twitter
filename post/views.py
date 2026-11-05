@@ -1,56 +1,98 @@
-from django.contrib.auth import get_user_model
-from django.shortcuts import HttpResponse, get_object_or_404, render
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-
-import json
 import uuid
 
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
 
 from .models import Post
-from .services import edit_post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
+from .services import edit_post, find_reply_target, publish_post, toggle_like
 
-User = get_user_model()
 
-def _post_from_request(request):
-	"""Пост по id из тела запроса. Без id или с невалидным UUID — 400, а не 500."""
+def render_cards(request, posts):
+	"""Карточки постов тем же шаблоном, что и в ленте (с лайками, ответами и прочими аннотациями)."""
+	pks = [post.pk for post in posts]
+	fresh = {post.pk: post for post in Post.objects.for_feed(request.user).filter(pk__in=pks)}
+	return render(request, PAGE_TEMPLATE, {"posts": [fresh[pk] for pk in pks if pk in fresh]})
+
+
+def visible_post(request, pk):
+	"""Пост, который пользователь видит, — иначе 404. Лайкнуть, ответить или удалить можно только такой."""
+	return get_object_or_404(Post.objects.visible_to(request.user), pk=pk)
+
+
+# ---------- Страницы и действия на них (HTMX) ----------
+
+@require_POST
+@htmx_login_required
+def like_post(request, pk):
+	"""Лайк или снятие лайка. htmx заменяет кнопку на ту, что вернулась отсюда."""
+	post = visible_post(request, pk)
+	liked, total = toggle_like(post, request.user.profile)
+	if not is_htmx(request):
+		return redirect('post', pk=post.pk)
+	return render(request, 'post/_like.html', {'post': post, 'liked': liked, 'likes_total': total})
+
+
+@require_POST
+@htmx_login_required
+def delete_post(request, pk):
+	"""Удаление своего поста. Со страницы самого поста уводим на главную (HX-Redirect),
+	в ленте — событие azzb:post-deleted: azzb.js убирает карточки и уменьшает счётчик ответов."""
+	post = visible_post(request, pk)
+	if post.author_id != request.user.id:
+		return htmx_errors('Удалять можно только свои посты.', status=403)
+	reply_of = post.reply_to_id
+	post.delete()
+	if not is_htmx(request):
+		return redirect('index')
+	response = HttpResponse()
+	if request.POST.get('main'):
+		response['HX-Redirect'] = reverse('index')
+		return response
+	# Порядок важен: htmx вызывает события по очереди на кнопке «Удалить», а azzb:post-deleted
+	# убирает карточку вместе с ней — событие после него до страницы уже не дойдёт.
+	return trigger(response, {
+		'azzb:toast': 'Пост удалён',
+		'azzb:post-deleted': {'id': str(pk), 'replyOf': str(reply_of) if reply_of else ''},
+	})
+
+
+@require_POST
+@htmx_login_required
+def compose(request):
+	"""Всё, что отправляет composer: новый пост, ответ (reply_to) или правка своего поста (edit).
+	Отдаёт карточку; куда её вставить, решает azzb.js — он знает, что сейчас открыто на странице."""
+	data = request.POST
 	try:
-		post_id = uuid.UUID(str(request.data['id']))
-	except (KeyError, TypeError, ValueError, AttributeError):
-		return None
-	# Лайкнуть или удалить можно только пост, который пользователю вообще виден.
-	return get_object_or_404(Post.objects.visible_to(request.user), pk=post_id)
+		if data.get('edit'):
+			try:
+				post = visible_post(request, uuid.UUID(data['edit']))
+			except ValueError:
+				return htmx_errors('Пост не найден.')
+			if post.author_id != request.user.id:
+				return htmx_errors('Редактировать можно только свои посты.', status=403)
+			edit_post(post, data.get('text', ''))
+		else:
+			post = publish_post(
+				request.user.profile,
+				data.get('text', ''),
+				request.FILES.getlist('images'),
+				data.getlist('alt'),
+				reply_to=find_reply_target(request.user, data.get('reply_to')),
+			)
+	except ValidationError as error:
+		return htmx_errors(error.messages, status=404 if getattr(error, 'code', None) == 'not_found' else 400)
+	return render_cards(request, [post])
 
-@api_view(['POST'])
-def like(request):
-	post = _post_from_request(request)
-	if post is None:
-		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
-	if post.likes.filter(pk=request.user.profile.id).exists():
-		post.likes.remove(request.user.profile.id)
-		liked = False
-	else:
-		post.likes.add(request.user.profile.id)
-		liked = True
-	likes_count = post.likes.count()
 
-	context = {"likes_count": likes_count, "liked": liked,}
-
-	return HttpResponse(json.dumps(context), content_type='application/json')
-
-@api_view(['POST'])
-def delete(request):
-	post = _post_from_request(request)
-	if post is None:
-		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
-	if request.user.id == post.author.user.id:
-		post.delete()
-		return Response(status=status.HTTP_200_OK)
-	else:
-		return Response(status=status.HTTP_403_FORBIDDEN)
 THREAD_DEPTH = 20
 
 
@@ -73,23 +115,6 @@ def thread_ancestors(post, user):
 	return ancestors, gap
 
 
-@api_view(['POST'])
-def edit(request):
-	"""Новый текст своего поста: {"id": ..., "text": ...}. Отдаёт обновлённую карточку."""
-	post = _post_from_request(request)
-	if post is None:
-		return Response({'errors': ['Нужен id поста.']}, status=status.HTTP_400_BAD_REQUEST)
-	if post.author_id != request.user.id:
-		return Response({'errors': ['Редактировать можно только свои посты.']}, status=status.HTTP_403_FORBIDDEN)
-	text = request.data.get('text')
-	try:
-		edit_post(post, text if isinstance(text, str) else '')
-	except ValidationError as error:
-		return Response({'errors': error.messages}, status=status.HTTP_400_BAD_REQUEST)
-	fresh = Post.objects.for_feed(request.user).get(pk=post.pk)
-	return render(request, PAGE_TEMPLATE, {"posts": [fresh]})
-
-
 def post_detail(request, pk):
 	"""Страница одного поста /p/<uuid>/: ветка выше, сам пост и ответы на него по времени.
 	Открыта и гостям: ссылкой на пост делятся."""
@@ -108,3 +133,50 @@ def post_detail(request, pk):
 		"replies": replies,
 		"next_url": next_url,
 	})
+
+
+# ---------- JSON API (для будущего мобильного клиента, A1) ----------
+
+def _post_from_request(request):
+	"""Пост по id из тела запроса. Без id или с невалидным UUID — None (400), а не 500."""
+	try:
+		post_id = uuid.UUID(str(request.data['id']))
+	except (KeyError, TypeError, ValueError, AttributeError):
+		return None
+	return visible_post(request, post_id)
+
+
+@api_view(['POST'])
+def like(request):
+	post = _post_from_request(request)
+	if post is None:
+		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
+	liked, total = toggle_like(post, request.user.profile)
+	return Response({"likes_count": total, "liked": liked})
+
+
+@api_view(['POST'])
+def delete(request):
+	post = _post_from_request(request)
+	if post is None:
+		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
+	if post.author_id != request.user.id:
+		return Response(status=status.HTTP_403_FORBIDDEN)
+	post.delete()
+	return Response(status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def edit(request):
+	"""Новый текст своего поста: {"id": ..., "text": ...}. Отдаёт обновлённую карточку."""
+	post = _post_from_request(request)
+	if post is None:
+		return Response({'errors': ['Нужен id поста.']}, status=status.HTTP_400_BAD_REQUEST)
+	if post.author_id != request.user.id:
+		return Response({'errors': ['Редактировать можно только свои посты.']}, status=status.HTTP_403_FORBIDDEN)
+	text = request.data.get('text')
+	try:
+		edit_post(post, text if isinstance(text, str) else '')
+	except ValidationError as error:
+		return Response({'errors': error.messages}, status=status.HTTP_400_BAD_REQUEST)
+	return render_cards(request, [post])

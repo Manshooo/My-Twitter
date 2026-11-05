@@ -40,6 +40,7 @@ MIDDLEWARE = [
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
 	'customUser.middleware.SetLastVisitMiddleware',
+	'azzb.htmx.HtmxVaryMiddleware',
 ]
 
 # Debug toolbar нужен только при разработке: на проде пакет можно даже не ставить.

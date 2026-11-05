@@ -1,4 +1,8 @@
 {% load show_posts %}{% for post in posts %}{% show_posts %}{% endfor %}
 {% if next_url %}
-	<a class="btn btn-outline" href="{{ next_url }}" style="align-self: center" data-load-more>Показать ещё</a>
+	{# Без JS — обычная ссылка на следующую страницу. С htmx — подгрузка порции карточек на место кнопки:
+	   по клику или сама, когда кнопка доезжает до экрана (бесконечная прокрутка). #}
+	<a class="btn btn-outline load-more" href="{{ next_url }}" style="align-self: center"
+		hx-get="{{ next_url }}" hx-trigger="click, revealed" hx-swap="outerHTML" hx-disabled-elt="this"
+		data-error="Не удалось загрузить посты">Показать ещё</a>
 {% endif %}
