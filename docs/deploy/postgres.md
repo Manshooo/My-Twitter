@@ -2,9 +2,9 @@
 
 Сайт работает **только на PostgreSQL**: без переменной `POSTGRES_DB` он не запустится. Поэтому выкладка новой версии и переезд базы — одна операция. Пока она не сделана, на сервере остаётся старый код.
 
-Старая база `azzb/db.sqlite3` после этого доступна только через отдельные настройки `azzb.settings_sqlite`: ими делается дамп, и ими же можно временно запустить сайт, если переезд придётся откатить.
+Старая база `db.sqlite3` после этого доступна только через отдельные настройки `azzb.settings_sqlite`: ими делается дамп, и ими же можно временно запустить сайт, если переезд придётся откатить.
 
-Команды рассчитаны на Debian 12 и запуск из каталога `azzb/` (где лежит `manage.py`) в виртуальном окружении проекта. Пути и имя сервиса (`azzb`) замените на свои.
+Команды рассчитаны на Debian 12 и запуск из корня проекта (где лежит `manage.py`) в виртуальном окружении проекта. Пути и имя сервиса (`azzb`) замените на свои.
 
 ## 0. Заранее: установить PostgreSQL и создать базу
 
@@ -50,7 +50,7 @@ python manage.py dumpdata --settings=azzb.settings_sqlite --natural-foreign \
 
 ## 4. Создать схему в PostgreSQL и загрузить данные
 
-Пропишите в `azzb/.env` переменные из `.env.example`: `POSTGRES_DB=azzb`, `POSTGRES_USER=azzb`, `POSTGRES_PASSWORD=…`, `POSTGRES_HOST=localhost`. Затем:
+Пропишите в `.env` переменные из `.env.example`: `POSTGRES_DB=azzb`, `POSTGRES_USER=azzb`, `POSTGRES_PASSWORD=…`, `POSTGRES_HOST=localhost`. Затем:
 
 ```bash
 python manage.py migrate
@@ -80,7 +80,7 @@ python manage.py shell --settings=azzb.settings_sqlite -c "from customUser.model
 
 ## После переезда
 
-- Удалите `azzb/azzb/settings_sqlite.py` и `db.sqlite3`, когда убедитесь, что всё работает (копию лучше сохранить где-нибудь ещё).
+- Удалите `azzb/settings_sqlite.py` и `db.sqlite3`, когда убедитесь, что всё работает (копию лучше сохранить где-нибудь ещё).
 - Ежедневный дамп с хранением 14 дней. Добавьте в `crontab -e` пользователя `postgres`:
 
 ```cron

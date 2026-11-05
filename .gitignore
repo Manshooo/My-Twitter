@@ -301,7 +301,7 @@ node_modules/
 *.dsw
 *.dsp
 
-# Visual Studio 6 technical files 
+# Visual Studio 6 technical files
 *.ncb
 *.aps
 
@@ -397,12 +397,22 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-azzb/media/
+/media/
 *.sqlite3
 /Server/
-azzb/*/deploy_settings.py
+/*/deploy_settings.py
 .env
 # Локальные виртуальные окружения и утилиты — не для репозитория
 venv/
 .venv/
-azzb/sqlite3.exe
+/sqlite3.exe
+access.txt
+# Собранная статика (collectstatic). Исходники стилей лежат в azzb/static/ и в репозитории.
+/static/
+SERVER_CHEATSHEET.md
+# Только на сервере: конфиг uWSGI
+/azzb.ini
+# Настройки IDE и материалы, которым не место на сервере
+.idea/
+.vscode/
+/ИП_ШК/

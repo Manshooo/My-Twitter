@@ -102,7 +102,7 @@ WSGI_APPLICATION = 'azzb.wsgi.application'
 # (см. .env.example). Для разового дампа старой SQLite-базы есть azzb/settings_sqlite.py.
 if not os.getenv('POSTGRES_DB'):
 	raise ImproperlyConfigured(
-		'Не задан POSTGRES_DB. Пропишите POSTGRES_* в azzb/.env (образец — azzb/.env.example).'
+		'Не задан POSTGRES_DB. Пропишите POSTGRES_* в .env (образец — .env.example).'
 	)
 
 DATABASES = {
