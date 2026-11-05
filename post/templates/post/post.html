@@ -8,6 +8,7 @@
 				<span class="muted">@{{ author.user.username }}</span>
 				<span class="muted" aria-hidden="true">·</span>
 				<a class="muted" href="{% url 'post' post.id %}"><time datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j E Y, H:i' }}">{{ post.created_at|ago }}</time></a>
+				{% if post.edited_at %}<span class="muted" title="Изменено {{ post.edited_at|date:'j E Y, H:i' }}">· изменено</span>{% endif %}
 			</div>
 			{% if post.is_reply %}
 				<p class="reply-to muted">
@@ -72,6 +73,9 @@
 				<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
 			</button>
 			<div class="menu" id="post-menu-{{ post.id }}" role="menu" hidden>
+				<button class="menu-item" type="button" role="menuitem" data-edit{% if images %} data-has-images{% endif %}>
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать
+				</button>
 				<button class="menu-item danger" type="button" role="menuitem" data-delete>
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"></use></svg>Удалить
 				</button>

@@ -238,3 +238,69 @@ class RepliesTests(TestCase):
 		# сессия, пользователь, профиль, посты, картинки, «Кого почитать» — сколько бы ни было ответов.
 		with self.assertNumQueries(6):
 			self.client.get('/')
+
+
+class EditPostTests(TestCase):
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.post = Post.objects.create(author=self.alice.profile, text='Перавя версия')
+
+	def edit(self, user, text, post=None):
+		self.client.force_login(user)
+		payload = {'id': str((post or self.post).pk), 'text': text}
+		return self.client.post('/api/edit-post/', json.dumps(payload), content_type='application/json')
+
+	def test_author_edits_and_old_text_is_kept(self):
+		response = self.edit(self.alice, 'Первая версия')
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Первая версия')
+		self.assertContains(response, '· изменено')
+		self.post.refresh_from_db()
+		self.assertEqual(self.post.text, 'Первая версия')
+		self.assertIsNotNone(self.post.edited_at)
+		self.edit(self.alice, 'Третья версия')
+		history = list(self.post.revisions.order_by('replaced_at').values_list('text', flat=True))
+		self.assertEqual(history, ['Перавя версия', 'Первая версия'])
+		first, second = self.post.revisions.order_by('replaced_at')
+		self.assertEqual(first.valid_from, self.post.created_at)
+		# Вторая версия действовала с момента первой правки.
+		self.assertGreater(second.valid_from, first.valid_from)
+
+	def test_same_text_is_not_a_revision(self):
+		self.edit(self.alice, '  Перавя версия  ')
+		self.post.refresh_from_db()
+		self.assertIsNone(self.post.edited_at)
+		self.assertFalse(self.post.revisions.exists())
+
+	def test_only_author_can_edit(self):
+		response = self.edit(self.bob, 'Взлом')
+		self.assertEqual(response.status_code, 403)
+		self.post.refresh_from_db()
+		self.assertEqual(self.post.text, 'Перавя версия')
+		self.client.logout()
+		response = self.client.post('/api/edit-post/', json.dumps({'id': str(self.post.pk), 'text': 'x'}), content_type='application/json')
+		self.assertNotEqual(response.status_code, 200)
+
+	def test_limits(self):
+		self.assertEqual(self.edit(self.alice, '').status_code, 400)
+		self.assertEqual(self.edit(self.alice, 'x' * 501).status_code, 400)
+		self.assertEqual(self.edit(self.alice, None).status_code, 400)
+		self.post.refresh_from_db()
+		self.assertEqual(self.post.text, 'Перавя версия')
+
+	@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+	def test_post_with_images_can_lose_its_text(self):
+		self.client.force_login(self.alice)
+		self.client.post('/api/new-post/', {'text': 'С картинкой', 'images': [make_upload()]})
+		with_image = Post.objects.get(text='С картинкой')
+		self.assertEqual(self.edit(self.alice, '', post=with_image).status_code, 200)
+		with_image.refresh_from_db()
+		self.assertEqual(with_image.text, '')
+		self.assertEqual(with_image.images.count(), 1)
+
+	def test_edit_menu_only_for_author(self):
+		self.client.force_login(self.alice)
+		self.assertContains(self.client.get('/'), 'role="menuitem" data-edit')
+		self.client.force_login(self.bob)
+		self.assertNotContains(self.client.get('/'), 'role="menuitem" data-edit')

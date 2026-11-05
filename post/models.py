@@ -59,6 +59,8 @@ class Post(models.Model):
 		'self', verbose_name="Ответ на", null=True, blank=True, on_delete=models.SET_NULL, related_name='replies',
 	)
 	is_reply = models.BooleanField("Это ответ", default=False)
+	# Когда автор последний раз менял текст. updated не годится: он меняется при любом save().
+	edited_at = models.DateTimeField("Изменён", null=True, blank=True)
 
 	objects = PostQuerySet.as_manager()
 	def get_likes(self):
@@ -76,6 +78,24 @@ class Post(models.Model):
 			# Ветка: ответы на пост по времени.
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
 		]
+
+class PostRevision(models.Model):
+	"""Прежняя версия текста поста. Пишется при каждом редактировании; видна в админке —
+	модераторам важно, что было в посте до правки (например, после жалобы)."""
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='revisions', verbose_name='Пост')
+	text = models.TextField("Текст")
+	# С какого момента этот текст был в посте и когда его заменили.
+	valid_from = models.DateTimeField("Действовал с")
+	replaced_at = models.DateTimeField("Заменён", auto_now_add=True)
+
+	class Meta:
+		ordering = ['-replaced_at']
+		verbose_name = 'Прежняя версия'
+		verbose_name_plural = 'Прежние версии'
+
+	def __str__(self):
+		return f'{self.post_id} до {self.replaced_at:%d.%m.%Y %H:%M}'
+
 
 class Like(models.Model):
 	"""Лайк с временем: нужен для «Горячего» с учётом свежести и для рекомендаций.

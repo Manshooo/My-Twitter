@@ -7,7 +7,7 @@
 			</button>
 		</div>
 		<form class="composer-form" id="composer-form" action="{% url 'create_post_api' %}" method="post" enctype="multipart/form-data"
-			data-composer-form data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
+			data-composer-form data-edit-url="{% url 'edit_post_api' %}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
 			<input type="hidden" name="reply_to" value="" data-composer-reply-to>
 			<p class="reply-to muted" data-composer-replying hidden>В ответ <b data-composer-replying-name></b></p>
 			<div class="post-row">
@@ -28,6 +28,7 @@
 					<input class="attachment-alt" type="text" maxlength="{{ alt_max_length }}" placeholder="Описание (alt)" data-attachment-alt>
 				</li>
 			</template>
+			<p class="hint" data-composer-edit-note hidden>Картинки в посте останутся как есть: изменить можно только текст.</p>
 			<div class="alert" role="alert" data-composer-error hidden>
 				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg><span data-composer-error-text>Пост не отправлен. Попробуйте ещё раз.</span>
 			</div>

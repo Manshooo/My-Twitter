@@ -100,52 +100,88 @@
 		return attachments.get(form);
 	}
 
-	// Composer один на страницу, а писать можно новый пост или ответ на любой пост.
-	// Черновик у каждой цели свой: начатый пост не уедет ответом и наоборот.
-	// Ключ: '' — новый пост, иначе id поста, на который отвечаем.
+	// Composer один на страницу, а пишут в нём новый пост, ответ на любой пост или правку своего.
+	// Режим: {kind: 'new'} | {kind: 'reply', id, name} | {kind: 'edit', id, hasImages}.
+	// Черновик у каждого режима свой: начатый пост не уедет ответом и наоборот.
+	const COMPOSER_TEXT = {
+		new: { title: 'Новый пост', submit: 'Опубликовать', busy: 'Публикуем…', done: 'Пост опубликован' },
+		reply: { title: 'Ответ', submit: 'Ответить', busy: 'Отправляем…', done: 'Ответ опубликован' },
+		edit: { title: 'Редактирование', submit: 'Сохранить', busy: 'Сохраняем…', done: 'Изменения сохранены' },
+	};
 	const drafts = new Map();
-	let composerTarget = '';
+	let composerMode = { kind: 'new' };
 
-	function switchComposerTarget(form, target) {
-		if (target === composerTarget) return;
-		collectAlts(form);
-		const textarea = form.querySelector('textarea');
-		drafts.set(composerTarget, { text: textarea.value, files: filesOf(form) });
-		const next = drafts.get(target) || { text: '', files: [] };
-		drafts.delete(target);
-		textarea.value = next.text;
-		attachments.set(form, next.files);
-		composerTarget = target;
-		renderAttachments(form);
-		showComposerError(form, null);
+	function modeKey(mode) {
+		return mode.kind === 'new' ? '' : mode.kind + ':' + mode.id;
 	}
 
-	function openComposer(reply) {
+	function switchComposerMode(form, mode, text) {
+		const textarea = form.querySelector('textarea');
+		if (modeKey(mode) !== modeKey(composerMode)) {
+			collectAlts(form);
+			// Правку не храним: при следующем открытии берём свежий текст поста.
+			if (composerMode.kind !== 'edit') drafts.set(modeKey(composerMode), { text: textarea.value, files: filesOf(form) });
+			const next = drafts.get(modeKey(mode)) || { text: '', files: [] };
+			drafts.delete(modeKey(mode));
+			textarea.value = next.text;
+			attachments.set(form, next.files);
+			composerMode = mode;
+			renderAttachments(form);
+			showComposerError(form, null);
+		}
+		if (mode.kind === 'edit') textarea.value = text;
+	}
+
+	function openComposer(mode, text) {
 		const modal = composer();
 		if (!modal) return;
 		const form = modal.querySelector('form');
-		const target = reply ? reply.id : '';
-		switchComposerTarget(form, target);
-		form.querySelector('[data-composer-reply-to]').value = target;
-		const replying = form.querySelector('[data-composer-replying]');
-		replying.hidden = !reply;
-		form.querySelector('[data-composer-replying-name]').textContent = reply ? reply.name : '';
-		modal.querySelector('[data-composer-title]').textContent = reply ? 'Ответ' : 'Новый пост';
+		switchComposerMode(form, mode, text);
+		const labels = COMPOSER_TEXT[mode.kind];
+		form.querySelector('[data-composer-reply-to]').value = mode.kind === 'reply' ? mode.id : '';
+		form.querySelector('[data-composer-replying]').hidden = mode.kind !== 'reply';
+		form.querySelector('[data-composer-replying-name]').textContent = mode.name || '';
+		// У правки картинки не меняются — прячем всё, что про вложения.
+		form.querySelector('.composer-tools').hidden = mode.kind === 'edit';
+		form.querySelector('[data-composer-edit-note]').hidden = !(mode.kind === 'edit' && mode.hasImages);
+		modal.querySelector('[data-composer-title]').textContent = labels.title;
 		const textarea = form.querySelector('textarea');
-		textarea.placeholder = reply ? 'Ваш ответ' : textarea.dataset.placeholder || textarea.placeholder;
-		form.querySelector('[type="submit"]').textContent = reply ? 'Ответить' : 'Опубликовать';
+		textarea.placeholder = mode.kind === 'reply' ? 'Ваш ответ' : textarea.dataset.placeholder;
+		form.querySelector('[type="submit"]').textContent = labels.submit;
 		lastFocus = document.activeElement;
 		modal.hidden = false;
 		syncModalOpen();
 		closeMenus();
 		updateCounter(form);
 		textarea.focus();
+		textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 	}
 
 	function openReply(btn) {
 		const card = btn.closest('[data-post-id]');
 		const id = btn.dataset.replyTo || (card && card.dataset.postId);
-		if (id) openComposer({ id: id, name: btn.dataset.replyName || '' });
+		if (id) openComposer({ kind: 'reply', id: id, name: btn.dataset.replyName || '' });
+	}
+
+	function openEdit(btn) {
+		const card = btn.closest('[data-post-id]');
+		const text = card.querySelector('.post-text');
+		openComposer(
+			{ kind: 'edit', id: card.dataset.postId, hasImages: btn.hasAttribute('data-has-images') },
+			text ? text.textContent : '',
+		);
+	}
+
+	// После правки меняем содержимое карточек, а не сами карточки: у главного поста
+	// и постов выше по ветке свой вид, и он должен сохраниться.
+	function replaceCardBodies(html) {
+		const page = document.createElement('template');
+		page.innerHTML = html;
+		page.content.querySelectorAll('[data-post-id]').forEach((fresh) => {
+			document.querySelectorAll('[data-post-id="' + fresh.dataset.postId + '"]').forEach((card) => {
+				card.querySelector('.post-body').replaceWith(fresh.querySelector('.post-body').cloneNode(true));
+			});
+		});
 	}
 
 	function bumpReplyCount(postId, delta) {
@@ -179,7 +215,8 @@
 		counter.textContent = n + ' / ' + max;
 		counter.classList.toggle('warn', n > max - 50 && n <= max);
 		counter.classList.toggle('over', n > max);
-		const hasContent = textarea.value.trim() || filesOf(form).length;
+		const keepsImages = composerMode.kind === 'edit' && composerMode.hasImages;
+		const hasContent = textarea.value.trim() || filesOf(form).length || keepsImages;
 		form.querySelector('[type="submit"]').disabled = Boolean(form.dataset.busy) || !hasContent || n > max;
 		const attach = form.querySelector('[data-composer-attach]');
 		if (attach) attach.disabled = filesOf(form).length >= Number(form.dataset.maxImages || 4);
@@ -255,64 +292,77 @@
 		showComposerError(form, null);
 	}
 
-	async function submitComposer(form) {
+	function sendComposer(form, mode) {
 		const textarea = form.querySelector('textarea');
-		collectAlts(form);
-		const target = composerTarget;
+		if (mode.kind === 'edit') {
+			return api(form.dataset.editUrl, { id: mode.id, text: textarea.value });
+		}
 		const body = new FormData();
 		body.append('text', textarea.value);
-		if (target) body.append('reply_to', target);
+		if (mode.kind === 'reply') body.append('reply_to', mode.id);
 		filesOf(form).forEach((item) => {
 			body.append('images', item.file, item.file.name);
 			body.append('alt', item.alt || '');
 		});
+		return fetch(form.action, {
+			method: 'POST',
+			headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+			body: body,
+			credentials: 'same-origin',
+		});
+	}
+
+	function showPublished(mode, html) {
+		if (mode.kind === 'edit') {
+			replaceCardBodies(html);
+		} else if (mode.kind === 'reply') {
+			// Ответ: в конец ветки, если она открыта, и +1 к счётчику на карточках родителя.
+			const thread = document.querySelector('[data-replies="' + mode.id + '"]');
+			if (thread) {
+				const empty = thread.querySelector('[data-feed-empty]');
+				if (empty) empty.remove();
+				const more = thread.querySelector('[data-load-more]');
+				if (more) more.insertAdjacentHTML('beforebegin', html);
+				else thread.insertAdjacentHTML('beforeend', html);
+			}
+			bumpReplyCount(mode.id, 1);
+		} else {
+			const feed = document.querySelector('[data-feed-prepend]');
+			if (feed) {
+				const empty = feed.querySelector('[data-feed-empty]');
+				if (empty) empty.remove();
+				feed.insertAdjacentHTML('afterbegin', html);
+			}
+		}
+	}
+
+	async function submitComposer(form) {
+		const mode = composerMode;
+		const labels = COMPOSER_TEXT[mode.kind];
+		const fallback = mode.kind === 'edit' ? 'Изменения не сохранены. Попробуйте ещё раз.' : 'Пост не отправлен. Попробуйте ещё раз.';
+		collectAlts(form);
 		form.dataset.busy = '1';
 		updateCounter(form);
 		showComposerError(form, null);
 		const button = form.querySelector('[type="submit"]');
-		const label = button.textContent;
-		button.textContent = 'Публикуем…';
+		button.textContent = labels.busy;
 		try {
 			let response;
 			try {
-				response = await fetch(form.action, {
-					method: 'POST',
-					headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
-					body: body,
-					credentials: 'same-origin',
-				});
+				response = await sendComposer(form, mode);
 			} catch (e) {
 				throw ['Нет связи с сервером. Попробуйте ещё раз.'];
 			}
-			if (!response.ok) throw await errorsOf(response, 'Пост не отправлен. Попробуйте ещё раз.');
-			const html = await response.text();
-			if (target) {
-				// Ответ: в конец ветки, если она открыта, и +1 к счётчику на карточках родителя.
-				const thread = document.querySelector('[data-replies="' + target + '"]');
-				if (thread) {
-					const empty = thread.querySelector('[data-feed-empty]');
-					if (empty) empty.remove();
-					const more = thread.querySelector('[data-load-more]');
-					if (more) more.insertAdjacentHTML('beforebegin', html);
-					else thread.insertAdjacentHTML('beforeend', html);
-				}
-				bumpReplyCount(target, 1);
-			} else {
-				const feed = document.querySelector('[data-feed-prepend]');
-				if (feed) {
-					const empty = feed.querySelector('[data-feed-empty]');
-					if (empty) empty.remove();
-					feed.insertAdjacentHTML('afterbegin', html);
-				}
-			}
+			if (!response.ok) throw await errorsOf(response, fallback);
+			showPublished(mode, await response.text());
 			resetComposer(form);
 			closeComposer();
-			toast(target ? 'Ответ опубликован' : 'Пост опубликован');
+			toast(labels.done);
 		} catch (messages) {
-			showComposerError(form, Array.isArray(messages) ? messages : ['Пост не отправлен. Попробуйте ещё раз.']);
+			showComposerError(form, Array.isArray(messages) ? messages : [fallback]);
 		} finally {
 			delete form.dataset.busy;
-			button.textContent = label;
+			button.textContent = labels.submit;
 			updateCounter(form);
 		}
 	}
@@ -611,8 +661,9 @@
 		}
 		if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
-		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer(null); return; }
+		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
 		if (target.matches('[data-reply]')) { event.preventDefault(); openReply(target); return; }
+		if (target.matches('[data-edit]')) { event.preventDefault(); openEdit(target); return; }
 		if (target.matches('[data-composer-close]')) { event.preventDefault(); closeComposer(); return; }
 		if (target.matches('[data-composer-attach]')) { event.preventDefault(); target.form.querySelector('[data-composer-file]').click(); return; }
 		if (target.matches('[data-attachment-remove]')) { event.preventDefault(); removeAttachment(target.form, Number(target.dataset.index)); return; }

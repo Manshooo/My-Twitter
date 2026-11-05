@@ -3,7 +3,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .media import process_post_image
-from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Post
+from django.utils import timezone
+
+from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Post, PostRevision
 from .serializer import POST_MAX_LENGTH
 
 
@@ -55,3 +57,27 @@ def publish_post(author, text='', uploads=(), alts=(), reply_to=None):
 			file.storage.delete(file.name)
 		raise
 	return post
+
+
+def edit_post(post, text):
+	"""Новый текст поста. Картинки не меняются. Прежний текст уходит в историю.
+	Возвращает True, если текст правда изменился."""
+	text = (text or '').strip()
+	errors = []
+	if len(text) > POST_MAX_LENGTH:
+		errors.append(f'Пост длиннее {POST_MAX_LENGTH} символов.')
+	if not text and not post.images.exists():
+		errors.append('Пост без картинок не может быть пустым.')
+	if errors:
+		raise ValidationError(errors)
+	with transaction.atomic():
+		# Блокируем строку: две правки одновременно не должны потерять версию между ними.
+		current = Post.objects.select_for_update().get(pk=post.pk)
+		if text == current.text:
+			return False
+		PostRevision.objects.create(post=current, text=current.text, valid_from=current.edited_at or current.created_at)
+		current.text = text
+		current.edited_at = timezone.now()
+		current.save(update_fields=['text', 'edited_at', 'updated'])
+	post.text, post.edited_at = current.text, current.edited_at
+	return True
