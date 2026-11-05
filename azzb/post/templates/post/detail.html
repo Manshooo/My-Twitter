@@ -1,0 +1,23 @@
+{% extends "azzb/azzb_base.html" %}
+{% load show_posts %}
+{% block title %}{{ post.author.username }}: «{{ post.text|truncatechars:60 }}»{% endblock title %}
+{% block meta_description %}{{ post.text|truncatechars:160 }}{% endblock meta_description %}
+{% block metatags %}
+	{# Превью ссылки в мессенджерах и соцсетях. #}
+	<meta property="og:type" content="article">
+	<meta property="og:site_name" content="AzzB">
+	<meta property="og:title" content="{{ post.author.username }} (@{{ post.author.user.username }})">
+	<meta property="og:description" content="{{ post.text|truncatechars:200 }}">
+	<meta property="og:url" content="{{ request.build_absolute_uri }}">
+	<meta name="twitter:card" content="summary">
+	<link rel="canonical" href="{{ request.build_absolute_uri }}">
+{% endblock metatags %}
+{% block content %}
+	<div style="display: flex; align-items: center; gap: 8px" data-post-page>
+		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
+			<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+		</a>
+		<h1 class="display" style="font-size: 22px">Пост</h1>
+	</div>
+	{% show_posts %}
+{% endblock content %}

@@ -158,6 +158,11 @@
 		try {
 			const response = await api('/api/delete-post/', { id: post.dataset.postId });
 			if (!response.ok) throw new Error('status ' + response.status);
+			// На странице самого поста после удаления смотреть не на что — уводим на главную.
+			if (document.querySelector('[data-post-page]')) {
+				window.location.href = '/';
+				return;
+			}
 			post.remove();
 			toast('Пост удалён');
 		} catch (e) {
@@ -236,6 +241,13 @@
 		if (target.matches('[data-delete]')) { event.preventDefault(); removePost(target); return; }
 		if (target.matches('[data-copy]')) { event.preventDefault(); copyLink(target); return; }
 		if (target.matches('[data-load-more]')) { event.preventDefault(); loadMore(target); return; }
+		// «Назад» возвращает туда, откуда пришли с этого же сайта (с той же позицией в ленте);
+		// если пришли по внешней ссылке — обычный переход на главную.
+		if (target.matches('[data-back]') && document.referrer.startsWith(window.location.origin + '/') && window.history.length > 1) {
+			event.preventDefault();
+			window.history.back();
+			return;
+		}
 		if (!target.closest('[role="menu"]')) closeMenus();
 	});
 

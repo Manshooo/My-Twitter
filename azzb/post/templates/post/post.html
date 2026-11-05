@@ -7,7 +7,7 @@
 				<a class="post-name" href="{% url 'profile' author.user.username %}">{{ author.username }}</a>{% badges author %}
 				<span class="muted">@{{ author.user.username }}</span>
 				<span class="muted" aria-hidden="true">·</span>
-				<time class="muted" datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j E Y, H:i' }}">{{ post.created_at|ago }}</time>
+				<a class="muted" href="{% url 'post' post.id %}"><time datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j E Y, H:i' }}">{{ post.created_at|ago }}</time></a>
 			</div>
 			{% if post.text %}<p class="post-text">{{ post.text }}</p>{% endif %}
 			{% if images %}
@@ -29,6 +29,9 @@
 						<span class="sr">Нравится:</span><span>{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</a>
 				{% endif %}
+				<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
+					<svg class="icon" aria-hidden="true"><use href="#i-share"></use></svg>
+				</button>
 			</div>
 		</div>
 	</div>

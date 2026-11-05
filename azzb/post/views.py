@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import HttpResponse, get_object_or_404, render
-from django.views.generic.detail import DetailView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -50,13 +49,8 @@ def delete(request):
 		return Response(status=status.HTTP_200_OK)
 	else:
 		return Response(status=status.HTTP_403_FORBIDDEN)
-class PostDetailView(DetailView):
-	model = Post
-	template_name = "post/post.html"
-
-	def get_context_data(self, **kwargs):
-		context = super().get_context_data(**kwargs)
-		context["liked"] = False
-		if Post.likes.filter(pk=self.request.user.profile.id).exists():
-			context["liked"] = True
-		return context
+def post_detail(request, pk):
+	"""Страница одного поста /p/<uuid>/ — на неё ведут «Поделиться», время в карточке,
+	а позже ответы и уведомления. Открыта и гостям: ссылкой на пост делятся."""
+	post = get_object_or_404(Post.objects.for_feed(request.user), pk=pk)
+	return render(request, "post/detail.html", {"post": post})
