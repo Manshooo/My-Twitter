@@ -89,3 +89,57 @@ class CreatePostApiTests(TestCase):
 		self.assertEqual(response.status_code, 400)
 		self.assertIn('text', response.json())
 		self.assertFalse(Post.objects.exists())
+
+
+class LikeAndDeleteApiTests(TestCase):
+	def setUp(self):
+		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345')
+		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345')
+		self.post = Post.objects.create(author=self.author.profile, text='Пост')
+
+	def call(self, url, payload):
+		return self.client.post(url, json.dumps(payload), content_type='application/json')
+
+	def test_like_toggles(self):
+		self.client.force_login(self.other)
+		first = self.call('/api/like-post/', {'id': str(self.post.pk)}).json()
+		self.assertEqual(first, {'likes_count': 1, 'liked': True})
+		second = self.call('/api/like-post/', {'id': str(self.post.pk)}).json()
+		self.assertEqual(second, {'likes_count': 0, 'liked': False})
+
+	def test_anonymous_cannot_like_or_delete(self):
+		for url in ('/api/like-post/', '/api/delete-post/'):
+			response = self.call(url, {'id': str(self.post.pk)})
+			self.assertNotEqual(response.status_code, 200, url)
+		self.assertEqual(self.post.likes.count(), 0)
+		self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
+
+	def test_only_author_can_delete(self):
+		self.client.force_login(self.other)
+		self.assertEqual(self.call('/api/delete-post/', {'id': str(self.post.pk)}).status_code, 403)
+		self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
+		self.client.force_login(self.author)
+		self.assertEqual(self.call('/api/delete-post/', {'id': str(self.post.pk)}).status_code, 200)
+		self.assertFalse(Post.objects.filter(pk=self.post.pk).exists())
+
+	def test_bad_or_missing_id_is_400_or_404_not_500(self):
+		self.client.force_login(self.other)
+		for url in ('/api/like-post/', '/api/delete-post/'):
+			self.assertEqual(self.call(url, {}).status_code, 400, url)
+			self.assertEqual(self.call(url, {'id': 'not-a-uuid'}).status_code, 400, url)
+			self.assertEqual(self.call(url, {'id': '00000000-0000-0000-0000-000000000000'}).status_code, 404, url)
+
+
+class FeedPermissionsTests(TestCase):
+	def test_following_feed_shows_only_followed_authors(self):
+		from customUser.models import FollowThrough
+		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345')
+		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345')
+		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345')
+		FollowThrough.objects.create(follower=reader.profile, followee=followed.profile)
+		Post.objects.create(author=followed.profile, text='От подписки')
+		Post.objects.create(author=stranger.profile, text='От незнакомца')
+		self.client.force_login(reader)
+		response = self.client.get('/follows-updates/')
+		self.assertContains(response, 'От подписки')
+		self.assertNotContains(response, 'От незнакомца')

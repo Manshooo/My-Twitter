@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 import json
+import uuid
 
 from post.serializer import PostSerializer
 
@@ -13,20 +14,26 @@ from .models import Post
 
 User = get_user_model()
 
+def _post_from_request(request):
+	"""Пост по id из тела запроса. Без id или с невалидным UUID — 400, а не 500."""
+	try:
+		post_id = uuid.UUID(str(request.data['id']))
+	except (KeyError, TypeError, ValueError, AttributeError):
+		return None
+	return get_object_or_404(Post, pk=post_id)
+
 @api_view(['POST'])
 def like(request):
-	# profile.user_id = user.id (=user?)
-	data = request.data
-	id = data['id']
-	post = get_object_or_404(Post, pk=id)
+	post = _post_from_request(request)
+	if post is None:
+		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
 	if post.likes.filter(pk=request.user.profile.id).exists():
 		post.likes.remove(request.user.profile.id)
-		likes_count = Post.objects.get(pk=id).likes_count
 		liked = False
 	else:
 		post.likes.add(request.user.profile.id)
-		likes_count = Post.objects.get(pk=id).likes_count
 		liked = True
+	likes_count = post.likes.count()
 
 	context = {"likes_count": likes_count, "liked": liked,}
 
@@ -34,9 +41,9 @@ def like(request):
 
 @api_view(['POST'])
 def delete(request):
-	data = request.data
-	id = data['id']
-	post = get_object_or_404(Post, pk=id)
+	post = _post_from_request(request)
+	if post is None:
+		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
 	if request.user.id == post.author.user.id:
 		post.delete()
 		return Response(status=status.HTTP_200_OK)
