@@ -53,7 +53,7 @@ class FollowThrough(models.Model):
 	class Meta:
 		constraints = [
 			models.UniqueConstraint(fields=['follower', 'followee'], name='follow_once'),
-			models.CheckConstraint(check=~Q(follower=F('followee')), name='not_follow_self')
+			models.CheckConstraint(condition=~Q(follower=F('followee')), name='not_follow_self')
 		]
 
 class Profile(models.Model):

@@ -24,16 +24,11 @@ INSTALLED_APPS = [
 	'post',
 	'customUser',
 
-	'django_hosts',
-    'debug_toolbar',
 	'rest_framework',
 	'corsheaders',
-	
 ]
 
 MIDDLEWARE = [
-	'django_hosts.middleware.HostsRequestMiddleware',
-
 	'django.middleware.security.SecurityMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
 	'corsheaders.middleware.CorsMiddleware',
@@ -42,14 +37,13 @@ MIDDLEWARE = [
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-	'django_hosts.middleware.HostsResponseMiddleware',
-
-	'debug_toolbar.middleware.DebugToolbarMiddleware',
-
 	'customUser.middleware.SetLastVisitMiddleware',
-	
 ]
+
+# Debug toolbar нужен только при разработке: на проде пакет можно даже не ставить.
+if DEBUG:
+	INSTALLED_APPS += ['debug_toolbar']
+	MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOWED_ORIGINS = [
@@ -79,10 +73,7 @@ ALLOWED_HOSTS = [
 	'www.azzb.ru'
 ]
 
-ROOT_HOSTCONF = 'azzb.hosts'
 ROOT_URLCONF = 'azzb.urls'
-
-DEFAULT_HOST = 'www'
 
 TEMPLATES = [
 	{

@@ -19,6 +19,6 @@ urlpatterns = [
 	path('follows-updates/', login_required(follows_updates), name="follows-updates"),
 ]
 if settings.DEBUG:
-	urlpatterns += path("__debug__/", include("debug_toolbar.urls")),
-	urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_URL)
+	# Статику при DEBUG и так раздаёт runserver (django.contrib.staticfiles); здесь — загрузки и toolbar.
+	urlpatterns += [path("__debug__/", include("debug_toolbar.urls"))]
 	urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

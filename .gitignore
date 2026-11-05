@@ -402,3 +402,7 @@ azzb/media/
 /Server/
 azzb/*/deploy_settings.py
 .env
+# Локальные виртуальные окружения и утилиты — не для репозитория
+venv/
+.venv/
+azzb/sqlite3.exe
