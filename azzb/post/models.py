@@ -18,7 +18,7 @@ class PostQuerySet(models.QuerySet):
 		"""Посты, готовые к выводу карточками: автор, картинки, число лайков и «мой ли лайк»
 		одним запросом на страницу, без отдельного запроса на каждый пост."""
 		if user is not None and user.is_authenticated:
-			liked = Exists(Post.likes.through.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
+			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
 		else:
 			liked = Value(False, output_field=BooleanField())
 		return (
@@ -36,10 +36,9 @@ class Post(models.Model):
 	author = models.ForeignKey(Profile, to_field='user', on_delete=models.CASCADE, related_name='posts')
 	updated = models.DateTimeField("Дата обновления", auto_now=True)
 	created_at = models.DateTimeField("Дата публикации", auto_now_add=True)
-	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked')
+	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked', through='Like')
 
 	objects = PostQuerySet.as_manager()
-	# Лайкам нужно ставить временную метку, когда он был поставлен, нужно для метрик
 	def get_likes(self):
 		return self.likes.all()
 	@property
@@ -49,6 +48,27 @@ class Post(models.Model):
 		return str(self.author.username)
 	class Meta():
 		ordering = ["-created_at"]
+
+class Like(models.Model):
+	"""Лайк с временем: нужен для «Горячего» с учётом свежести и для рекомендаций.
+
+	Живёт в той же таблице, что и прежняя автоматическая связь Post.likes, поэтому
+	post.likes.add()/remove() и все старые запросы работают как раньше.
+	"""
+	post = models.ForeignKey(Post, on_delete=models.CASCADE)
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+	created_at = models.DateTimeField("Когда поставлен", auto_now_add=True)
+
+	class Meta:
+		db_table = 'post_post_likes'
+		# Совпадает с уникальным индексом, который Django создал для автоматической связи.
+		unique_together = [('post', 'profile')]
+		verbose_name = 'Лайк'
+		verbose_name_plural = 'Лайки'
+
+	def __str__(self):
+		return f'{self.profile} → {self.post_id}'
+
 
 class Image(models.Model):
 	

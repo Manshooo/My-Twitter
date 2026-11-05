@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view
 
 from django.db.models import Exists, OuterRef
 
-from post.models import Image, Post
+from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 from .forms import CustomUserCreationForm, UpdateUserForm
@@ -85,7 +85,7 @@ class UserProfileDetailView(DetailView):
 		elif tab == "media":
 			items = posts.filter(author=profile).filter(Exists(Image.objects.filter(post=OuterRef("pk"))))
 		elif tab == "likes" and likes_visible:
-			liked_by_profile = Post.likes.through.objects.filter(post_id=OuterRef("pk"), profile_id=profile.pk)
+			liked_by_profile = Like.objects.filter(post_id=OuterRef("pk"), profile_id=profile.pk)
 			items = posts.filter(Exists(liked_by_profile))
 		else:
 			items = posts.none()

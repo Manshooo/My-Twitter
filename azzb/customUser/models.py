@@ -45,6 +45,7 @@ class CustomUser(AbstractUser):
 class FollowThrough(models.Model):
 	follower = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='following_set')
 	followee = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='followee_set')
+	created_at = models.DateTimeField("Когда подписался", auto_now_add=True)
 
 	def clean(self):
 		if self.follower_id == self.followee_id:
