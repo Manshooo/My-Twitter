@@ -119,6 +119,22 @@
 			{% endif %}
 			{% include "azzb/includes/composer.html" %}
 		{% endif %}
+		<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Просмотр картинки" hidden>
+			<button class="lb-btn lb-close" type="button" aria-label="Закрыть" data-lightbox-close>
+				<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+			</button>
+			<button class="lb-btn lb-prev" type="button" aria-label="Предыдущая картинка" data-lightbox-step="-1">
+				<svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg>
+			</button>
+			<figure class="lb-figure">
+				<img alt="" data-lightbox-img>
+				<figcaption class="lb-caption" data-lightbox-caption hidden></figcaption>
+			</figure>
+			<button class="lb-btn lb-next" type="button" aria-label="Следующая картинка" data-lightbox-step="1">
+				<svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+			</button>
+			<span class="lb-count" data-lightbox-count aria-live="polite"></span>
+		</div>
 		<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 	</body>
 </html>

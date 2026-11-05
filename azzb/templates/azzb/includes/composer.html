@@ -6,7 +6,8 @@
 				<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
 			</button>
 		</div>
-		<form class="composer-form" action="{% url 'create_post_api' %}" method="post" data-composer-form>
+		<form class="composer-form" id="composer-form" action="{% url 'create_post_api' %}" method="post" enctype="multipart/form-data"
+			data-composer-form data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
 			<div class="post-row">
 				{% avatar user.profile %}
 				<div style="flex: 1; min-width: 0">
@@ -14,10 +15,27 @@
 					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-composer-text></textarea>
 				</div>
 			</div>
+			<ul class="attachments" aria-label="Прикреплённые картинки" data-attachments hidden></ul>
+			<template data-attachment-template>
+				<li class="attachment">
+					<img alt="" data-attachment-preview>
+					<button class="attachment-remove" type="button" aria-label="Убрать картинку" data-attachment-remove>
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>
+					</button>
+					<label class="sr" data-attachment-alt-label>Описание картинки</label>
+					<input class="attachment-alt" type="text" maxlength="{{ alt_max_length }}" placeholder="Описание (alt)" data-attachment-alt>
+				</li>
+			</template>
 			<div class="alert" role="alert" data-composer-error hidden>
-				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>Пост не отправлен. Попробуйте ещё раз.
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg><span data-composer-error-text>Пост не отправлен. Попробуйте ещё раз.</span>
 			</div>
 			<div class="composer-foot">
+				<div class="composer-tools">
+					<input class="sr" type="file" id="composer-file" accept="{{ image_accept }}" multiple tabindex="-1" data-composer-file>
+					<button class="icon-btn" type="button" aria-label="Прикрепить картинку" title="Картинка: до {{ max_images }} шт., до {{ max_upload_mb }} МБ" data-composer-attach>
+						<svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>
+					</button>
+				</div>
 				<span class="counter" data-counter>0 / {{ post_max_length }}</span>
 				<button class="btn" type="submit" disabled>Опубликовать</button>
 			</div>

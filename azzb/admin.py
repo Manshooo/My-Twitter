@@ -3,12 +3,7 @@ from django.contrib.auth.models import Group
 
 from customUser.models import CustomUser, FollowThrough
 from .settings import AUTH_USER_MODEL
-from post.models import Post
 from .models import Profile
-
-class PostAdmin(admin.ModelAdmin):
-	model = Post
-	list_display = ["author", "created_at", "likes_count"]
 
 class FollowThroughInlineAdmin(admin.TabularInline):
 	model = FollowThrough
@@ -29,6 +24,5 @@ class UserAdmin(admin.ModelAdmin):
 
 
 admin.site.unregister(Group)
-admin.site.register(Post, PostAdmin)
 admin.site.register(CustomUser, UserAdmin)
 admin.site.register(Profile, UserProfileAdmin)

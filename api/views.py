@@ -4,17 +4,45 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from django.core.exceptions import ValidationError
+
 from customUser.serializers import ProfileSerializer
 from customUser.models import Profile
-from post.serializer import PostSerializer
+from post.models import Post
+from post.pagination import PAGE_TEMPLATE
+from post.services import publish_post
+
+def _getlist(data, key):
+	"""Список значений и из multipart-формы (QueryDict), и из JSON."""
+	if hasattr(data, 'getlist'):
+		return data.getlist(key)
+	value = data.get(key, [])
+	return value if isinstance(value, list) else [value]
+
+
+def render_cards(request, posts):
+	"""Карточки постов тем же шаблоном, что и в ленте (с лайками и прочими аннотациями)."""
+	pks = [post.pk for post in posts]
+	fresh = {post.pk: post for post in Post.objects.for_feed(request.user).filter(pk__in=pks)}
+	return render(request, PAGE_TEMPLATE, {"posts": [fresh[pk] for pk in pks if pk in fresh]})
+
 
 @api_view(['POST'])
 def create_post(request):
-	serializer = PostSerializer(data=request.data)
-	if serializer.is_valid():
-		new_post = serializer.save(author=request.user.profile)
-		return render(request, "post/post.html", {"post": new_post, "liked": False, "likes_total": 0})
-	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+	"""Новый пост: текст и до 4 картинок (multipart: text, images[], alt[] в том же порядке)."""
+	data = request.data
+	text = data.get('text')
+	try:
+		post = publish_post(
+			request.user.profile,
+			text if isinstance(text, str) else '',
+			request.FILES.getlist('images'),
+			_getlist(data, 'alt'),
+		)
+	except ValidationError as error:
+		return Response({'errors': error.messages}, status=status.HTTP_400_BAD_REQUEST)
+	return render_cards(request, [post])
+
 
 @api_view(['GET'])
 def profiles_list(request):

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.db.models import BooleanField, Count, Exists, OuterRef, Value
 from uuid import uuid4
 from azzb.models import Profile
@@ -70,9 +71,35 @@ class Like(models.Model):
 		return f'{self.profile} → {self.post_id}'
 
 
-class Image(models.Model):
-	
-	id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-	file = models.ImageField("Изображение", upload_to='images', default=None ,null=True)
+def post_image_path(instance, filename):
+	# Файлы раскладываются по месяцам, чтобы в одной папке не копились сотни тысяч.
+	return f"posts/{timezone.now():%Y/%m}/{filename}"
 
-	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images', verbose_name="Имагес")
+
+MAX_IMAGES = 4
+ALT_MAX_LENGTH = 1000
+
+
+class Image(models.Model):
+	"""Картинка поста. Файл всегда WebP, перекодированный в post/media.py."""
+
+	id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+	file = models.ImageField("Изображение", upload_to=post_image_path, default=None, null=True)
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images', verbose_name="Пост")
+	alt = models.CharField("Описание для незрячих", max_length=ALT_MAX_LENGTH, blank=True, default="")
+	position = models.PositiveSmallIntegerField("Порядок", default=0)
+	width = models.PositiveIntegerField("Ширина", null=True, blank=True)
+	height = models.PositiveIntegerField("Высота", null=True, blank=True)
+
+	class Meta:
+		ordering = ['position']
+		verbose_name = 'Картинка'
+		verbose_name_plural = 'Картинки'
+
+	@property
+	def ratio(self):
+		"""Пропорции одиночной картинки в ленте: как есть, но не уже 4:5 и не шире 2:1."""
+		if not self.width or not self.height:
+			return '16 / 9'
+		value = min(max(self.width / self.height, 0.8), 2.0)
+		return f'{value:.4f}'

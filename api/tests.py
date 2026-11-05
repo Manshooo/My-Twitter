@@ -87,7 +87,7 @@ class CreatePostApiTests(TestCase):
 	def test_invalid_data_returns_400_not_500(self):
 		response = self.post_json({'text': None})
 		self.assertEqual(response.status_code, 400)
-		self.assertIn('text', response.json())
+		self.assertIn('errors', response.json())
 		self.assertFalse(Post.objects.exists())
 
 
