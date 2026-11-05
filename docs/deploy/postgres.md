@@ -29,7 +29,7 @@ cp db.sqlite3 ~/db.sqlite3.before-postgres
 
 ```bash
 git pull
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 ```
 
 ## 3. Довести старую базу до текущей схемы и выгрузить данные
