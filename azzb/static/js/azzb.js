@@ -100,16 +100,59 @@
 		return attachments.get(form);
 	}
 
-	function openComposer() {
+	// Composer один на страницу, а писать можно новый пост или ответ на любой пост.
+	// Черновик у каждой цели свой: начатый пост не уедет ответом и наоборот.
+	// Ключ: '' — новый пост, иначе id поста, на который отвечаем.
+	const drafts = new Map();
+	let composerTarget = '';
+
+	function switchComposerTarget(form, target) {
+		if (target === composerTarget) return;
+		collectAlts(form);
+		const textarea = form.querySelector('textarea');
+		drafts.set(composerTarget, { text: textarea.value, files: filesOf(form) });
+		const next = drafts.get(target) || { text: '', files: [] };
+		drafts.delete(target);
+		textarea.value = next.text;
+		attachments.set(form, next.files);
+		composerTarget = target;
+		renderAttachments(form);
+		showComposerError(form, null);
+	}
+
+	function openComposer(reply) {
 		const modal = composer();
 		if (!modal) return;
+		const form = modal.querySelector('form');
+		const target = reply ? reply.id : '';
+		switchComposerTarget(form, target);
+		form.querySelector('[data-composer-reply-to]').value = target;
+		const replying = form.querySelector('[data-composer-replying]');
+		replying.hidden = !reply;
+		form.querySelector('[data-composer-replying-name]').textContent = reply ? reply.name : '';
+		modal.querySelector('[data-composer-title]').textContent = reply ? 'Ответ' : 'Новый пост';
+		const textarea = form.querySelector('textarea');
+		textarea.placeholder = reply ? 'Ваш ответ' : textarea.dataset.placeholder || textarea.placeholder;
+		form.querySelector('[type="submit"]').textContent = reply ? 'Ответить' : 'Опубликовать';
 		lastFocus = document.activeElement;
 		modal.hidden = false;
 		syncModalOpen();
 		closeMenus();
-		const textarea = modal.querySelector('textarea');
-		updateCounter(textarea.form);
+		updateCounter(form);
 		textarea.focus();
+	}
+
+	function openReply(btn) {
+		const card = btn.closest('[data-post-id]');
+		const id = btn.dataset.replyTo || (card && card.dataset.postId);
+		if (id) openComposer({ id: id, name: btn.dataset.replyName || '' });
+	}
+
+	function bumpReplyCount(postId, delta) {
+		document.querySelectorAll('[data-post-id="' + postId + '"] [data-reply-count]').forEach((el) => {
+			const n = Math.max(0, (Number(el.textContent) || 0) + delta);
+			el.textContent = n ? String(n) : '';
+		});
 	}
 
 	function closeComposer() {
@@ -215,8 +258,10 @@
 	async function submitComposer(form) {
 		const textarea = form.querySelector('textarea');
 		collectAlts(form);
+		const target = composerTarget;
 		const body = new FormData();
 		body.append('text', textarea.value);
+		if (target) body.append('reply_to', target);
 		filesOf(form).forEach((item) => {
 			body.append('images', item.file, item.file.name);
 			body.append('alt', item.alt || '');
@@ -241,15 +286,28 @@
 			}
 			if (!response.ok) throw await errorsOf(response, 'Пост не отправлен. Попробуйте ещё раз.');
 			const html = await response.text();
-			const feed = document.querySelector('[data-feed-prepend]');
-			if (feed) {
-				const empty = feed.querySelector('[data-feed-empty]');
-				if (empty) empty.remove();
-				feed.insertAdjacentHTML('afterbegin', html);
+			if (target) {
+				// Ответ: в конец ветки, если она открыта, и +1 к счётчику на карточках родителя.
+				const thread = document.querySelector('[data-replies="' + target + '"]');
+				if (thread) {
+					const empty = thread.querySelector('[data-feed-empty]');
+					if (empty) empty.remove();
+					const more = thread.querySelector('[data-load-more]');
+					if (more) more.insertAdjacentHTML('beforebegin', html);
+					else thread.insertAdjacentHTML('beforeend', html);
+				}
+				bumpReplyCount(target, 1);
+			} else {
+				const feed = document.querySelector('[data-feed-prepend]');
+				if (feed) {
+					const empty = feed.querySelector('[data-feed-empty]');
+					if (empty) empty.remove();
+					feed.insertAdjacentHTML('afterbegin', html);
+				}
 			}
 			resetComposer(form);
 			closeComposer();
-			toast('Пост опубликован');
+			toast(target ? 'Ответ опубликован' : 'Пост опубликован');
 		} catch (messages) {
 			showComposerError(form, Array.isArray(messages) ? messages : ['Пост не отправлен. Попробуйте ещё раз.']);
 		} finally {
@@ -469,11 +527,12 @@
 			const response = await api('/api/delete-post/', { id: post.dataset.postId });
 			if (!response.ok) throw new Error('status ' + response.status);
 			// На странице самого поста после удаления смотреть не на что — уводим на главную.
-			if (document.querySelector('[data-post-page]')) {
+			if (post.matches('[data-main-post]')) {
 				window.location.href = '/';
 				return;
 			}
-			post.remove();
+			document.querySelectorAll('[data-post-id="' + post.dataset.postId + '"]').forEach((el) => el.remove());
+			if (post.dataset.replyOf) bumpReplyCount(post.dataset.replyOf, -1);
 			toast('Пост удалён');
 		} catch (e) {
 			toast('Не удалось удалить пост');
@@ -505,8 +564,13 @@
 				credentials: 'same-origin',
 			});
 			if (!response.ok) throw new Error('status ' + response.status);
-			const html = await response.text();
-			link.insertAdjacentHTML('beforebegin', html);
+			const page = document.createElement('template');
+			page.innerHTML = await response.text();
+			// Свой свежий ответ мог уже попасть на страницу — не показываем его дважды.
+			page.content.querySelectorAll('[data-post-id]').forEach((card) => {
+				if (document.querySelector('[data-post-id="' + card.dataset.postId + '"]')) card.remove();
+			});
+			link.before(page.content);
 			if (loadMoreObserver) loadMoreObserver.unobserve(link);
 			link.remove();
 			observeLoadMore();
@@ -547,7 +611,8 @@
 		}
 		if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
-		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer(); return; }
+		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer(null); return; }
+		if (target.matches('[data-reply]')) { event.preventDefault(); openReply(target); return; }
 		if (target.matches('[data-composer-close]')) { event.preventDefault(); closeComposer(); return; }
 		if (target.matches('[data-composer-attach]')) { event.preventDefault(); target.form.querySelector('[data-composer-file]').click(); return; }
 		if (target.matches('[data-attachment-remove]')) { event.preventDefault(); removeAttachment(target.form, Number(target.dataset.index)); return; }

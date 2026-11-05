@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import render
 from rest_framework import status
@@ -29,15 +31,27 @@ def render_cards(request, posts):
 
 @api_view(['POST'])
 def create_post(request):
-	"""Новый пост: текст и до 4 картинок (multipart: text, images[], alt[] в том же порядке)."""
+	"""Новый пост или ответ: текст и до 4 картинок
+	(multipart: text, images[], alt[] в том же порядке, reply_to — id поста, если это ответ)."""
 	data = request.data
 	text = data.get('text')
+	reply_to = None
+	if data.get('reply_to'):
+		try:
+			reply_to_id = uuid.UUID(str(data.get('reply_to')))
+		except ValueError:
+			return Response({'errors': ['Пост, на который вы отвечаете, не найден.']}, status=status.HTTP_400_BAD_REQUEST)
+		# Ответить можно только на пост, который пользователь видит.
+		reply_to = Post.objects.visible_to(request.user).filter(pk=reply_to_id).first()
+		if reply_to is None:
+			return Response({'errors': ['Пост, на который вы отвечаете, удалён или недоступен.']}, status=status.HTTP_404_NOT_FOUND)
 	try:
 		post = publish_post(
 			request.user.profile,
 			text if isinstance(text, str) else '',
 			request.FILES.getlist('images'),
 			_getlist(data, 'alt'),
+			reply_to=reply_to,
 		)
 	except ValidationError as error:
 		return Response({'errors': error.messages}, status=status.HTTP_400_BAD_REQUEST)

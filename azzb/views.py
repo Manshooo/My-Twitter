@@ -15,7 +15,7 @@ def render_posts(request, template, context, posts, next_params):
 
 
 def index(request):
-	posts, cursor = cursor_page(Post.objects.for_feed(request.user), request.GET.get("cursor"))
+	posts, cursor = cursor_page(Post.objects.for_feed(request.user).top_level(), request.GET.get("cursor"))
 	# Свой новый пост из composer логично показать сверху именно «Свежего».
 	context = {"feed": "latest", "prepend": True}
 	return render_posts(request, FEED_TEMPLATE, context, posts, cursor and {"cursor": cursor})
@@ -23,12 +23,12 @@ def index(request):
 
 def follows_updates(request):
 	follows = request.user.profile.follows.all()
-	queryset = Post.objects.for_feed(request.user).filter(author__in=follows)
+	queryset = Post.objects.for_feed(request.user).top_level().filter(author__in=follows)
 	posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "following"}, posts, cursor and {"cursor": cursor})
 
 
 def hot_news(request):
-	queryset = Post.objects.for_feed(request.user).order_by("-likes_n", "-created_at", "-id")
+	queryset = Post.objects.for_feed(request.user).top_level().order_by("-likes_n", "-created_at", "-id")
 	posts, next_page = number_page(queryset, request.GET.get("page"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})

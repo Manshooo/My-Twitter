@@ -61,7 +61,7 @@ class ChangeProfileView(UpdateView):
 		]
 		return context
 
-PROFILE_TABS = ('posts', 'media', 'likes', 'following', 'followers')
+PROFILE_TABS = ('posts', 'replies', 'media', 'likes', 'following', 'followers')
 
 class UserProfileDetailView(DetailView):
 	template_name = "registration/profile.html"
@@ -91,7 +91,9 @@ class UserProfileDetailView(DetailView):
 		posts = Post.objects.for_feed(self.request.user)
 		people = None
 		if tab == "posts":
-			items = posts.filter(author=profile)
+			items = posts.filter(author=profile).top_level()
+		elif tab == "replies":
+			items = posts.filter(author=profile, is_reply=True)
 		elif tab == "media":
 			items = posts.filter(author=profile).filter(Exists(Image.objects.filter(post=OuterRef("pk"))))
 		elif tab == "likes" and likes_visible:

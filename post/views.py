@@ -7,9 +7,8 @@ from rest_framework import status
 import json
 import uuid
 
-from post.serializer import PostSerializer
-
 from .models import Post
+from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 User = get_user_model()
 
@@ -49,8 +48,43 @@ def delete(request):
 		return Response(status=status.HTTP_200_OK)
 	else:
 		return Response(status=status.HTTP_403_FORBIDDEN)
+THREAD_DEPTH = 20
+
+
+def thread_ancestors(post, user):
+	"""Посты выше по ветке, от корня к родителю. Второе значение — обрыв ветки сверху:
+	"deleted" (родителя удалили), "hidden" (родитель недоступен) или None."""
+	ancestors = []
+	parent_id = post.reply_to_id
+	gap = "deleted" if post.is_reply and parent_id is None else None
+	while parent_id and len(ancestors) < THREAD_DEPTH:
+		parent = Post.objects.for_feed(user).filter(pk=parent_id).first()
+		if parent is None:
+			gap = "hidden"
+			break
+		ancestors.append(parent)
+		parent_id = parent.reply_to_id
+		if parent.is_reply and parent_id is None:
+			gap = "deleted"
+	ancestors.reverse()
+	return ancestors, gap
+
+
 def post_detail(request, pk):
-	"""Страница одного поста /p/<uuid>/ — на неё ведут «Поделиться», время в карточке,
-	а позже ответы и уведомления. Открыта и гостям: ссылкой на пост делятся."""
+	"""Страница одного поста /p/<uuid>/: ветка выше, сам пост и ответы на него по времени.
+	Открыта и гостям: ссылкой на пост делятся."""
 	post = get_object_or_404(Post.objects.for_feed(request.user), pk=pk)
-	return render(request, "post/detail.html", {"post": post})
+	replies, cursor = cursor_page(
+		Post.objects.for_feed(request.user).filter(reply_to=post), request.GET.get("cursor"), ascending=True,
+	)
+	next_url = page_url(request, cursor=cursor) if cursor else None
+	if is_load_more(request):
+		return render(request, PAGE_TEMPLATE, {"posts": replies, "next_url": next_url})
+	ancestors, gap = thread_ancestors(post, request.user)
+	return render(request, "post/detail.html", {
+		"post": post,
+		"ancestors": ancestors,
+		"thread_gap": gap,
+		"replies": replies,
+		"next_url": next_url,
+	})

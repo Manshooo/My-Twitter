@@ -1,6 +1,6 @@
 {% extends "azzb/azzb_base.html" %}
-{% load show_posts %}
-{% block title %}{{ post.author.username }}: «{{ post.text|truncatechars:60 }}»{% endblock title %}
+{% load show_posts azzb_ui %}
+{% block title %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endblock title %}
 {% block meta_description %}{{ post.text|truncatechars:160 }}{% endblock meta_description %}
 {% block metatags %}
 	{# Превью ссылки в мессенджерах и соцсетях. #}
@@ -9,15 +9,61 @@
 	<meta property="og:title" content="{{ post.author.username }} (@{{ post.author.user.username }})">
 	<meta property="og:description" content="{{ post.text|truncatechars:200 }}">
 	<meta property="og:url" content="{{ request.build_absolute_uri }}">
-	<meta name="twitter:card" content="summary">
-	<link rel="canonical" href="{{ request.build_absolute_uri }}">
+	{% with first=post.images.all|first %}{% if first and first.file %}
+		<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ first.file.url }}">
+		{% if first.alt %}<meta property="og:image:alt" content="{{ first.alt }}">{% endif %}
+		<meta name="twitter:card" content="summary_large_image">
+	{% else %}
+		<meta name="twitter:card" content="summary">
+	{% endif %}{% endwith %}
+	<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 {% endblock metatags %}
 {% block content %}
 	<div style="display: flex; align-items: center; gap: 8px" data-post-page>
 		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
 			<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
 		</a>
-		<h1 class="display" style="font-size: 22px">Пост</h1>
+		<h1 class="display" style="font-size: 22px">{% if post.is_reply %}Ответ{% else %}Пост{% endif %}</h1>
 	</div>
-	{% show_posts %}
+
+	{% if thread_gap or ancestors %}
+		<div class="thread" aria-label="Выше по ветке">
+			{% if thread_gap %}
+				<div class="card thread-gap muted">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>
+					{% if thread_gap == 'deleted' %}Начало ветки удалено{% else %}Начало ветки недоступно{% endif %}
+				</div>
+			{% endif %}
+			{% for post in ancestors %}{% show_posts "parent" %}{% endfor %}
+		</div>
+	{% endif %}
+
+	{% show_posts "main" %}
+
+	<section class="replies" aria-labelledby="replies-title">
+		<h2 id="replies-title" class="sr">Ответы</h2>
+		{% if user.is_authenticated %}
+			<div class="card composer-start">
+				{% avatar user.profile %}
+				<button class="fake-input" type="button" data-reply data-reply-to="{{ post.id }}" data-reply-name="@{{ post.author.user.username }}">Ответить @{{ post.author.user.username }}</button>
+			</div>
+		{% else %}
+			<div class="card card-pad" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+				<span class="muted" style="flex: 1 1 220px">Войдите, чтобы ответить.</span>
+				<a class="btn btn-sm" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+			</div>
+		{% endif %}
+
+		<div class="feed" style="display: flex; flex-direction: column; gap: 14px" data-replies="{{ post.id }}">
+			{% if replies %}
+				{% include "azzb/includes/post_page.html" with posts=replies %}
+			{% else %}
+				<div class="card empty" data-feed-empty>
+					<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-reply"></use></svg></span>
+					<h2>Ответов пока нет</h2>
+					<p>Начните обсуждение первым.</p>
+				</div>
+			{% endif %}
+		</div>
+	</section>
 {% endblock content %}

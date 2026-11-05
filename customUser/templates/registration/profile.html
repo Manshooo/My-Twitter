@@ -65,6 +65,7 @@
 
 	<nav class="tabs" aria-label="Публикации">
 		<a class="tab" href="{{ profile_url }}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
+		<a class="tab" href="{{ profile_url }}?tab=replies"{% if tab == 'replies' %} aria-current="page"{% endif %}>Ответы</a>
 		<a class="tab" href="{{ profile_url }}?tab=media"{% if tab == 'media' %} aria-current="page"{% endif %}>Медиа</a>
 		{% if likes_visible %}
 			<a class="tab" href="{{ profile_url }}?tab=likes"{% if tab == 'likes' %} aria-current="page"{% endif %}>Лайки</a>
@@ -97,8 +98,8 @@
 						<h2>Лайки скрыты</h2>
 						<p>@{{ profile.user.username }} показывает свои лайки только себе.</p>
 					{% else %}
-						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-{% if tab == 'media' %}image{% elif tab == 'likes' %}heart{% else %}edit{% endif %}"></use></svg></span>
-						<h2>{% if tab == 'media' %}Картинок пока нет{% elif tab == 'likes' %}Лайков пока нет{% else %}Постов пока нет{% endif %}</h2>
+						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-{% if tab == 'media' %}image{% elif tab == 'likes' %}heart{% elif tab == 'replies' %}reply{% else %}edit{% endif %}"></use></svg></span>
+						<h2>{% if tab == 'media' %}Картинок пока нет{% elif tab == 'likes' %}Лайков пока нет{% elif tab == 'replies' %}Ответов пока нет{% else %}Постов пока нет{% endif %}</h2>
 						{% if is_own and tab == 'posts' %}
 							<p>Расскажите, что у вас нового.</p>
 							<button class="btn" type="button" style="margin-top: 6px" data-composer-open>Написать пост</button>

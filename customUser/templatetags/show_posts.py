@@ -3,7 +3,9 @@ from django import template
 register = template.Library()
 
 @register.inclusion_tag(filename='post/post.html', name="show_posts", takes_context=True)
-def show_posts(context):
+def show_posts(context, variant=""):
+	"""Карточка поста. variant: "" — в ленте, "main" — главный пост на своей странице,
+	"parent" — пост выше по ветке (с линией к следующему)."""
 	post = context["post"]
 	request = context["request"]
 	# Лента приходит из Post.objects.for_feed(): там число лайков и «мой ли лайк» уже посчитаны
@@ -14,4 +16,10 @@ def show_posts(context):
 	likes_total = getattr(post, "likes_n", None)
 	if likes_total is None:
 		likes_total = post.likes.count()
-	return {"post": post, "liked": liked, "likes_total": likes_total, "request": request, "user": request.user}
+	replies_total = getattr(post, "replies_n", None)
+	if replies_total is None:
+		replies_total = post.replies.visible_to(request.user).count()
+	return {
+		"post": post, "liked": liked, "likes_total": likes_total, "replies_total": replies_total,
+		"variant": variant, "request": request, "user": request.user,
+	}

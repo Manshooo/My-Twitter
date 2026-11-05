@@ -292,6 +292,20 @@ img { max-width: 100%; }
 .action.liked { color: var(--like); }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
+.reply-to { font-size: 14px; margin-top: -4px; }
+.composer-form .reply-to { margin: -4px 0 0; }
+
+/* Ветка: посты выше по ветке соединены линией с главным постом */
+.thread { display: flex; flex-direction: column; gap: 14px; }
+.post-parent { overflow: visible; }
+.post-parent::after {
+	content: ''; position: absolute; left: 39px; top: 62px; bottom: -15px; width: 2px;
+	background: var(--border-strong); border-radius: 2px;
+}
+.thread-gap { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 15px; }
+.post-main { border-color: var(--border-strong); }
+.post-main .post-text { font-size: 18px; }
+.replies { display: flex; flex-direction: column; gap: 14px; }
 
 /* ---------- Пустые состояния, скелетоны, тосты ---------- */
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 24px; }

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
-from django.db.models import BooleanField, Count, Exists, OuterRef, Value
+from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from uuid import uuid4
 from azzb.models import Profile
 
@@ -15,18 +16,31 @@ class PostQuerySet(models.QuerySet):
 		"""
 		return self.filter(author__user__is_active=True)
 
+	def top_level(self):
+		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
+		return self.filter(is_reply=False)
+
 	def for_feed(self, user):
-		"""Посты, готовые к выводу карточками: автор, картинки, число лайков и «мой ли лайк»
-		одним запросом на страницу, без отдельного запроса на каждый пост."""
+		"""Посты, готовые к выводу карточками: автор, картинки, число лайков и ответов,
+		«мой ли лайк» и на что это ответ — одним запросом на страницу, без запросов на каждый пост."""
 		if user is not None and user.is_authenticated:
 			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
 		else:
 			liked = Value(False, output_field=BooleanField())
+		# Считаем только ответы, которые пользователь и так увидит в ветке.
+		replies = (
+			self.model.objects.visible_to(user).filter(reply_to=OuterRef('pk'))
+			.order_by().values('reply_to').annotate(n=Count('pk')).values('n')
+		)
 		return (
 			self.visible_to(user)
-			.select_related('author__user')
+			.select_related('author__user', 'reply_to__author__user')
 			.prefetch_related('images')
-			.annotate(likes_n=Count('likes', distinct=True), is_liked=liked)
+			.annotate(
+				likes_n=Count('likes', distinct=True),
+				is_liked=liked,
+				replies_n=Coalesce(Subquery(replies, output_field=IntegerField()), 0),
+			)
 		)
 
 
@@ -38,6 +52,13 @@ class Post(models.Model):
 	updated = models.DateTimeField("Дата обновления", auto_now=True)
 	created_at = models.DateTimeField("Дата публикации", auto_now_add=True)
 	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked', through='Like')
+	# Ответ — это обычный пост с родителем: лайки, картинки, а позже жалобы, поиск и уведомления
+	# работают для ответов без отдельного кода. Если родителя удалят, ответ останется
+	# (reply_to станет NULL), а is_reply не даст ему всплыть в лентах как новому посту.
+	reply_to = models.ForeignKey(
+		'self', verbose_name="Ответ на", null=True, blank=True, on_delete=models.SET_NULL, related_name='replies',
+	)
+	is_reply = models.BooleanField("Это ответ", default=False)
 
 	objects = PostQuerySet.as_manager()
 	def get_likes(self):
@@ -49,6 +70,12 @@ class Post(models.Model):
 		return str(self.author.username)
 	class Meta():
 		ordering = ["-created_at"]
+		indexes = [
+			# Ленты: только посты верхнего уровня, от новых к старым.
+			models.Index(fields=['is_reply', '-created_at'], name='post_top_level_recent'),
+			# Ветка: ответы на пост по времени.
+			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
+		]
 
 class Like(models.Model):
 	"""Лайк с временем: нужен для «Горячего» с учётом свежести и для рекомендаций.

@@ -150,3 +150,91 @@ class CreatePostWithImagesTests(TestCase):
 		self.post(text='x', images=[make_upload()])
 		self.assertContains(self.client.get('/users/alice/?tab=media'), 'data-gallery')
 		self.assertContains(self.client.get('/'), 'class="media media-1"')
+
+
+class RepliesTests(TestCase):
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.root = Post.objects.create(author=self.alice.profile, text='Корень ветки')
+
+	def reply(self, user, parent, text):
+		self.client.force_login(user)
+		return self.client.post('/api/new-post/', {'text': text, 'reply_to': str(parent.pk)})
+
+	def test_reply_is_created_and_hidden_from_feeds(self):
+		response = self.reply(self.bob, self.root, 'Ответ Боба')
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'В ответ <a href="/p/%s/">@alice</a>' % self.root.pk, html=False)
+		reply = Post.objects.get(text='Ответ Боба')
+		self.assertTrue(reply.is_reply)
+		self.assertEqual(reply.reply_to, self.root)
+		for url in ('/', '/hot/'):
+			self.assertNotContains(self.client.get(url), 'Ответ Боба')
+		self.assertNotContains(self.client.get('/users/bob/'), 'Ответ Боба')
+		self.assertContains(self.client.get('/users/bob/?tab=replies'), 'Ответ Боба')
+
+	def test_thread_page_shows_ancestors_and_replies_in_order(self):
+		self.reply(self.bob, self.root, 'Первый ответ')
+		first = Post.objects.get(text='Первый ответ')
+		self.reply(self.alice, first, 'Ответ на ответ')
+		self.reply(self.alice, self.root, 'Второй ответ')
+
+		page = self.client.get(f'/p/{self.root.pk}/').content.decode()
+		page = page[page.index('<main'):]
+		self.assertLess(page.index('Первый ответ'), page.index('Второй ответ'))
+		self.assertNotIn('Ответ на ответ', page)  # только прямые ответы
+		self.assertIn('data-reply-count>2<', page)
+
+		nested = Post.objects.get(text='Ответ на ответ')
+		page = self.client.get(f'/p/{nested.pk}/').content.decode()
+		page = page[page.index('<main'):]  # в <title> тоже есть текст поста
+		self.assertLess(page.index('Корень ветки'), page.index('Первый ответ'))
+		self.assertLess(page.index('Первый ответ'), page.index('Ответ на ответ'))
+		self.assertIn('post-parent', page)
+
+	def test_replies_paginate_oldest_first(self):
+		from .pagination import PAGE_SIZE
+		for i in range(PAGE_SIZE + 3):
+			Post.objects.create(author=self.bob.profile, text=f'ответ №{i:02d}', reply_to=self.root, is_reply=True)
+		page = self.client.get(f'/p/{self.root.pk}/')
+		self.assertContains(page, 'ответ №00')
+		self.assertNotContains(page, f'ответ №{PAGE_SIZE:02d}')
+		next_url = page.context['next_url']
+		more = self.client.get(next_url, headers={'X-Requested-With': 'azzb-load-more'})
+		self.assertContains(more, f'ответ №{PAGE_SIZE + 2:02d}')
+		self.assertNotContains(more, 'ответ №00')
+
+	def test_deleting_parent_keeps_reply_out_of_feeds(self):
+		self.reply(self.bob, self.root, 'Сирота')
+		self.root.delete()
+		orphan = Post.objects.get(text='Сирота')
+		self.assertIsNone(orphan.reply_to)
+		self.assertNotContains(self.client.get('/'), 'Сирота')
+		self.assertContains(self.client.get(f'/p/{orphan.pk}/'), 'Начало ветки удалено')
+
+	def test_cannot_reply_to_hidden_or_missing_post(self):
+		self.alice.is_active = False
+		self.alice.save()
+		self.assertEqual(self.reply(self.bob, self.root, 'x').status_code, 404)
+		self.assertEqual(
+			self.client.post('/api/new-post/', {'text': 'x', 'reply_to': 'garbage'}).status_code, 400,
+		)
+		self.assertFalse(Post.objects.filter(text='x').exists())
+
+	def test_reply_count_ignores_hidden_replies(self):
+		self.reply(self.bob, self.root, 'Скрытый ответ')
+		self.bob.is_active = False
+		self.bob.save()
+		self.client.force_login(self.alice)
+		self.assertNotContains(self.client.get('/'), 'data-reply-count>1<')
+
+	def test_feed_query_count_does_not_grow_with_replies(self):
+		for i in range(5):
+			post = Post.objects.create(author=self.alice.profile, text=f'пост {i}')
+			Post.objects.create(author=self.bob.profile, text='ответ', reply_to=post, is_reply=True)
+		self.client.force_login(self.bob)
+		self.client.get('/')  # прогрев: сессия, last_visit
+		# сессия, пользователь, профиль, посты, картинки, «Кого почитать» — сколько бы ни было ответов.
+		with self.assertNumQueries(6):
+			self.client.get('/')

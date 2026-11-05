@@ -45,13 +45,20 @@ def decode_cursor(cursor):
 		return None
 
 
-def cursor_page(queryset, cursor, size=PAGE_SIZE):
-	"""Страница постов от новых к старым после курсора. Возвращает (посты, курсор следующей)."""
-	queryset = queryset.order_by('-created_at', '-id')
+def cursor_page(queryset, cursor, size=PAGE_SIZE, ascending=False):
+	"""Страница постов после курсора: от новых к старым, а для ветки ответов (ascending) —
+	от старых к новым. Возвращает (посты, курсор следующей)."""
+	if ascending:
+		queryset = queryset.order_by('created_at', 'id')
+	else:
+		queryset = queryset.order_by('-created_at', '-id')
 	after = decode_cursor(cursor)
 	if after:
 		created, pk = after
-		queryset = queryset.filter(Q(created_at__lt=created) | Q(created_at=created, id__lt=pk))
+		if ascending:
+			queryset = queryset.filter(Q(created_at__gt=created) | Q(created_at=created, id__gt=pk))
+		else:
+			queryset = queryset.filter(Q(created_at__lt=created) | Q(created_at=created, id__lt=pk))
 	items = list(queryset[:size + 1])
 	if len(items) > size:
 		items = items[:size]

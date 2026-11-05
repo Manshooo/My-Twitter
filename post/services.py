@@ -1,4 +1,4 @@
-"""Создание постов. Одна точка и для composer, и (позже) для ответов."""
+"""Создание постов и ответов. Одна точка для composer и формы ответа."""
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -37,12 +37,13 @@ def clean_post_input(text, uploads, alts):
 	return text, processed
 
 
-def publish_post(author, text='', uploads=(), alts=()):
+def publish_post(author, text='', uploads=(), alts=(), reply_to=None):
+	"""Новый пост или ответ (reply_to — пост, который автор ответа видит; проверяет вызывающий)."""
 	text, images = clean_post_input(text, uploads, alts)
 	saved = []
 	try:
 		with transaction.atomic():
-			post = Post.objects.create(author=author, text=text)
+			post = Post.objects.create(author=author, text=text, reply_to=reply_to, is_reply=reply_to is not None)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
