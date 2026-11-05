@@ -373,6 +373,17 @@ img { max-width: 100%; }
 	background: var(--surface-2); font-size: 13px;
 }
 .attachment-alt:focus-visible { outline: none; border-color: var(--accent); }
+.composer-form.dragging { outline: 2px dashed var(--accent); outline-offset: -8px; border-radius: 0 0 24px 24px; }
+.composer-form textarea { overflow-y: auto; }
+.composer-keys { white-space: nowrap; }
+@media (max-width: 760px), (pointer: coarse) { .composer-keys { display: none; } }
+/* На телефоне окна (composer, кадрирование) — на весь экран: клавиатура и так съедает половину. */
+@media (max-width: 560px) {
+	.modal { padding: 0; align-items: stretch; }
+	.modal .dialog { max-width: none; min-height: 100%; border-radius: 0; }
+	.composer-form { flex: 1; }
+	.composer-form .post-row { flex: 1; }
+}
 .counter { font-size: 13px; font-weight: 700; color: var(--text-2); }
 .counter.warn { color: var(--warn); }
 .counter.over { color: var(--danger); }

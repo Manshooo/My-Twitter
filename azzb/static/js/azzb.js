@@ -115,13 +115,53 @@
 		return mode.kind === 'new' ? '' : mode.kind + ':' + mode.id;
 	}
 
+	// Тексты черновиков переживают перезагрузку и закрытую вкладку: лежат в localStorage
+	// (ключ свой у каждого пользователя). Картинки браузер так сохранить не даёт.
+	const DRAFT_MAX_AGE = 14 * 24 * 3600 * 1000;
+	const DRAFT_MAX_COUNT = 30;
+
+	function readSavedDrafts(form) {
+		try {
+			const data = JSON.parse(localStorage.getItem(form.dataset.draftKey) || '{}');
+			return data && typeof data === 'object' ? data : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	function writeSavedDraft(form, key, text) {
+		if (!form.dataset.draftKey) return;
+		const data = readSavedDrafts(form);
+		if (text.trim()) data[key] = { text: text, at: Date.now() };
+		else delete data[key];
+		// Старые и лишние черновики выбрасываем, чтобы хранилище не росло бесконечно.
+		const fresh = Object.entries(data)
+			.filter(([, item]) => item && typeof item.text === 'string' && Date.now() - item.at < DRAFT_MAX_AGE)
+			.sort((a, b) => b[1].at - a[1].at)
+			.slice(0, DRAFT_MAX_COUNT);
+		try {
+			if (fresh.length) localStorage.setItem(form.dataset.draftKey, JSON.stringify(Object.fromEntries(fresh)));
+			else localStorage.removeItem(form.dataset.draftKey);
+		} catch (e) { /* приватный режим или нет места — живём без сохранения */ }
+	}
+
+	let draftTimer = null;
+	function saveDraftSoon(form) {
+		if (composerMode.kind === 'edit') return;
+		const key = modeKey(composerMode);
+		const text = form.querySelector('textarea').value;
+		clearTimeout(draftTimer);
+		draftTimer = setTimeout(() => writeSavedDraft(form, key, text), 400);
+	}
+
 	function switchComposerMode(form, mode, text) {
 		const textarea = form.querySelector('textarea');
 		if (modeKey(mode) !== modeKey(composerMode)) {
 			collectAlts(form);
 			// Правку не храним: при следующем открытии берём свежий текст поста.
 			if (composerMode.kind !== 'edit') drafts.set(modeKey(composerMode), { text: textarea.value, files: filesOf(form) });
-			const next = drafts.get(modeKey(mode)) || { text: '', files: [] };
+			const saved = mode.kind === 'edit' ? null : readSavedDrafts(form)[modeKey(mode)];
+			const next = drafts.get(modeKey(mode)) || { text: saved ? saved.text : '', files: [] };
 			drafts.delete(modeKey(mode));
 			textarea.value = next.text;
 			attachments.set(form, next.files);
@@ -153,8 +193,41 @@
 		syncModalOpen();
 		closeMenus();
 		updateCounter(form);
+		autosize(textarea);
 		textarea.focus();
 		textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+	}
+
+	// Поле растёт вместе с текстом (до половины экрана, дальше — прокрутка внутри).
+	function autosize(textarea) {
+		textarea.style.height = 'auto';
+		textarea.style.height = Math.min(textarea.scrollHeight + 2, window.innerHeight * 0.5) + 'px';
+	}
+
+	// Tab и Shift+Tab не выходят из открытого окна на страницу под ним.
+	function trapFocus(event) {
+		const dialog = Array.from(document.querySelectorAll('.modal, .lightbox')).find((el) => !el.hidden);
+		if (!dialog) return;
+		const focusable = Array.from(dialog.querySelectorAll(
+			'button, [href], input:not([type="hidden"]), textarea, select, [tabindex]:not([tabindex="-1"])'
+		)).filter((el) => !el.disabled && !el.closest('[hidden]') && !el.classList.contains('sr'));
+		if (!focusable.length) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (!dialog.contains(document.activeElement)) {
+			event.preventDefault();
+			first.focus();
+		} else if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
+
+	function imageFiles(list) {
+		return Array.from(list || []).filter((file) => file.type.startsWith('image/'));
 	}
 
 	function openReply(btn) {
@@ -355,6 +428,8 @@
 			}
 			if (!response.ok) throw await errorsOf(response, fallback);
 			showPublished(mode, await response.text());
+			clearTimeout(draftTimer);
+			if (mode.kind !== 'edit') writeSavedDraft(form, modeKey(mode), '');
 			resetComposer(form);
 			closeComposer();
 			toast(labels.done);
@@ -692,6 +767,14 @@
 	});
 
 	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Tab') { trapFocus(event); return; }
+		// Ctrl+Enter (⌘+Enter на Mac) — отправить из composer.
+		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target.closest('[data-composer-form]')) {
+			const form = event.target.closest('[data-composer-form]');
+			event.preventDefault();
+			if (!form.querySelector('[type="submit"]').disabled) form.requestSubmit();
+			return;
+		}
 		const box = lightboxEl();
 		if (box && !box.hidden) {
 			if (event.key === 'ArrowLeft') { event.preventDefault(); stepLightbox(-1); return; }
@@ -721,7 +804,11 @@
 	});
 
 	document.addEventListener('input', (event) => {
-		if (event.target.matches('[data-composer-text]')) updateCounter(event.target.form);
+		if (event.target.matches('[data-composer-text]')) {
+			updateCounter(event.target.form);
+			autosize(event.target);
+			saveDraftSoon(event.target.form);
+		}
 		if (event.target.matches('[data-crop-zoom]')) setCropZoom(Number(event.target.value));
 	});
 
@@ -743,6 +830,39 @@
 		}
 	});
 
+	// Картинку можно вставить из буфера (Ctrl+V) или перетащить в окно composer.
+	document.addEventListener('paste', (event) => {
+		const form = event.target.closest && event.target.closest('[data-composer-form]');
+		if (!form || composerMode.kind === 'edit') return;
+		const files = imageFiles(event.clipboardData && event.clipboardData.files);
+		if (!files.length) return;
+		event.preventDefault();
+		addFiles(form, files);
+	});
+
+	function dropTarget(event) {
+		const modal = composer();
+		if (!modal || modal.hidden || composerMode.kind === 'edit') return null;
+		if (!event.dataTransfer || !Array.from(event.dataTransfer.types).includes('Files')) return null;
+		return modal.querySelector('[data-composer-form]');
+	}
+	document.addEventListener('dragover', (event) => {
+		const form = dropTarget(event);
+		if (!form) return;
+		event.preventDefault();
+		form.classList.add('dragging');
+	});
+	document.addEventListener('dragleave', (event) => {
+		if (event.relatedTarget === null) document.querySelectorAll('.dragging').forEach((el) => el.classList.remove('dragging'));
+	});
+	document.addEventListener('drop', (event) => {
+		const form = dropTarget(event);
+		if (!form) return;
+		event.preventDefault();
+		form.classList.remove('dragging');
+		addFiles(form, imageFiles(event.dataTransfer.files));
+	});
+
 	document.addEventListener('submit', (event) => {
 		if (event.target.matches('[data-composer-form]')) {
 			event.preventDefault();
@@ -753,5 +873,11 @@
 	document.addEventListener('DOMContentLoaded', () => {
 		syncThemeToggles();
 		observeLoadMore();
+		// Недописанный пост из прошлого визита ждёт в composer.
+		const form = document.querySelector('#composer [data-composer-form]');
+		if (form) {
+			const saved = readSavedDrafts(form)[''];
+			if (saved) form.querySelector('textarea').value = saved.text;
+		}
 	});
 })();

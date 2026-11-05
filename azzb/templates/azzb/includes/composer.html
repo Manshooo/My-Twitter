@@ -7,7 +7,7 @@
 			</button>
 		</div>
 		<form class="composer-form" id="composer-form" action="{% url 'create_post_api' %}" method="post" enctype="multipart/form-data"
-			data-composer-form data-edit-url="{% url 'edit_post_api' %}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
+			data-composer-form data-draft-key="azzb-draft-{{ user.pk }}" data-edit-url="{% url 'edit_post_api' %}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
 			<input type="hidden" name="reply_to" value="" data-composer-reply-to>
 			<p class="reply-to muted" data-composer-replying hidden>В ответ <b data-composer-replying-name></b></p>
 			<div class="post-row">
@@ -39,6 +39,7 @@
 						<svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>
 					</button>
 				</div>
+				<span class="hint composer-keys" aria-hidden="true">Ctrl+Enter — отправить</span>
 				<span class="counter" data-counter>0 / {{ post_max_length }}</span>
 				<button class="btn" type="submit" disabled>Опубликовать</button>
 			</div>
