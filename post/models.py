@@ -1,40 +1,23 @@
 from django.db import connection, models
 from django.utils import timezone
 from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
-from django.db.models.query import ModelIterable
 from uuid import uuid4
 from customUser.models import Block, Mute, Profile
 
 
 class PostQuerySet(models.QuerySet):
-	# Для кого досчитать replies_n после загрузки постов (см. for_feed и _fetch_all): (user,) или None.
-	_reply_counts_for = None
-
-	def _clone(self):
-		clone = super()._clone()
-		clone._reply_counts_for = self._reply_counts_for
-		return clone
-
-	def _fetch_all(self):
-		# Число ответов во всей ветке — рекурсивный запрос, его не выразить аннотацией. Считаем его
-		# здесь, когда посты уже загружены: так страница ленты получает счётчики разом, двумя
-		# запросами, а не по запросу на пост, и ни одна вьюха не забудет их досчитать.
-		counting = self._result_cache is None and self._reply_counts_for is not None
-		super()._fetch_all()
-		if counting and self._iterable_class is ModelIterable and self._result_cache:
-			counts = reply_counts(self._result_cache, self._reply_counts_for[0])
-			for post in self._result_cache:
-				post.replies_n = counts[post.pk]
-
 	def visible_to(self, user):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
 		Все ленты, профиль, лайки (а позже поиск и уведомления) берут посты только отсюда.
-		Скрываем посты отключённых и забаненных аккаунтов (E4), скрытые модераторами (кроме
-		собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка в
-		любую сторону (E3). Сюда же лягут закрытые аккаунты (E5).
+		Скрываем удалённые, посты отключённых и забаненных аккаунтов (E4), скрытые модераторами
+		(кроме собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка
+		в любую сторону (E3). Сюда же лягут закрытые аккаунты (E5).
 		"""
-		posts = self.filter(author__user__is_active=True).exclude(author__user__banned_until__gt=timezone.now())
+		posts = (
+			self.filter(deleted_at__isnull=True, author__user__is_active=True)
+			.exclude(author__user__banned_until__gt=timezone.now())
+		)
 		if user is None or not user.is_authenticated:
 			return posts.filter(hidden_at__isnull=True)
 		posts = posts.filter(Q(hidden_at__isnull=True) | Q(author_id=user.pk))
@@ -55,22 +38,32 @@ class PostQuerySet(models.QuerySet):
 		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
 		return self.filter(is_reply=False)
 
-	def for_feed(self, user):
-		"""Посты, готовые к выводу карточками: автор, картинки, число лайков и ответов,
-		«мой ли лайк» и на что это ответ — запросами на страницу, а не на каждый пост.
-		Число ответов (replies_n) досчитывается после загрузки, см. _fetch_all."""
+	def _cards(self, user):
+		"""Всё, что нужно карточке: автор, картинки, число лайков и «мой ли лайк» — запросами
+		на страницу, а не на каждый пост. Число ответов хранится в самом посте (replies_count)."""
 		if user is not None and user.is_authenticated:
 			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
 		else:
 			liked = Value(False, output_field=BooleanField())
-		posts = (
-			self.visible_to(user)
-			.select_related('author__user', 'reply_to__author__user')
+		return (
+			self.select_related('author__user', 'reply_to__author__user')
 			.prefetch_related('images')
 			.annotate(likes_n=Count('likes', distinct=True), is_liked=liked)
 		)
-		posts._reply_counts_for = (user,)
-		return posts
+
+	def for_feed(self, user):
+		"""Посты, которые пользователь видит, готовые к выводу карточками."""
+		return self.visible_to(user)._cards(user)
+
+	def in_thread(self, user):
+		"""Посты для ветки обсуждения: и те, что пользователь не видит, — они выводятся заглушкой
+		(available=False), чтобы ветка не рвалась, а счётчик ответов сходился с тем, что в ней.
+		Удалённый пост без ответов не нужен и заглушкой: он и в счётчиках не учитывается."""
+		available = Exists(Post.objects.visible_to(user).filter(pk=OuterRef('pk')))
+		return (
+			self.exclude(deleted_at__isnull=False, replies_count=0)
+			._cards(user).annotate(available=available)
+		)
 
 
 class Post(models.Model):
@@ -82,8 +75,9 @@ class Post(models.Model):
 	created_at = models.DateTimeField("Дата публикации", auto_now_add=True)
 	likes = models.ManyToManyField(Profile, verbose_name="Классы", blank=True, related_name='profile_liked', through='Like')
 	# Ответ — это обычный пост с родителем: лайки, картинки, а позже жалобы, поиск и уведомления
-	# работают для ответов без отдельного кода. Если родителя удалят, ответ останется
-	# (reply_to станет NULL), а is_reply не даст ему всплыть в лентах как новому посту.
+	# работают для ответов без отдельного кода. Посты удаляются мягко (deleted_at), так что ветка
+	# не рвётся. Если строку всё же сотрут из базы (админка), ответ останется с reply_to = NULL,
+	# а is_reply не даст ему всплыть в лентах как новому посту.
 	reply_to = models.ForeignKey(
 		'self', verbose_name="Ответ на", null=True, blank=True, on_delete=models.SET_NULL, related_name='replies',
 	)
@@ -93,6 +87,13 @@ class Post(models.Model):
 	# Скрыт модератором (E4): пропадает у всех, кроме автора, — тот видит пометку с причиной.
 	hidden_at = models.DateTimeField("Скрыт модератором", null=True, blank=True)
 	hidden_reason = models.CharField("Причина скрытия", max_length=200, blank=True, default="")
+	# Сколько ответов во всей ветке под постом, на любой глубине, кроме удалённых авторами.
+	# Меняется только через shift_ancestor_counts: при ответе и удалении — у всей цепочки вверх.
+	replies_count = models.PositiveIntegerField("Ответов в ветке", default=0)
+	# Удалён автором. Содержимое хранится ещё RETENTION_CONTENT (149-ФЗ, ст. 10.1) для запросов
+	# госорганов, затем стирается (purged_at); строка остаётся, чтобы ветка не рвалась.
+	deleted_at = models.DateTimeField("Удалён автором", null=True, blank=True)
+	purged_at = models.DateTimeField("Содержимое стёрто", null=True, blank=True)
 
 	objects = PostQuerySet.as_manager()
 	def get_likes(self):
@@ -111,58 +112,27 @@ class Post(models.Model):
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
 		]
 
-def reply_counts(posts, user):
-	"""{id поста: сколько ответов во всей его ветке} — с ответами на ответы на любой глубине.
-
-	Считаются только ответы, до которых пользователь дойдёт по ветке: если ответ ему не виден
-	(автор заблокирован, забанен, ответ скрыт модератором), не считается и всё, что под ним.
-	Два запроса на любое число постов: рекурсивный — все потомки, второй — какие из них видны.
-	"""
-	roots = [post.pk for post in posts]
-	counts = dict.fromkeys(roots, 0)
-	if not roots:
-		return counts
-	qn = connection.ops.quote_name
-	table, pk, parent = qn(Post._meta.db_table), qn(Post._meta.pk.column), qn(Post._meta.get_field('reply_to').column)
-	marks = ', '.join(['%s'] * len(roots))
-	# UNION, а не UNION ALL: если на странице и ответ, и его родитель, ветка ответа
-	# встретится дважды — повторы отбрасываем.
+def shift_ancestor_counts(post_ids, delta):
+	"""Прибавить delta к replies_count всех постов выше по ветке — для каждого из post_ids.
+	Один запрос на любое число постов: у предка, над которым удаляют сразу несколько
+	постов (удаление аккаунта), счётчик уменьшится на их число."""
+	post_ids = list(post_ids)
+	if not post_ids:
+		return
+	marks = ', '.join(['%s'] * len(post_ids))
+	# GREATEST — страховка: счётчик не уйдёт в минус, даже если когда-то разошёлся с базой.
 	sql = f'''
-		WITH RECURSIVE tree(id, parent) AS (
-			SELECT {pk}, {parent} FROM {table} WHERE {parent} IN ({marks})
-			UNION
-			SELECT p.{pk}, p.{parent} FROM {table} p JOIN tree ON p.{parent} = tree.id
+		WITH RECURSIVE up(id) AS (
+			SELECT reply_to_id FROM post_post WHERE id IN ({marks}) AND reply_to_id IS NOT NULL
+			UNION ALL
+			SELECT p.reply_to_id FROM post_post p JOIN up ON p.id = up.id WHERE p.reply_to_id IS NOT NULL
 		)
-		SELECT id, parent FROM tree
+		UPDATE post_post SET replies_count = GREATEST(replies_count + %s * c.n, 0)
+		FROM (SELECT id, COUNT(*) AS n FROM up GROUP BY id) c
+		WHERE post_post.id = c.id
 	'''
 	with connection.cursor() as cursor:
-		cursor.execute(sql, roots)
-		edges = cursor.fetchall()
-	if not edges:
-		return counts
-	visible = set(Post.objects.visible_to(user).filter(pk__in=[child for child, _ in edges]).values_list('pk', flat=True))
-	children = {}
-	for child, parent_id in edges:
-		if child in visible:
-			children.setdefault(parent_id, []).append(child)
-	# Размер поддерева — обходом «сначала дети» на своём стеке, без рекурсии Python: ветки
-	# бывают длинными. Пост страницы может оказаться внутри ветки другого — тогда его размер
-	# уже посчитан и берётся готовым.
-	size = {}
-	for root in roots:
-		stack = [(root, False)]
-		while stack:
-			node, kids_done = stack.pop()
-			if node in size:
-				continue
-			kids = children.get(node, ())
-			if kids_done:
-				size[node] = sum(1 + size[kid] for kid in kids)
-			else:
-				stack.append((node, True))
-				stack.extend((kid, False) for kid in kids if kid not in size)
-		counts[root] = size[root]
-	return counts
+		cursor.execute(sql, [*post_ids, delta])
 
 
 class PostRevision(models.Model):

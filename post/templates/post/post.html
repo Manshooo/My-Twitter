@@ -1,4 +1,4 @@
-{% load azzb_ui %}{% with author=post.author images=post.images.all %}
+{% load azzb_ui %}{% if gone %}{% include "post/_gone.html" %}{% else %}{% with author=post.author images=post.images.all %}
 <article class="card post{% if variant %} post-{{ variant }}{% endif %}" data-post-id="{{ post.id }}"{% if post.reply_to_id %} data-reply-of="{{ post.reply_to_id }}"{% endif %}{% if variant == "main" %} data-main-post{% endif %}>
 	<div class="post-row">
 		<a class="nu" href="{% url 'profile' author.user.username %}" tabindex="-1" aria-hidden="true">{% avatar author %}</a>
@@ -111,4 +111,4 @@
 		</div>
 	{% endif %}
 </article>
-{% endwith %}
+{% endwith %}{% endif %}

@@ -244,7 +244,9 @@ class BlockMuteTests(TestCase):
 		self.assertNotIn(self.alice_post, Post.objects.visible_to(self.bob))
 		self.assertIn(self.bob_post, Post.objects.visible_to(None))
 		self.assertNotContains(self.client.get('/'), 'пост Боба')
-		self.assertEqual(self.client.get(f'/p/{self.bob_post.pk}/').status_code, 404)
+		page = self.client.get(f'/p/{self.bob_post.pk}/')  # по прямой ссылке — заглушка
+		self.assertContains(page, 'Пост недоступен')
+		self.assertNotContains(page, 'пост Боба')
 
 	def test_blocked_user_cannot_follow_like_or_reply(self):
 		from .models import Block, FollowThrough
@@ -357,10 +359,16 @@ class AccountDataTests(TestCase):
 		self.assertTrue(User.objects.filter(username='alice').exists())
 
 	def test_delete_account(self):
+		# Аккаунт сразу отключается и пропадает, а данные хранятся полгода (149-ФЗ).
 		from post.models import Post
 		response = self.client.post('/settings/account/delete/', {'confirm': 'pass-12345'})
 		self.assertRedirects(response, '/', fetch_redirect_response=False)
-		self.assertFalse(User.objects.filter(username='alice').exists())
-		self.assertFalse(Post.objects.filter(text='мой пост').exists())
-		self.assertTrue(Post.objects.filter(text='пост Боба').exists())
 		self.assertNotIn('_auth_user_id', self.client.session)
+		alice = User.objects.get(username='alice')
+		self.assertFalse(alice.is_active)
+		self.assertIsNotNone(alice.deleted_at)
+		self.assertIsNotNone(Post.objects.get(text='мой пост').deleted_at)
+		self.assertIsNone(Post.objects.get(text='пост Боба').deleted_at)
+		self.client.force_login(User.objects.get(username='bob'))
+		self.assertEqual(self.client.get('/users/alice/').status_code, 404)
+		self.assertNotContains(self.client.get('/'), 'мой пост')

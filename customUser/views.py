@@ -103,7 +103,8 @@ class UserProfileDetailView(DetailView):
 	slug_field = "user__username"
 
 	def get_queryset(self):
-		return Profile.objects.select_related("user")
+		# Удалённый аккаунт пропадает сразу, хотя данные ещё хранятся (azzb/retention.py).
+		return Profile.objects.select_related("user").filter(user__deleted_at__isnull=True)
 
 	def get_template_names(self):
 		return [PAGE_TEMPLATE] if is_load_more(self.request) else [self.template_name]

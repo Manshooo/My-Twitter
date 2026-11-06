@@ -9,12 +9,13 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from azzb.activity import Action, record
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
 from azzb.ratelimit import rate_limit
 
 from .models import Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
-from .services import edit_post, find_reply_target, publish_post, toggle_like
+from .services import delete_post as soft_delete_post, edit_post, find_reply_target, publish_post, toggle_like
 
 
 def render_cards(request, posts):
@@ -51,13 +52,15 @@ def like_post(request, pk):
 @require_POST
 @htmx_login_required
 def delete_post(request, pk):
-	"""Удаление своего поста. Со страницы самого поста уводим на главную (HX-Redirect),
-	в ленте — событие azzb:post-deleted: azzb.js убирает карточки и уменьшает счётчик ответов."""
+	"""Удаление своего поста (мягкое, см. post.services.delete_posts). Со страницы самого поста
+	уводим на главную (HX-Redirect), в ленте — событие azzb:post-deleted: azzb.js убирает
+	карточки и уменьшает счётчик ответов."""
 	post = visible_post(request, pk)
 	if post.author_id != request.user.id:
 		return htmx_errors('Удалять можно только свои посты.', status=403)
 	reply_of = post.reply_to_id
-	post.delete()
+	soft_delete_post(post)
+	record(request, Action.POST_DELETE, post=post)
 	if not is_htmx(request):
 		return redirect('index')
 	response = HttpResponse()
@@ -87,7 +90,8 @@ def compose(request):
 				return htmx_errors('Пост не найден.')
 			if post.author_id != request.user.id:
 				return htmx_errors('Редактировать можно только свои посты.', status=403)
-			edit_post(post, data.get('text', ''))
+			if edit_post(post, data.get('text', '')):
+				record(request, Action.POST_EDIT, post=post)
 		else:
 			post = publish_post(
 				request.user.profile,
@@ -96,6 +100,7 @@ def compose(request):
 				data.getlist('alt'),
 				reply_to=find_reply_target(request.user, data.get('reply_to')),
 			)
+			record(request, Action.POST_CREATE, post=post)
 	except ValidationError as error:
 		return htmx_errors(error.messages, status=404 if getattr(error, 'code', None) == 'not_found' else 400)
 	return render_cards(request, [post])
@@ -105,15 +110,15 @@ THREAD_DEPTH = 20
 
 
 def thread_ancestors(post, user):
-	"""Посты выше по ветке, от корня к родителю. Второе значение — обрыв ветки сверху:
-	"deleted" (родителя удалили), "hidden" (родитель недоступен) или None."""
+	"""Посты выше по ветке, от корня к родителю; недоступные — заглушками (Post.objects.in_thread).
+	Второе значение — обрыв ветки сверху: "deleted", если строку родителя стёрли из базы, иначе None."""
 	ancestors = []
 	parent_id = post.reply_to_id
 	gap = "deleted" if post.is_reply and parent_id is None else None
 	while parent_id and len(ancestors) < THREAD_DEPTH:
-		parent = Post.objects.for_feed(user).filter(pk=parent_id).first()
+		parent = Post.objects.in_thread(user).filter(pk=parent_id).first()
 		if parent is None:
-			gap = "hidden"
+			gap = "deleted"
 			break
 		ancestors.append(parent)
 		parent_id = parent.reply_to_id
@@ -125,10 +130,11 @@ def thread_ancestors(post, user):
 
 def post_detail(request, pk):
 	"""Страница одного поста /p/<uuid>/: ветка выше, сам пост и ответы на него по времени.
-	Открыта и гостям: ссылкой на пост делятся."""
-	post = get_object_or_404(Post.objects.for_feed(request.user), pk=pk)
+	Открыта и гостям: ссылкой на пост делятся. Недоступный пост (удалён, скрыт, автор
+	забанен или в блокировке) показывается заглушкой — ради ответов под ним."""
+	post = get_object_or_404(Post.objects.in_thread(request.user), pk=pk)
 	replies, cursor = cursor_page(
-		Post.objects.for_feed(request.user).filter(reply_to=post), request.GET.get("cursor"), ascending=True,
+		Post.objects.in_thread(request.user).filter(reply_to=post), request.GET.get("cursor"), ascending=True,
 	)
 	next_url = page_url(request, cursor=cursor) if cursor else None
 	if is_load_more(request):
@@ -171,7 +177,8 @@ def delete(request):
 		return Response({'id': 'Нужен id поста.'}, status=status.HTTP_400_BAD_REQUEST)
 	if post.author_id != request.user.id:
 		return Response(status=status.HTTP_403_FORBIDDEN)
-	post.delete()
+	soft_delete_post(post)
+	record(request, Action.POST_DELETE, post=post)
 	return Response(status=status.HTTP_200_OK)
 
 
@@ -186,7 +193,8 @@ def edit(request):
 		return Response({'errors': ['Редактировать можно только свои посты.']}, status=status.HTTP_403_FORBIDDEN)
 	text = request.data.get('text')
 	try:
-		edit_post(post, text if isinstance(text, str) else '')
+		if edit_post(post, text if isinstance(text, str) else ''):
+			record(request, Action.POST_EDIT, post=post)
 	except ValidationError as error:
 		return Response({'errors': error.messages}, status=status.HTTP_400_BAD_REQUEST)
 	return render_cards(request, [post])

@@ -1,8 +1,12 @@
 {% extends "azzb/azzb_base.html" %}
 {% load show_posts azzb_ui %}
-{% block title %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endblock title %}
-{% block meta_description %}{{ post.text|truncatechars:160 }}{% endblock meta_description %}
+{% block title %}{% if not post.available %}Пост недоступен{% else %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endif %}{% endblock title %}
+{% block meta_description %}{% if post.available %}{{ post.text|truncatechars:160 }}{% endif %}{% endblock meta_description %}
 {% block metatags %}
+	{% if not post.available %}
+		{# Недоступный пост — заглушка ради ответов под ним: ни текста, ни автора в превью, не индексировать. #}
+		<meta name="robots" content="noindex">
+	{% else %}
 	{# Превью ссылки в мессенджерах и соцсетях. #}
 	<meta property="og:type" content="article">
 	<meta property="og:title" content="{{ post.author.username }} (@{{ post.author.user.username }})">
@@ -12,9 +16,10 @@
 		<meta name="twitter:card" content="{% if first and first.file %}summary_large_image{% else %}summary{% endif %}">
 	{% endwith %}
 	<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+	{% endif %}
 {% endblock metatags %}
 {% block og_image %}
-	{% with first=post.images.all|first %}{% if first and first.file %}
+	{% with first=post.images.all|first %}{% if post.available and first and first.file %}
 		<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ first.file.url }}">
 		{% if first.alt %}<meta property="og:image:alt" content="{{ first.alt }}">{% endif %}
 	{% else %}{{ block.super }}{% endif %}{% endwith %}
@@ -43,7 +48,8 @@
 
 	<section class="replies" aria-labelledby="replies-title">
 		<h2 id="replies-title" class="sr">Ответы</h2>
-		{% if user.is_authenticated %}
+		{% if not post.available %}
+		{% elif user.is_authenticated %}
 			<div class="card composer-start">
 				{% avatar user.profile %}
 				<button class="fake-input" type="button" data-reply data-reply-to="{{ post.id }}" data-reply-name="@{{ post.author.user.username }}">Ответить @{{ post.author.user.username }}</button>

@@ -657,12 +657,9 @@
 
 	document.addEventListener('azzb:post-deleted', (event) => {
 		const { id, replyOf } = event.detail;
-		const cards = document.querySelectorAll('[data-post-id="' + id + '"]');
-		// Ответы на удалённый пост остаются, но отрываются от ветки — выше по ней их больше не считаем.
-		const counter = cards.length ? cards[0].querySelector('[data-reply-count]') : null;
-		const subtree = counter ? Number(counter.textContent) || 0 : 0;
-		cards.forEach((card) => card.remove());
-		if (replyOf) bumpReplyCount(replyOf, -(1 + subtree));
+		document.querySelectorAll('[data-post-id="' + id + '"]').forEach((card) => card.remove());
+		// Ответы под удалённым постом остаются в ветке (там он теперь заглушка) и в счётчиках выше.
+		if (replyOf) bumpReplyCount(replyOf, -1);
 	});
 
 	// Ошибка запроса не из composer (у него свой блок ошибок) — короткий тост.

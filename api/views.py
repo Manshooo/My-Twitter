@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from customUser.serializers import ProfileSerializer
 from customUser.models import Profile
 from post.services import find_reply_target, publish_post
+from azzb.activity import Action, record
 from azzb.ratelimit import rate_limit
 from post.views import POST_RATES, render_cards
 
@@ -38,6 +39,7 @@ def create_post(request):
 	except ValidationError as error:
 		code = status.HTTP_404_NOT_FOUND if getattr(error, 'code', None) == 'not_found' else status.HTTP_400_BAD_REQUEST
 		return Response({'errors': error.messages}, status=code)
+	record(request, Action.POST_CREATE, post=post)
 	return render_cards(request, [post])
 
 

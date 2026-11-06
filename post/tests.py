@@ -137,14 +137,18 @@ class CreatePostWithImagesTests(TestCase):
 		self.assertFalse(Post.objects.exists())
 		self.assertFalse(Image.objects.exists())
 
-	def test_deleting_post_deletes_files(self):
+	def test_deleted_post_keeps_files_until_purged(self):
+		from .services import purge_posts
 		self.post(text='x', images=[make_upload()])
 		image = Image.objects.get()
 		storage, name = image.file.storage, image.file.name
-		self.assertTrue(storage.exists(name))
 		with self.captureOnCommitCallbacks(execute=True):
 			self.client.post('/api/delete-post/', json.dumps({'id': str(image.post_id)}), content_type='application/json')
+		self.assertTrue(storage.exists(name))  # хранится полгода (149-ФЗ)
+		with self.captureOnCommitCallbacks(execute=True):
+			purge_posts(Post.objects.filter(pk=image.post_id))
 		self.assertFalse(storage.exists(name))
+		self.assertEqual(Post.objects.get(pk=image.post_id).text, '')
 
 	def test_media_tab_and_feed_show_images(self):
 		self.post(text='x', images=[make_upload()])
@@ -222,12 +226,53 @@ class RepliesTests(TestCase):
 		)
 		self.assertFalse(Post.objects.filter(text='x').exists())
 
-	def test_reply_count_ignores_hidden_replies(self):
+	def test_unavailable_reply_is_counted_and_shown_as_placeholder(self):
 		self.reply(self.bob, self.root, 'Скрытый ответ')
 		self.bob.is_active = False
 		self.bob.save()
 		self.client.force_login(self.alice)
-		self.assertNotContains(self.client.get('/'), 'data-reply-count>1<')
+		self.assertContains(self.client.get('/'), 'data-reply-count>1<')
+		page = self.client.get(f'/p/{self.root.pk}/')
+		self.assertContains(page, 'Пост недоступен')
+		self.assertNotContains(page, 'Скрытый ответ')
+
+	def test_reply_counter_follows_the_chain(self):
+		self.reply(self.bob, self.root, 'Первый')
+		first = Post.objects.get(text='Первый')
+		self.reply(self.alice, first, 'Второй')
+		second = Post.objects.get(text='Второй')
+		self.root.refresh_from_db()
+		first.refresh_from_db()
+		self.assertEqual((self.root.replies_count, first.replies_count), (2, 1))
+		self.client.post(f'/p/{second.pk}/delete/', headers={'HX-Request': 'true'})
+		self.root.refresh_from_db()
+		first.refresh_from_db()
+		self.assertEqual((self.root.replies_count, first.replies_count), (1, 0))
+
+	def test_deleted_post_leaves_feeds_but_stays_in_thread(self):
+		self.reply(self.bob, self.root, 'Удалю потом')
+		middle = Post.objects.get(text='Удалю потом')
+		self.reply(self.alice, middle, 'Ответ под удалённым')
+		self.client.force_login(self.bob)
+		self.client.post(f'/p/{middle.pk}/delete/', headers={'HX-Request': 'true'})
+		self.assertTrue(Post.objects.filter(pk=middle.pk).exists())  # хранится полгода (149-ФЗ)
+		self.assertNotContains(self.client.get('/users/bob/?tab=replies'), 'Удалю потом')
+		page = self.client.get(f'/p/{self.root.pk}/')
+		self.assertContains(page, 'Пост удалён')
+		self.assertNotContains(page, 'Удалю потом')
+		self.assertContains(self.client.get(f'/p/{middle.pk}/'), 'Ответ под удалённым')
+		# Удалённый пост без ответов не нужен и заглушкой.
+		self.reply(self.bob, self.root, 'Одинокий')
+		lonely = Post.objects.get(text='Одинокий')
+		self.client.post(f'/p/{lonely.pk}/delete/', headers={'HX-Request': 'true'})
+		self.assertEqual(self.client.get(f'/p/{lonely.pk}/').status_code, 404)
+
+	def test_cannot_like_or_reply_to_deleted_post(self):
+		from .services import delete_post
+		delete_post(self.root)
+		self.client.force_login(self.bob)
+		self.assertEqual(self.client.post(f'/p/{self.root.pk}/like/', headers={'HX-Request': 'true'}).status_code, 404)
+		self.assertEqual(self.reply(self.bob, self.root, 'поздно').status_code, 404)
 
 	def test_feed_query_count_does_not_grow_with_replies(self):
 		for i in range(5):
@@ -235,9 +280,9 @@ class RepliesTests(TestCase):
 			Post.objects.create(author=self.bob.profile, text='ответ', reply_to=post, is_reply=True)
 		self.client.force_login(self.bob)
 		self.client.get('/')  # прогрев: сессия, last_visit
-		# сессия, пользователь, профиль, посты, картинки, ответы в ветках и какие из них видны,
-		# право модерировать (пункт меню), «Кого почитать» — сколько бы ни было ответов.
-		with self.assertNumQueries(9):
+		# сессия, пользователь, профиль, посты, картинки, право модерировать (пункт меню),
+		# «Кого почитать» — сколько бы ни было ответов.
+		with self.assertNumQueries(7):
 			self.client.get('/')
 
 
@@ -354,7 +399,7 @@ class HtmxActionsTests(TestCase):
 		self.assertEqual(list(events), ['azzb:toast', 'azzb:post-deleted'])  # тост до удаления карточки
 		self.assertEqual(events['azzb:post-deleted'], {'id': str(reply.pk), 'replyOf': str(self.post.pk)})
 		self.assertEqual(events['azzb:toast'], 'Пост удалён')
-		self.assertFalse(Post.objects.filter(pk=reply.pk).exists())
+		self.assertIsNotNone(Post.objects.get(pk=reply.pk).deleted_at)
 
 	def test_delete_main_post_redirects_home(self):
 		self.client.force_login(self.alice)

@@ -23,12 +23,13 @@ class RevisionInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-	list_display = ('created_at', 'author', 'short_text', 'is_reply', 'edited_at', 'hidden_at')
-	list_filter = ('hidden_at',)
+	list_display = ('created_at', 'author', 'short_text', 'is_reply', 'replies_count', 'edited_at', 'hidden_at', 'deleted_at')
+	list_filter = ('hidden_at', 'deleted_at', 'purged_at')
 	list_select_related = ('author',)
 	search_fields = ('text', 'author__user__username')
 	date_hierarchy = 'created_at'
-	readonly_fields = ('id', 'created_at', 'updated', 'edited_at')
+	# Счётчик и удаление меняются только через post.services (с пересчётом ветки).
+	readonly_fields = ('id', 'created_at', 'updated', 'edited_at', 'replies_count', 'deleted_at', 'purged_at')
 	raw_id_fields = ('author', 'reply_to')
 	exclude = ('likes',)
 	inlines = [ImageInline, RevisionInline]

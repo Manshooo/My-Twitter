@@ -72,6 +72,10 @@ class CustomUser(AbstractUser):
 	# заведён до появления галочек на регистрации.
 	terms_accepted_at = models.DateTimeField("Принял правила", null=True, blank=True)
 	pd_consent_at = models.DateTimeField("Согласие на обработку ПДн", null=True, blank=True)
+	# Человек удалил аккаунт: тот сразу отключён, а данные стираются через полгода
+	# (azzb/retention.py) или сразу, если он об этом попросил (erased_at).
+	deleted_at = models.DateTimeField("Удалил аккаунт", null=True, blank=True)
+	erased_at = models.DateTimeField("Данные стёрты", null=True, blank=True)
 
 	@property
 	def is_banned(self):

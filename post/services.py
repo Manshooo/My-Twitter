@@ -1,4 +1,4 @@
-"""Создание, правка постов и лайки. Одна точка и для страниц (HTMX), и для API."""
+"""Создание, правка, удаление постов и лайки. Одна точка и для страниц (HTMX), и для API."""
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -7,7 +7,7 @@ from django.db import transaction
 from .media import process_post_image
 from django.utils import timezone
 
-from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision
+from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision, shift_ancestor_counts
 from .serializer import POST_MAX_LENGTH
 
 
@@ -48,6 +48,8 @@ def publish_post(author, text='', uploads=(), alts=(), reply_to=None):
 	try:
 		with transaction.atomic():
 			post = Post.objects.create(author=author, text=text, reply_to=reply_to, is_reply=reply_to is not None)
+			if reply_to is not None:
+				shift_ancestor_counts([post.pk], +1)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
@@ -83,6 +85,36 @@ def edit_post(post, text):
 		current.save(update_fields=['text', 'edited_at', 'updated'])
 	post.text, post.edited_at = current.text, current.edited_at
 	return True
+
+
+def delete_posts(posts):
+	"""Мягкое удаление: посты пропадают отовсюду, у веток над ними −1 в счётчиках ответов.
+	Содержимое остаётся до purge_posts — его требует хранить 149-ФЗ (см. azzb/retention.py)."""
+	with transaction.atomic():
+		ids = list(posts.filter(deleted_at__isnull=True).select_for_update().values_list('pk', flat=True))
+		if not ids:
+			return 0
+		Post.objects.filter(pk__in=ids).update(deleted_at=timezone.now())
+		shift_ancestor_counts(ids, -1)
+	return len(ids)
+
+
+def delete_post(post):
+	return delete_posts(Post.objects.filter(pk=post.pk))
+
+
+def purge_posts(posts):
+	"""Стереть содержимое удалённых постов: текст, картинки (файлы удалит сигнал), прежние
+	версии, лайки. Строка остаётся пустой заглушкой, чтобы ветка не рвалась."""
+	with transaction.atomic():
+		ids = list(posts.filter(deleted_at__isnull=False, purged_at__isnull=True).values_list('pk', flat=True))
+		if not ids:
+			return 0
+		Image.objects.filter(post_id__in=ids).delete()
+		PostRevision.objects.filter(post_id__in=ids).delete()
+		Like.objects.filter(post_id__in=ids).delete()
+		Post.objects.filter(pk__in=ids).update(text='', purged_at=timezone.now())
+	return len(ids)
 
 
 def toggle_like(post, profile):
