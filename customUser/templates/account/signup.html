@@ -1,0 +1,29 @@
+{% extends "account/base_entrance.html" %}
+{% load allauth %}
+{% block head_title %}Регистрация{% endblock head_title %}
+{% block meta_description %}Регистрация в AzzB{% endblock meta_description %}
+{% block content %}
+	<h1>Регистрация</h1>
+	<p class="lead">Пишите посты, ставьте лайки и подписывайтесь на интересных людей. На почту придёт письмо — по ссылке из него аккаунт заработает.</p>
+	{% url 'account_signup' as action_url %}
+	{% element form form=form method="post" action=action_url %}
+		{% slot body %}
+			{% csrf_token %}
+			{% element fields form=form %}{% endelement %}
+			{% if form.captcha_key %}
+				<div class="smart-captcha" data-sitekey="{{ form.captcha_key }}" data-hl="ru"></div>
+			{% endif %}
+			{{ redirect_field }}
+		{% endslot %}
+		{% slot actions %}
+			<button class="btn btn-lg btn-block" type="submit">Зарегистрироваться</button>
+		{% endslot %}
+	{% endelement %}
+	<div class="auth-links">
+		<span class="muted">Уже есть аккаунт?</span>
+		<a href="{{ login_url }}">Войти</a>
+	</div>
+{% endblock content %}
+{% block extra_head %}
+	{% if form.captcha_key %}<script src="https://smartcaptcha.yandexcloud.net/captcha.js" defer></script>{% endif %}
+{% endblock extra_head %}

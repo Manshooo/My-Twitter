@@ -1,9 +1,9 @@
 from django.db import models
 from django.utils import timezone
-from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Subquery, Value
+from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Coalesce
 from uuid import uuid4
-from azzb.models import Profile
+from customUser.models import Block, Mute, Profile
 
 
 class PostQuerySet(models.QuerySet):
@@ -11,10 +11,26 @@ class PostQuerySet(models.QuerySet):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
 		Все ленты, профиль, лайки (а позже поиск и уведомления) берут посты только отсюда.
-		Сейчас скрываем посты отключённых аккаунтов (is_active=False — это и есть бан).
-		Сюда же лягут блокировки (E3), закрытые аккаунты (E5) и скрытие модераторами (E4).
+		Скрываем посты отключённых и забаненных аккаунтов (E4), скрытые модераторами (кроме
+		собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка в
+		любую сторону (E3). Сюда же лягут закрытые аккаунты (E5).
 		"""
-		return self.filter(author__user__is_active=True)
+		posts = self.filter(author__user__is_active=True).exclude(author__user__banned_until__gt=timezone.now())
+		if user is None or not user.is_authenticated:
+			return posts.filter(hidden_at__isnull=True)
+		posts = posts.filter(Q(hidden_at__isnull=True) | Q(author_id=user.pk))
+		# author_id — это id пользователя (to_field='user'), поэтому сравниваем с user_id профилей.
+		return posts.exclude(
+			author_id__in=Block.objects.filter(blocker__user_id=user.pk).values('blocked__user_id'),
+		).exclude(
+			author_id__in=Block.objects.filter(blocked__user_id=user.pk).values('blocker__user_id'),
+		)
+
+	def without_muted(self, user):
+		"""Для лент: без постов заглушённых (E3). Профиль и ветка обсуждения их по-прежнему показывают."""
+		if user is None or not user.is_authenticated:
+			return self
+		return self.exclude(author_id__in=Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id'))
 
 	def top_level(self):
 		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
@@ -61,6 +77,9 @@ class Post(models.Model):
 	is_reply = models.BooleanField("Это ответ", default=False)
 	# Когда автор последний раз менял текст. updated не годится: он меняется при любом save().
 	edited_at = models.DateTimeField("Изменён", null=True, blank=True)
+	# Скрыт модератором (E4): пропадает у всех, кроме автора, — тот видит пометку с причиной.
+	hidden_at = models.DateTimeField("Скрыт модератором", null=True, blank=True)
+	hidden_reason = models.CharField("Причина скрытия", max_length=200, blank=True, default="")
 
 	objects = PostQuerySet.as_manager()
 	def get_likes(self):

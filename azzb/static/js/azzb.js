@@ -816,8 +816,17 @@
 		addFiles(form, imageFiles(event.dataTransfer.files));
 	});
 
+	// Обычные формы с подтверждением: <form data-confirm="Точно?"> (htmx-кнопкам хватает hx-confirm).
+	document.addEventListener('submit', (event) => {
+		const form = event.target.closest('form[data-confirm]');
+		if (form && !window.confirm(form.dataset.confirm)) event.preventDefault();
+	});
+
 	document.addEventListener('DOMContentLoaded', () => {
 		syncThemeToggles();
+		// Сообщения Django (например, «Почта подтверждена» после перехода по ссылке из письма).
+		const flash = document.getElementById('toast');
+		if (flash && flash.dataset.flash) toast(flash.dataset.flash);
 		// Недописанный пост из прошлого визита ждёт в composer.
 		const form = document.querySelector('#composer [data-composer-form]');
 		if (form) {

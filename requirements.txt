@@ -6,6 +6,8 @@ djangorestframework==3.18.3
 django-cors-headers==4.9.0
 Pillow==13.0.0
 python-dotenv==1.2.4
+# Регистрация с подтверждением почты, вход, сброс пароля (E1); лимиты на вход и регистрацию.
+django-allauth==65.21.1
 # Драйвер PostgreSQL с готовыми бинарными сборками (не нужен libpq-dev на сервере).
 psycopg[binary]==3.3.8
 

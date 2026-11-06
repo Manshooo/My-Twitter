@@ -23,7 +23,8 @@ class RevisionInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-	list_display = ('created_at', 'author', 'short_text', 'is_reply', 'edited_at')
+	list_display = ('created_at', 'author', 'short_text', 'is_reply', 'edited_at', 'hidden_at')
+	list_filter = ('hidden_at',)
 	list_select_related = ('author',)
 	search_fields = ('text', 'author__user__username')
 	date_hierarchy = 'created_at'

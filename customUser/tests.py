@@ -217,3 +217,150 @@ class BrandTests(TestCase):
 			self.assertEqual(icon.size, (180, 180))
 		with PILImage.open(finders.find('og-default.png')) as og:
 			self.assertEqual(og.size, (1200, 630))
+
+
+class BlockMuteTests(TestCase):
+	"""E3: блокировка скрывает посты в обе стороны и снимает подписки; заглушение — только ленты."""
+
+	def setUp(self):
+		from post.models import Post
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice_post = Post.objects.create(author=self.alice.profile, text='пост Алисы')
+		self.bob_post = Post.objects.create(author=self.bob.profile, text='пост Боба')
+		self.client.force_login(self.alice)
+
+	def act(self, action, username='bob', **extra):
+		return self.client.post(f'/users/{username}/', {action: '', **extra})
+
+	def test_block_hides_posts_both_ways_and_removes_follows(self):
+		from .models import FollowThrough
+		from post.models import Post
+		FollowThrough.objects.create(follower=self.alice.profile, followee=self.bob.profile)
+		FollowThrough.objects.create(follower=self.bob.profile, followee=self.alice.profile)
+		self.act('block')
+		self.assertFalse(FollowThrough.objects.exists())
+		self.assertNotIn(self.bob_post, Post.objects.visible_to(self.alice))
+		self.assertNotIn(self.alice_post, Post.objects.visible_to(self.bob))
+		self.assertIn(self.bob_post, Post.objects.visible_to(None))
+		self.assertNotContains(self.client.get('/'), 'пост Боба')
+		self.assertEqual(self.client.get(f'/p/{self.bob_post.pk}/').status_code, 404)
+
+	def test_blocked_user_cannot_follow_like_or_reply(self):
+		from .models import Block, FollowThrough
+		Block.objects.create(blocker=self.alice.profile, blocked=self.bob.profile)
+		self.client.force_login(self.bob)
+		self.act('subscribe', username='alice')
+		self.assertFalse(FollowThrough.objects.exists())
+		self.assertEqual(self.client.post(f'/p/{self.alice_post.pk}/like/').status_code, 404)
+		response = self.client.post('/compose/', {'text': 'ответ', 'reply_to': str(self.alice_post.pk)}, headers={'HX-Request': 'true'})
+		self.assertEqual(response.status_code, 404)
+		page = self.client.get('/users/alice/')
+		self.assertContains(page, 'ограничил(а) доступ')
+		self.assertNotContains(page, 'name="subscribe"')
+
+	def test_unblock(self):
+		from .models import Block
+		self.act('block')
+		page = self.client.get('/users/bob/')
+		self.assertContains(page, 'Вы заблокировали @bob')
+		self.assertContains(page, 'name="unblock"')
+		self.act('unblock')
+		self.assertFalse(Block.objects.exists())
+		self.assertContains(self.client.get('/'), 'пост Боба')
+
+	def test_mute_hides_from_feeds_only(self):
+		from .models import FollowThrough
+		FollowThrough.objects.create(follower=self.alice.profile, followee=self.bob.profile)
+		response = self.act('mute', next='/hot/')
+		self.assertRedirects(response, '/hot/', fetch_redirect_response=False)
+		for url in ('/', '/hot/', '/follows-updates/'):
+			self.assertNotContains(self.client.get(url), 'пост Боба', msg_prefix=url)
+		self.assertContains(self.client.get('/users/bob/'), 'пост Боба')
+		self.assertEqual(self.client.get(f'/p/{self.bob_post.pk}/').status_code, 200)
+		self.assertTrue(FollowThrough.objects.exists(), 'подписка остаётся')
+		self.act('unmute')
+		self.assertContains(self.client.get('/'), 'пост Боба')
+
+	def test_card_menu_offers_block_for_others_only(self):
+		page = self.client.get('/')
+		self.assertContains(page, 'Заблокировать @bob')
+		self.assertNotContains(page, 'Заблокировать @alice')
+
+	def test_cannot_block_self(self):
+		from .models import Block
+		self.act('block', username='alice')
+		self.assertFalse(Block.objects.exists())
+
+
+class BlockedAccountsPageTests(TestCase):
+	def test_lists_and_unblocks(self):
+		from .models import Block, Mute
+		alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345')
+		Block.objects.create(blocker=alice.profile, blocked=bob.profile)
+		Mute.objects.create(muter=alice.profile, muted=carol.profile)
+		self.client.force_login(alice)
+		page = self.client.get('/settings/blocked/')
+		self.assertContains(page, '@bob')
+		self.assertContains(page, '@carol')
+		response = self.client.post('/users/bob/', {'unblock': '', 'next': '/settings/blocked/'})
+		self.assertRedirects(response, '/settings/blocked/', fetch_redirect_response=False)
+		self.assertFalse(Block.objects.exists())
+
+
+class LegalPagesTests(TestCase):
+	"""C5: правила и документы открыты всем, ссылки — в подвале."""
+
+	def test_pages_render_for_guests(self):
+		for url in ('/rules/', '/privacy/', '/privacy/consent/'):
+			response = self.client.get(url)
+			self.assertEqual(response.status_code, 200, url)
+			self.assertContains(response, 'Редакция от')
+		self.assertContains(self.client.get('/'), 'href="/rules/"')
+		self.assertContains(self.client.get('/auth/login/'), 'href="/privacy/"')
+
+
+@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+class AccountDataTests(TestCase):
+	"""E6: выгрузка своих данных и удаление аккаунта."""
+
+	def setUp(self):
+		from post.models import Post
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.post = Post.objects.create(author=self.alice.profile, text='мой пост')
+		Post.objects.create(author=self.bob.profile, text='пост Боба')
+		self.client.force_login(self.alice)
+
+	def test_export_zip(self):
+		import io, json, zipfile
+		self.client.post('/compose/', {'text': 'с картинкой', 'images': make_upload()}, headers={'HX-Request': 'true'})
+		self.assertEqual(self.client.get('/settings/account/').status_code, 200)
+		response = self.client.post('/settings/account/export/')
+		self.assertEqual(response.status_code, 200)
+		self.assertIn('attachment', response['Content-Disposition'])
+		bundle = zipfile.ZipFile(io.BytesIO(b''.join(response.streaming_content)))
+		data = json.loads(bundle.read('data.json'))
+		self.assertEqual(data['account']['email'], 'alice@example.com')
+		texts = [post['text'] for post in data['posts']]
+		self.assertIn('мой пост', texts)
+		self.assertNotIn('пост Боба', texts)
+		image = next(post for post in data['posts'] if post['images'])['images'][0]['file']
+		self.assertIn(image, bundle.namelist())
+
+	def test_delete_requires_password(self):
+		response = self.client.post('/settings/account/delete/', {'confirm': 'wrong'})
+		self.assertEqual(response.status_code, 400)
+		self.assertContains(response, 'Неверный пароль', status_code=400)
+		self.assertTrue(User.objects.filter(username='alice').exists())
+
+	def test_delete_account(self):
+		from post.models import Post
+		response = self.client.post('/settings/account/delete/', {'confirm': 'pass-12345'})
+		self.assertRedirects(response, '/', fetch_redirect_response=False)
+		self.assertFalse(User.objects.filter(username='alice').exists())
+		self.assertFalse(Post.objects.filter(text='мой пост').exists())
+		self.assertTrue(Post.objects.filter(text='пост Боба').exists())
+		self.assertNotIn('_auth_user_id', self.client.session)

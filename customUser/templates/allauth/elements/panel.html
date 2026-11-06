@@ -1,0 +1,6 @@
+{% load allauth %}
+<section class="form">
+	<h2 class="section-title">{% slot title %}{% endslot %}</h2>
+	{% slot body %}{% endslot %}
+	{% if slots.actions %}<div class="form-actions">{% for action in slots.actions %}{{ action }}{% endfor %}</div>{% endif %}
+</section>

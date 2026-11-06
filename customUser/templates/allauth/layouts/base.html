@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+{# Оболочка всех страниц allauth: вход, регистрация, подтверждение почты, пароль (E1). #}
+<html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+	<head>
+		<title>{% block head_title %}AzzB{% endblock head_title %} · AzzB</title>
+		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов.{% endblock meta_description %}">
+		{% include "azzb/includes/head.html" %}
+		{% include "azzb/includes/og_default.html" %}
+		{% block extra_head %}{% endblock extra_head %}
+	</head>
+	<body>
+		{% include "azzb/includes/icons.html" %}
+		<div class="auth">
+			{% include "azzb/includes/logo.html" %}
+			<main class="card auth-card">
+				{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
+				{% block body %}{% block content %}{% endblock content %}{% endblock body %}
+			</main>
+			{% block footer %}{% include "account/snippets/auth_footer.html" %}{% endblock footer %}
+		</div>
+		{% block extra_body %}{% endblock extra_body %}
+	</body>
+</html>

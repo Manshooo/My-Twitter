@@ -1,9 +1,14 @@
 import json
 
+import re
+
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.cache import cache
 from django.test import TestCase
 
-from customUser.forms import CustomUserCreationForm
+from customUser.forms import SignupForm
 from customUser.models import FollowThrough
 from post.models import Post
 
@@ -107,7 +112,7 @@ class ProfilePageTests(TestCase):
 		self.assertEqual(self.client.get('/edit/').status_code, 200)
 		response = self.client.post('/edit/', {
 			'username': 'Алиса', 'first_name': 'Алиса', 'last_name': 'Иванова',
-			'email': 'alice@example.com', 'bio': 'О себе', 'likes_public': 'on',
+			'bio': 'О себе', 'likes_public': 'on',
 		})
 		self.assertEqual(response.status_code, 302)
 		self.alice.refresh_from_db()
@@ -118,19 +123,102 @@ class ProfilePageTests(TestCase):
 
 class AuthPagesTests(TestCase):
 	def test_auth_pages_render(self):
-		for url in ('/auth/login/', '/auth/signup/', '/auth/password_reset/'):
-			self.assertEqual(self.client.get(url).status_code, 200, url)
+		for url in ('/auth/login/', '/auth/signup/', '/auth/password/reset/'):
+			response = self.client.get(url)
+			self.assertEqual(response.status_code, 200, url)
+			self.assertContains(response, 'auth-card', msg_prefix=url)
 
 	def signup_form(self, username):
-		return CustomUserCreationForm(data={
+		return SignupForm(data={
 			'username': username, 'email': 'new@example.com',
 			'password1': 'Very-strong-pass-42', 'password2': 'Very-strong-pass-42',
+			'accept_rules': 'on', 'pd_consent': 'on',
 		})
+
+	def test_consents_required_and_recorded(self):
+		form = SignupForm(data={
+			'username': 'ok', 'email': 'ok@example.com',
+			'password1': 'Very-strong-pass-42', 'password2': 'Very-strong-pass-42',
+		})
+		self.assertFalse(form.is_valid())
+		self.assertIn('accept_rules', form.errors)
+		self.assertIn('pd_consent', form.errors)
+		page = self.client.get('/auth/signup/')
+		self.assertContains(page, 'href="/rules/"')
+		self.assertContains(page, 'href="/privacy/consent/"')
 
 	def test_username_rules(self):
 		self.assertTrue(self.signup_form('ok_name.1-x').is_valid())
-		for bad in ('bad@name', 'plus+name', 'кириллица', 'a' * 31):
+		for bad in ('bad@name', 'plus+name', 'кириллица', 'a' * 31, 'admin'):
 			self.assertFalse(self.signup_form(bad).is_valid(), bad)
+
+
+class EmailVerificationTests(TestCase):
+	"""E1: без подтверждённой почты войти нельзя, ссылка из письма подтверждает и впускает."""
+
+	def setUp(self):
+		# Лимиты allauth (например, одно письмо подтверждения на адрес за 3 минуты) живут в кэше.
+		cache.clear()
+
+	def signup(self, username='newbie', email='newbie@example.com'):
+		return self.client.post('/auth/signup/', {
+			'username': username, 'email': email,
+			'password1': 'Very-strong-pass-42', 'password2': 'Very-strong-pass-42',
+			'accept_rules': 'on', 'pd_consent': 'on',
+		})
+
+	def test_signup_sends_confirmation_and_does_not_log_in(self):
+		response = self.signup()
+		self.assertRedirects(response, '/auth/confirm-email/', fetch_redirect_response=False)
+		self.assertEqual(len(mail.outbox), 1)
+		self.assertIn('newbie@example.com', mail.outbox[0].to)
+		self.assertNotIn('_auth_user_id', self.client.session)
+		user = User.objects.get(username='newbie')
+		self.assertTrue(hasattr(user, 'profile'))
+		self.assertIsNotNone(user.terms_accepted_at)
+		self.assertIsNotNone(user.pd_consent_at)
+		self.assertFalse(EmailAddress.objects.get(user=user).verified)
+
+	def test_unverified_user_cannot_log_in(self):
+		self.signup()
+		mail.outbox.clear()
+		cache.clear()  # иначе повторное письмо упрётся в лимит «одно за 3 минуты»
+		response = self.client.post('/auth/login/', {'login': 'newbie', 'password': 'Very-strong-pass-42'})
+		self.assertNotIn('_auth_user_id', self.client.session)
+		self.assertRedirects(response, '/auth/confirm-email/', fetch_redirect_response=False)
+		self.assertEqual(len(mail.outbox), 1, 'письмо отправляется повторно')
+
+	def test_confirmation_link_verifies_and_logs_in(self):
+		self.signup()
+		link = re.search(r'https?://[^/\s]+(/auth/confirm-email/[^\s]+/)', mail.outbox[0].body).group(1)
+		self.assertEqual(self.client.get(link).status_code, 200)
+		self.client.post(link)
+		self.assertTrue(EmailAddress.objects.get(email='newbie@example.com').verified)
+		self.assertEqual(int(self.client.session['_auth_user_id']), User.objects.get(username='newbie').pk)
+
+	def test_duplicate_email_rejected(self):
+		user = make_user('alice')
+		EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
+		response = self.signup(email='Alice@Example.com')
+		# Чтобы по форме нельзя было проверить, зарегистрирован ли адрес, allauth отвечает как обычно,
+		# а владельцу почты пишет, что аккаунт уже есть.
+		self.assertRedirects(response, '/auth/confirm-email/', fetch_redirect_response=False)
+		self.assertFalse(User.objects.filter(username='newbie').exists())
+		self.assertEqual(mail.outbox[0].to, ['alice@example.com'])
+
+	def test_verified_user_logs_in_by_username_or_email(self):
+		user = make_user('alice')
+		EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
+		for login in ('alice', 'alice@example.com'):
+			self.client.logout()
+			response = self.client.post('/auth/login/', {'login': login, 'password': 'pass-12345'})
+			self.assertRedirects(response, '/', fetch_redirect_response=False)
+			self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
+
+	def test_logout_by_post(self):
+		self.client.force_login(make_user('alice'))
+		self.assertRedirects(self.client.post('/auth/logout/'), '/', fetch_redirect_response=False)
+		self.assertNotIn('_auth_user_id', self.client.session)
 
 
 class CreatePostLimitsTests(TestCase):
@@ -144,3 +232,83 @@ class CreatePostLimitsTests(TestCase):
 		self.assertEqual(self.post_text('   ').status_code, 400)
 		self.assertEqual(self.post_text('x' * 501).status_code, 400)
 		self.assertEqual(self.post_text('x' * 500).status_code, 200)
+
+
+class RateLimitTests(TestCase):
+	"""E2: лимиты частоты на посты, лайки, подписки; капча на регистрации."""
+
+	def setUp(self):
+		from unittest import mock
+		cache.clear()
+		# Окна лимитов привязаны к часам: без фиксированного времени тест, начатый в конце минуты,
+		# попал бы в два окна и не дошёл бы до лимита.
+		clock = mock.patch('azzb.ratelimit._now', return_value=1_800_000_000.0)
+		clock.start()
+		self.addCleanup(clock.stop)
+		self.alice = make_user('alice')
+		self.client.force_login(self.alice)
+
+	def test_parse_rate(self):
+		from azzb.ratelimit import parse_rate
+		self.assertEqual(parse_rate('8/m'), (8, 60))
+		self.assertEqual(parse_rate('5/15m'), (5, 900))
+		self.assertEqual(parse_rate('100/d'), (100, 86400))
+		with self.assertRaises(ValueError):
+			parse_rate('8 per minute')
+
+	def test_posting_is_limited_per_minute(self):
+		from post.views import POST_RATES
+		limit = int(POST_RATES[0].split('/')[0])
+		headers = {'HX-Request': 'true'}
+		for i in range(limit):
+			response = self.client.post('/compose/', {'text': f'пост {i}'}, headers=headers)
+			self.assertEqual(response.status_code, 200, i)
+		response = self.client.post('/compose/', {'text': 'лишний'}, headers=headers)
+		self.assertEqual(response.status_code, 429)
+		self.assertIn('errors', json.loads(response.content))
+		self.assertEqual(Post.objects.filter(author=self.alice.profile).count(), limit)
+		# API считается вместе с composer.
+		self.assertEqual(self.client.post('/api/new-post/', {'text': 'через API'}).status_code, 429)
+
+	def test_limits_are_per_user(self):
+		from azzb.ratelimit import hit
+		self.assertFalse(hit('t:u1', '1/m'))
+		self.assertTrue(hit('t:u1', '1/m'))
+		self.assertFalse(hit('t:u2', '1/m'))
+
+	def test_follow_limit_shows_page_for_plain_form(self):
+		for i in range(31):
+			bob = make_user(f'bob{i}')
+			response = self.client.post(f'/users/{bob.username}/', {'subscribe': ''})
+		self.assertEqual(response.status_code, 429)
+		self.assertContains(response, 'Слишком много попыток', status_code=429)
+		self.assertEqual(FollowThrough.objects.count(), 30)
+
+	def test_client_ip_from_trusted_header(self):
+		from django.test import RequestFactory, override_settings
+		from azzb.ratelimit import client_ip
+		request = RequestFactory().get('/', REMOTE_ADDR='127.0.0.1', HTTP_X_REAL_IP='203.0.113.7')
+		with override_settings(CLIENT_IP_HEADER='X-Real-IP'):
+			self.assertEqual(client_ip(request), '203.0.113.7')
+		with override_settings(CLIENT_IP_HEADER=''):
+			self.assertEqual(client_ip(request), '127.0.0.1')
+
+	def test_signup_requires_captcha_when_enabled(self):
+		from unittest import mock
+		from django.test import override_settings
+		self.client.logout()
+		data = {
+			'username': 'newbie', 'email': 'newbie@example.com',
+			'password1': 'Very-strong-pass-42', 'password2': 'Very-strong-pass-42',
+			'accept_rules': 'on', 'pd_consent': 'on',
+		}
+		with override_settings(SMARTCAPTCHA_CLIENT_KEY='client', SMARTCAPTCHA_SERVER_KEY='server'):
+			self.assertContains(self.client.get('/auth/signup/'), 'data-sitekey="client"')
+			with mock.patch('customUser.captcha.check', return_value=False) as check:
+				response = self.client.post('/auth/signup/', data)
+			self.assertContains(response, 'не робот')
+			self.assertFalse(User.objects.filter(username='newbie').exists())
+			with mock.patch('customUser.captcha.check', return_value=True):
+				self.client.post('/auth/signup/', {**data, 'smart-token': 'ok'})
+			self.assertTrue(User.objects.filter(username='newbie').exists())
+		check.assert_called_once()

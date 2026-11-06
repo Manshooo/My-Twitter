@@ -1,9 +1,6 @@
 from django.contrib import admin
-from django.contrib.auth.models import Group
 
-from customUser.models import CustomUser, FollowThrough
-from .settings import AUTH_USER_MODEL
-from .models import Profile
+from customUser.models import Block, CustomUser, FollowThrough, Mute, Profile
 
 class FollowThroughInlineAdmin(admin.TabularInline):
 	model = FollowThrough
@@ -20,9 +17,24 @@ class UserProfileAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
 	model = CustomUser
 	list_display = ["username", "email", "first_name", "last_name", "last_visit", "last_login", "date_joined"]
-	fields = ["username", "password", "first_name", "last_name", "email", "last_login", "date_joined", ]
+	fields = ["username", "password", "first_name", "last_name", "email", "last_login", "date_joined", "banned_until", "ban_reason"]
+	# Бан ставится через очередь модерации (история в «Банах»), здесь — только посмотреть.
+	readonly_fields = ["banned_until", "ban_reason"]
+	search_fields = ["username", "email"]
 
 
-admin.site.unregister(Group)
+# Группы нужны: участники группы «Модераторы» получают доступ к /moderation/ (E4).
 admin.site.register(CustomUser, UserAdmin)
 admin.site.register(Profile, UserProfileAdmin)
+
+
+@admin.register(Block)
+class BlockAdmin(admin.ModelAdmin):
+	list_display = ("blocker", "blocked", "created_at")
+	raw_id_fields = ("blocker", "blocked")
+
+
+@admin.register(Mute)
+class MuteAdmin(admin.ModelAdmin):
+	list_display = ("muter", "muted", "created_at")
+	raw_id_fields = ("muter", "muted")

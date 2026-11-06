@@ -1,0 +1,8 @@
+{% extends "allauth/layouts/base.html" %}
+{# Почта и пароль — из настроек профиля: туда и возвращаем. #}
+{% block footer %}
+	<nav class="auth-links auth-foot">
+		<a href="{% url 'edit-profile' %}">← Настройки профиля</a>
+		<a href="{% url 'index' %}">На главную</a>
+	</nav>
+{% endblock footer %}

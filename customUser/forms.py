@@ -1,33 +1,84 @@
 from django import forms
-from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.conf import settings
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.html import format_html
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
+from allauth.account import forms as allauth_forms
+from allauth.core import context as allauth_context
 
+from azzb.ratelimit import client_ip
 from post.media import ACCEPT, parse_crop, process_cropped_image
 
+from . import captcha
 from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser
 
-class CustomUserCreationForm(UserCreationForm):
-	email = forms.EmailField(
-		label=_("Email"),
-		widget=forms.EmailInput(),
-		help_text=validate_email.message
-	)
+class LoginForm(allauth_forms.LoginForm):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['login'].label = 'Логин или почта'
+		self.fields['login'].widget.attrs.pop('placeholder', None)
+		self.fields['login'].widget.attrs['autocomplete'] = 'username'
+		self.fields['password'].widget.attrs.pop('placeholder', None)
+		# allauth кладёт в подсказку HTML-ссылку «Забыли пароль?»; у нас она под формой.
+		self.fields['password'].help_text = ''
 
-	class Meta:
-		model = CustomUser
-		fields = ('username', 'email', 'password1', 'password2')
-		labels = {'username': 'Логин'}
+
+class SignupForm(allauth_forms.SignupForm):
+	# Две отдельные галочки: с 1 сентября 2025 года согласие на обработку ПДн по 152-ФЗ
+	# оформляется отдельно от других документов (правил, оферты).
+	accept_rules = forms.BooleanField(required=True, error_messages={'required': 'Без согласия с правилами зарегистрироваться нельзя.'})
+	pd_consent = forms.BooleanField(required=True, error_messages={'required': 'Без согласия на обработку данных мы не можем создать аккаунт.'})
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.fields['username'].widget.attrs.update({'maxlength': USERNAME_MAX_LENGTH, 'autocomplete': 'username'})
+		username = self.fields['username']
+		username.label = 'Логин'
+		username.help_text = f'Будет в адресе профиля. До {USERNAME_MAX_LENGTH} символов: латинские буквы, цифры и _ . -'
+		username.widget.attrs.update({'maxlength': USERNAME_MAX_LENGTH})
+		self.fields['email'].label = 'Почта'
+		self.fields['email'].help_text = 'Пришлём письмо для подтверждения. Никому не показываем.'
+		self.fields['password1'].label = 'Пароль'
+		self.fields['password2'].label = 'Пароль ещё раз'
+		for field in self.fields.values():
+			field.widget.attrs.pop('placeholder', None)
+		# Галочки — в конце формы, после пароля.
+		for name in ('accept_rules', 'pd_consent'):
+			self.fields[name] = self.fields.pop(name)
+		self.fields['accept_rules'].label = format_html(
+			'Принимаю <a href="{}" target="_blank">правила сообщества</a>', reverse('rules'),
+		)
+		self.fields['pd_consent'].label = format_html(
+			'Даю <a href="{}" target="_blank">согласие на обработку персональных данных</a> '
+			'на условиях <a href="{}" target="_blank">политики конфиденциальности</a>',
+			reverse('pd-consent'), reverse('privacy'),
+		)
+		# Ключ для виджета капчи в шаблоне; пусто — капча выключена.
+		self.captcha_key = settings.SMARTCAPTCHA_CLIENT_KEY if captcha.is_enabled() else ''
+
+	def clean(self):
+		cleaned = super().clean()
+		if self.captcha_key:
+			request = allauth_context.request
+			token = self.data.get(captcha.TOKEN_FIELD, '')
+			if not captcha.check(token, client_ip(request) if request else ''):
+				raise ValidationError('Подтвердите, что вы не робот.')
+		return cleaned
+
+	def custom_signup(self, request, user):
+		# Хук allauth: пользователь уже сохранён. Фиксируем, когда приняты правила и дано согласие.
+		accepted = timezone.now()
+		user.terms_accepted_at = accepted
+		user.pd_consent_at = accepted
+		user.save(update_fields=['terms_accepted_at', 'pd_consent_at'])
+
+
 class UpdateUserForm(forms.ModelForm):
 	class Meta:
 		model = CustomUser
-		fields = ['email', 'first_name', 'last_name', 'theme']
+		# Почта меняется только через allauth (/auth/email/) — с подтверждением нового адреса.
+		fields = ['first_name', 'last_name', 'theme']
 		widgets = {'theme': forms.RadioSelect}
 
 	username = forms.CharField(
@@ -35,11 +86,6 @@ class UpdateUserForm(forms.ModelForm):
 		max_length=100,
 		required=True,
 		widget=forms.TextInput,
-	)
-	email =  forms.EmailField(
-		label=_("Email"),
-		required=True,
-		widget=forms.EmailInput(),
 	)
 	first_name = forms.CharField(
 		label=("Имя"),

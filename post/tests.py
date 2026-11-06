@@ -235,8 +235,9 @@ class RepliesTests(TestCase):
 			Post.objects.create(author=self.bob.profile, text='ответ', reply_to=post, is_reply=True)
 		self.client.force_login(self.bob)
 		self.client.get('/')  # прогрев: сессия, last_visit
-		# сессия, пользователь, профиль, посты, картинки, «Кого почитать» — сколько бы ни было ответов.
-		with self.assertNumQueries(6):
+		# сессия, пользователь, профиль, посты, картинки, право модерировать (пункт меню),
+		# «Кого почитать» — сколько бы ни было ответов.
+		with self.assertNumQueries(7):
 			self.client.get('/')
 
 

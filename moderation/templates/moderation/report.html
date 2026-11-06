@@ -1,0 +1,35 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Жалоба{% endblock title %}
+{% block content %}
+	<section class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 20px">
+		<div style="display: flex; align-items: center; gap: 8px; margin-left: -10px">
+			<a class="icon-btn" href="{{ back }}" aria-label="Назад">
+				<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+			</a>
+			<h1 class="display" style="font-size: 22px">{% if post %}Пожаловаться на пост{% else %}Пожаловаться на @{{ target.user.username }}{% endif %}</h1>
+		</div>
+		{% if post %}
+			<blockquote class="report-quote">
+				<span><b>{{ post.author.username }}</b> <span class="muted">@{{ post.author.user.username }}</span></span>
+				<p>{{ post.text|truncatechars:280|default:"(только картинки)" }}</p>
+			</blockquote>
+		{% endif %}
+		<form method="post" class="form">
+			{% csrf_token %}
+			<input type="hidden" name="next" value="{{ back }}">
+			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+				<legend class="field-label" style="padding: 0; margin-bottom: 10px">{{ form.reason.label }}</legend>
+				{% for radio in form.reason %}
+					<label class="check" for="{{ radio.id_for_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+				{% endfor %}
+				{% if form.reason.errors %}{{ form.reason.errors }}{% endif %}
+			</fieldset>
+			{% include "azzb/includes/field.html" with field=form.comment %}
+			<p class="hint">Жалобу видят только модераторы. Автор не узнает, кто пожаловался. Что запрещено — в <a href="{% url 'rules' %}">правилах сообщества</a>.</p>
+			<div class="form-actions">
+				<a class="btn btn-outline" href="{{ back }}">Отмена</a>
+				<button class="btn" type="submit">Отправить жалобу</button>
+			</div>
+		</form>
+	</section>
+{% endblock content %}

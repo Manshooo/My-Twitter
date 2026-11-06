@@ -18,13 +18,43 @@
 							<button class="menu-item" type="button" role="menuitem" data-copy="{{ profile_url }}">
 								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"></use></svg>Скопировать ссылку
 							</button>
+							{% if user.is_authenticated and not is_own %}
+								<form method="post" action="{{ profile_url }}">
+									{% csrf_token %}
+									<button class="menu-item" type="submit" role="menuitem" name="{% if i_muted %}unmute{% else %}mute{% endif %}">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-mute"></use></svg>{% if i_muted %}Вернуть в ленты{% else %}Заглушить @{{ profile.user.username }}{% endif %}
+									</button>
+								</form>
+								<a class="menu-item" role="menuitem" href="{% url 'profile-report' profile.user.username %}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
+								</a>
+								<form method="post" action="{{ profile_url }}"{% if not i_blocked %} data-confirm="Заблокировать @{{ profile.user.username }}? Вы перестанете видеть посты друг друга, подписки в обе стороны снимутся."{% endif %}>
+									{% csrf_token %}
+									<button class="menu-item danger" type="submit" role="menuitem" name="{% if i_blocked %}unblock{% else %}block{% endif %}">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-block"></use></svg>{% if i_blocked %}Разблокировать{% else %}Заблокировать @{{ profile.user.username }}{% endif %}
+									</button>
+								</form>
+							{% endif %}
+							{% if can_moderate and not is_own and profile.user.is_banned %}
+								<form method="post" action="{% url 'moderation-unban' profile.user.username %}" data-confirm="Снять бан с @{{ profile.user.username }}?">
+									{% csrf_token %}
+									<button class="menu-item" type="submit" role="menuitem">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>Снять бан
+									</button>
+								</form>
+							{% endif %}
 						</div>
 					</div>
 					{% if is_own %}
 						<a class="btn btn-outline" href="{% url 'edit-profile' %}">
 							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать профиль
 						</a>
-					{% else %}
+					{% elif i_blocked %}
+						<form method="post" action="{{ profile_url }}">
+							{% csrf_token %}
+							<button class="btn btn-outline btn-danger" type="submit" name="unblock">Разблокировать</button>
+						</form>
+					{% elif not blocked_me %}
 						<form method="post" action="{{ profile_url }}">
 							{% csrf_token %}
 							{% if is_subscribed %}
@@ -93,7 +123,20 @@
 				{% include "azzb/includes/post_page.html" %}
 			{% else %}
 				<div class="card empty" data-feed-empty>
-					{% if tab == 'likes' and not likes_visible %}
+					{% if profile.user.is_banned %}
+						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
+						<h2>Аккаунт заблокирован</h2>
+						<p>@{{ profile.user.username }} нарушил(а) <a href="{% url 'rules' %}">правила сообщества</a>, посты скрыты.</p>
+					{% elif i_blocked or blocked_me %}
+						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-block"></use></svg></span>
+						{% if i_blocked %}
+							<h2>Вы заблокировали @{{ profile.user.username }}</h2>
+							<p>Вы не видите посты друг друга. Разблокировать можно кнопкой выше.</p>
+						{% else %}
+							<h2>@{{ profile.user.username }} ограничил(а) доступ</h2>
+							<p>Вы не можете видеть посты этого аккаунта и подписаться на него.</p>
+						{% endif %}
+					{% elif tab == 'likes' and not likes_visible %}
 						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
 						<h2>Лайки скрыты</h2>
 						<p>@{{ profile.user.username }} показывает свои лайки только себе.</p>

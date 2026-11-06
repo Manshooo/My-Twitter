@@ -4,6 +4,8 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy as _
 from django.db.models import F, Q
+from django.utils import timezone
+from datetime import datetime, timezone as dt_timezone
 from django.core.exceptions import ValidationError
 
 
@@ -25,6 +27,8 @@ DEFAULT_AVATAR = 'default/default_user_avatar.jpg'
 # Профиль создаётся сигналом в customUser/signals.py.
 
 USERNAME_MAX_LENGTH = 30
+# «Навсегда» для banned_until: дата, до которой бан точно не кончится.
+BAN_FOREVER = datetime(9999, 1, 1, tzinfo=dt_timezone.utc)
 
 @deconstructible
 class UsernameValidator(validators.RegexValidator):
@@ -60,6 +64,22 @@ class CustomUser(AbstractUser):
 	# Тема хранится в аккаунте, а не только в cookie: выбор переезжает на все устройства.
 	# Поле у пользователя, а не у Profile, — request.user уже загружен, лишнего запроса нет.
 	theme = models.CharField("Тема оформления", max_length=5, choices=Theme.choices, blank=True, default=Theme.SYSTEM)
+	# Текущий бан (E4); история — moderation.Ban. Срок в прошлом — бан закончился сам.
+	# Бессрочный бан — BAN_FOREVER. Ставится только через moderation.services.ban_user.
+	banned_until = models.DateTimeField("Забанен до", null=True, blank=True)
+	ban_reason = models.CharField("Причина бана", max_length=500, blank=True, default="")
+	# Когда человек принял правила и дал согласие на обработку ПДн (E6, 152-ФЗ). Пусто — аккаунт
+	# заведён до появления галочек на регистрации.
+	terms_accepted_at = models.DateTimeField("Принял правила", null=True, blank=True)
+	pd_consent_at = models.DateTimeField("Согласие на обработку ПДн", null=True, blank=True)
+
+	@property
+	def is_banned(self):
+		return self.banned_until is not None and self.banned_until > timezone.now()
+
+	@property
+	def ban_is_permanent(self):
+		return self.banned_until is not None and self.banned_until >= BAN_FOREVER
 
 class FollowThrough(models.Model):
 	follower = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='following_set')
@@ -119,3 +139,42 @@ class Profile(models.Model):
 		if not self.username:
 			self.username = self.user.username
 		super(Profile, self).save(*args, **kwargs)
+
+
+class Block(models.Model):
+	"""Блокировка (E3): ни один из двоих не видит посты другого, не может подписаться,
+	ответить или лайкнуть. При блокировке подписки в обе стороны снимаются.
+	Фильтр постов — в Post.objects.visible_to (единая точка видимости)."""
+	blocker = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='blocking_set')
+	blocked = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='blocked_by_set')
+	created_at = models.DateTimeField('Когда', auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Блокировка'
+		verbose_name_plural = 'Блокировки'
+		constraints = [
+			models.UniqueConstraint(fields=['blocker', 'blocked'], name='block_once'),
+			models.CheckConstraint(condition=~Q(blocker=F('blocked')), name='not_block_self'),
+		]
+
+	def __str__(self):
+		return f'{self.blocker} ⊘ {self.blocked}'
+
+
+class Mute(models.Model):
+	"""Заглушить (E3): посты человека пропадают из моих лент, но профиль и ветки открываются,
+	и он ничего об этом не знает. Подписка остаётся."""
+	muter = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='muting_set')
+	muted = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='muted_by_set')
+	created_at = models.DateTimeField('Когда', auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Заглушённый'
+		verbose_name_plural = 'Заглушённые'
+		constraints = [
+			models.UniqueConstraint(fields=['muter', 'muted'], name='mute_once'),
+			models.CheckConstraint(condition=~Q(muter=F('muted')), name='not_mute_self'),
+		]
+
+	def __str__(self):
+		return f'{self.muter} 🔇 {self.muted}'

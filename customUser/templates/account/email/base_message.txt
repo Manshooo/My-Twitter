@@ -1,0 +1,6 @@
+{% autoescape off %}Здравствуйте!
+
+{% block content %}{% endblock content %}
+
+— AzzB, {{ current_site.domain }}
+{% endautoescape %}

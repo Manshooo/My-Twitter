@@ -1,44 +1,25 @@
-from django.contrib.auth import authenticate, login
 from django.db.models.base import Model as Model
 from django.shortcuts import redirect, render, HttpResponse
 from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.detail import DetailView
 from django.views.decorators.http import require_POST
-from django.views.generic.edit import CreateView, UpdateView
-
-from rest_framework.decorators import api_view
+from django.views.generic.edit import UpdateView
 
 from django.db.models import Exists, OuterRef
 
 from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
-from .forms import CustomUserCreationForm, UpdateUserForm
+from .forms import UpdateUserForm
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
+from azzb.ratelimit import rate_limit
+from django.utils.decorators import method_decorator
+from django.contrib import messages
 
-from .models import FollowThrough, Profile, Theme
+from . import relations
+from .models import Block, FollowThrough, Mute, Profile, Theme
 from .serializers import *
-
-class CustomSignUp(CreateView):
-	form_class = CustomUserCreationForm
-	success_url = reverse_lazy('login')
-	template_name = 'registration/signup.html'
-
-	def register(request):
-		if request.method == 'POST':
-			form = CustomUserCreationForm(request.POST)
-			if form.is_valid():
-				form.save()
-				username = form.cleaned_data.get('username')
-				password = form.cleaned_data.get('password2')
-				user = authenticate(username=username, password=password)
-				login(request, user)
-			else:
-				return HttpResponse(form.errors)
-		else:
-			form = CustomUserCreationForm()
-		return render(request, 'registration/signup.html', {'form': form})
 
 THEME_COOKIE_AGE = 365 * 24 * 60 * 60
 
@@ -96,6 +77,24 @@ class ChangeProfileView(UpdateView):
 
 PROFILE_TABS = ('posts', 'replies', 'media', 'likes', 'following', 'followers')
 
+# Что можно сделать с чужим профилем POST-запросом на его страницу (имя кнопки → действие).
+PROFILE_ACTIONS = {
+	'subscribe': relations.follow,
+	'unsubscribe': relations.unfollow,
+	'block': relations.block,
+	'unblock': relations.unblock,
+	'mute': relations.mute,
+	'unmute': relations.unmute,
+}
+PROFILE_TOASTS = {
+	'block': '@{username} заблокирован(а)',
+	'unblock': '@{username} разблокирован(а)',
+	'mute': 'Посты @{username} больше не появятся в ваших лентах',
+	'unmute': 'Посты @{username} снова в ваших лентах',
+}
+
+# Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
+@method_decorator(rate_limit('follow', '30/m', '300/h'), name='post')
 class UserProfileDetailView(DetailView):
 	template_name = "registration/profile.html"
 	model = Profile
@@ -150,6 +149,10 @@ class UserProfileDetailView(DetailView):
 			"following_count": profile.follows.count(),
 			"followers_count": profile.followed_by.count(),
 			"is_subscribed": FollowThrough.objects.filter(follower=viewer, followee=profile).exists(),
+			# E3: блокировки и заглушение — для меню «⋯» и заглушки вместо постов.
+			"i_blocked": not is_own and Block.objects.filter(blocker=viewer, blocked=profile).exists(),
+			"blocked_me": not is_own and Block.objects.filter(blocker=profile, blocked=viewer).exists(),
+			"i_muted": not is_own and Mute.objects.filter(muter=viewer, muted=profile).exists(),
 		})
 		return context
 
@@ -157,14 +160,25 @@ class UserProfileDetailView(DetailView):
 		profile = self.get_object()
 		current_user_profile = request.user.profile
 
-		# На себя подписаться нельзя: это запрещает CheckConstraint, и раньше здесь падало с 500.
+		# С собой ничего не делаем: подписку на себя запрещает CheckConstraint (раньше здесь был 500).
+		# Подписка при блокировке в любую сторону не создаётся — это проверяет relations.follow.
 		if profile.pk != current_user_profile.pk:
-			if 'subscribe' in request.POST:
-				FollowThrough.objects.get_or_create(follower=current_user_profile, followee=profile)
-			elif 'unsubscribe' in request.POST:
-				FollowThrough.objects.filter(follower=current_user_profile, followee=profile).delete()
+			action = next((name for name in PROFILE_ACTIONS if name in request.POST), None)
+			if action:
+				PROFILE_ACTIONS[action](current_user_profile, profile)
+				if action in PROFILE_TOASTS:
+					messages.success(request, PROFILE_TOASTS[action].format(username=profile.user.username))
 
 		next_url = request.POST.get('next')
 		if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
 			return redirect(next_url)
 		return redirect('profile', slug=profile.user.username)
+
+
+def blocked_accounts(request):
+	"""Настройки → «Блокировки и заглушённые» (E3): кого я заблокировал и заглушил, с кнопкой «вернуть»."""
+	me = request.user.profile
+	return render(request, 'registration/blocked.html', {
+		'blocked': Profile.objects.filter(blocked_by_set__blocker=me).select_related('user').order_by('-blocked_by_set__created_at'),
+		'muted': Profile.objects.filter(muted_by_set__muter=me).select_related('user').order_by('-muted_by_set__created_at'),
+	})

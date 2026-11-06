@@ -1,10 +1,19 @@
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.contrib.auth import get_user_model
-import uuid
-from django.conf import settings
 
-from customUser.models import Profile
 
-User = settings.AUTH_USER_MODEL
+class RateCounter(models.Model):
+	"""Счётчик запросов в окне времени для лимитов частоты (azzb/ratelimit.py).
+
+	Увеличивается одним атомарным INSERT … ON CONFLICT, поэтому верно считает при любом
+	числе воркеров. Просроченные строки периодически удаляются там же.
+	"""
+	key = models.CharField(max_length=200)
+	window = models.BigIntegerField('Номер окна')
+	hits = models.PositiveIntegerField(default=0)
+	expires_at = models.DateTimeField(db_index=True)
+
+	class Meta:
+		constraints = [models.UniqueConstraint(fields=['key', 'window'], name='rate_counter_key_window')]
+
+	def __str__(self):
+		return f'{self.key} #{self.window}: {self.hits}'

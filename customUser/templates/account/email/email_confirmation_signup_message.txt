@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}Кто-то (надеемся, вы) зарегистрировался в AzzB с этой почтой под логином @{{ user.username }}.
+
+Чтобы подтвердить почту и войти, откройте ссылку:
+{{ activate_url }}
+
+Если вы не регистрировались, просто проигнорируйте письмо — аккаунт без подтверждения не заработает.{% endautoescape %}{% endblock content %}

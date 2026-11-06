@@ -67,4 +67,4 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run tests
-        run: python -W default::DeprecationWarning manage.py test azzb api customUser post
+        run: python -W default::DeprecationWarning manage.py test azzb api customUser post moderation

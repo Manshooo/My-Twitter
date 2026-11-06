@@ -1,0 +1,10 @@
+{% extends "registration/auth_base.html" %}
+{# Превышен лимит частоты (E2): и наши лимиты, и allauth (вход, регистрация, сброс пароля). #}
+{% block title %}Слишком часто{% endblock title %}
+{% block content %}
+	<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></span>
+	<h1>Слишком много попыток</h1>
+	<p class="lead">{{ message|default:"Подождите немного и попробуйте снова." }}</p>
+	<a class="btn btn-outline" href="javascript:history.back()">Назад</a>
+	<a class="btn" href="{% url 'index' %}">На главную</a>
+{% endblock content %}

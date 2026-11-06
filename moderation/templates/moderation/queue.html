@@ -1,0 +1,80 @@
+{% extends "azzb/azzb_base.html" %}
+{% load azzb_ui %}
+{% block title %}Модерация{% endblock title %}
+{% block content %}
+	<section class="card card-pad" style="display: flex; flex-direction: column; gap: 6px">
+		<h1 class="display" style="font-size: 22px">Модерация</h1>
+		<p class="muted">Открытые жалобы, старые сверху. Решение закрывает все жалобы на эту цель. Скрытый пост автор видит с причиной; забаненный видит только экран бана, его посты пропадают у всех.</p>
+	</section>
+
+	{% for group in groups %}
+		{% with post=group.post target=group.profile %}
+		<article class="card card-pad mod-card">
+			<header class="mod-head">
+				{% avatar target 'sm' %}
+				<div class="who" style="flex: 1; min-width: 0">
+					<a class="clip1" href="{% url 'profile' target.user.username %}"><b>{{ target.username }}</b></a>
+					<span class="muted clip1" style="font-size: 13px">@{{ target.user.username }}{% if target.user.is_banned %} · <b style="color: var(--danger)">забанен(а)</b>{% endif %}</span>
+				</div>
+				<span class="mod-count">{{ group.reports|length }} {{ group.reports|length|plural_ru:"жалоба,жалобы,жалоб" }}</span>
+			</header>
+
+			{% if post %}
+				<div class="report-quote">
+					{% if post.hidden_at %}<p class="hint">Уже скрыт: {{ post.hidden_reason }}</p>{% endif %}
+					<p class="post-text">{{ post.text|default:"(только картинки)" }}</p>
+					{% if post.images.all %}
+						<div class="mod-thumbs">{% for image in post.images.all %}<img src="{{ image.file.url }}" alt="{{ image.alt }}">{% endfor %}</div>
+					{% endif %}
+					<a class="hint" href="{% url 'post' post.id %}">Открыть пост · {{ post.created_at|date:"j E, H:i" }}</a>
+				</div>
+			{% else %}
+				<p class="hint">Жалоба на профиль{% if target.bio %}: «{{ target.bio|truncatechars:160 }}»{% endif %}</p>
+			{% endif %}
+
+			<ul class="mod-reasons">
+				{% for label, count in group.reasons.items %}<li><b>{{ label }}</b>{% if count > 1 %} ×{{ count }}{% endif %}</li>{% endfor %}
+			</ul>
+			{% for report in group.reports %}
+				{% if report.comment %}<p class="hint">@{{ report.reporter.user.username }}: «{{ report.comment }}»</p>{% endif %}
+			{% endfor %}
+
+			<div class="mod-actions">
+				<form method="post" action="{% url 'moderation-act' %}">
+					{% csrf_token %}
+					<input type="hidden" name="profile" value="{{ target.pk }}">
+					{% if post %}<input type="hidden" name="post" value="{{ post.id }}">{% endif %}
+					<button class="btn btn-outline btn-sm" type="submit" name="action" value="dismiss">Нарушений нет</button>
+				</form>
+				{% if post and not post.hidden_at %}
+					<form method="post" action="{% url 'moderation-act' %}" class="mod-inline">
+						{% csrf_token %}
+						<input type="hidden" name="profile" value="{{ target.pk }}">
+						<input type="hidden" name="post" value="{{ post.id }}">
+						<input type="text" name="reason" maxlength="200" required placeholder="Причина (увидит автор)" aria-label="Причина скрытия" value="{{ group.reports.0.get_reason_display }}">
+						<button class="btn btn-sm" type="submit" name="action" value="hide">Скрыть пост</button>
+					</form>
+				{% endif %}
+				{% if not target.user.is_banned and not target.user.is_superuser %}
+					<form method="post" action="{% url 'moderation-act' %}" class="mod-inline" data-confirm="Забанить @{{ target.user.username }}?">
+						{% csrf_token %}
+						<input type="hidden" name="profile" value="{{ target.pk }}">
+						{% if post %}<input type="hidden" name="post" value="{{ post.id }}">{% endif %}
+						<input type="text" name="reason" maxlength="200" required placeholder="Причина бана" aria-label="Причина бана" value="{{ group.reports.0.get_reason_display }}">
+						<select name="term" aria-label="Срок бана">
+							{% for key, label in ban_terms %}<option value="{{ key }}"{% if key == '7d' %} selected{% endif %}>{{ label }}</option>{% endfor %}
+						</select>
+						<button class="btn btn-sm btn-outline btn-danger" type="submit" name="action" value="ban">Забанить</button>
+					</form>
+				{% endif %}
+			</div>
+		</article>
+		{% endwith %}
+	{% empty %}
+		<div class="card empty">
+			<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
+			<h2>Жалоб нет</h2>
+			<p>Новые появятся здесь.</p>
+		</div>
+	{% endfor %}
+{% endblock content %}

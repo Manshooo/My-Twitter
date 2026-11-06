@@ -1,0 +1,21 @@
+{% extends "registration/auth_base.html" %}
+{% block title %}Аккаунт заблокирован{% endblock title %}
+{% block content %}
+	<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-block"></use></svg></span>
+	<h1>Аккаунт заблокирован</h1>
+	<p class="lead">
+		{% if user.ban_is_permanent %}
+			Аккаунт @{{ user.username }} заблокирован бессрочно за нарушение <a href="{% url 'rules' %}">правил сообщества</a>.
+		{% else %}
+			Аккаунт @{{ user.username }} заблокирован до {{ user.banned_until|date:"j E Y, H:i" }} за нарушение <a href="{% url 'rules' %}">правил сообщества</a>.
+		{% endif %}
+	</p>
+	{% if user.ban_reason %}
+		<div class="notice"><b>Причина:</b> {{ user.ban_reason }}</div>
+	{% endif %}
+	<p class="hint">Пока бан действует, ваши посты никто не видит. Если считаете решение ошибкой, напишите на <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Скачать свои данные или удалить аккаунт можно <a href="{% url 'account-settings' %}">здесь</a>.</p>
+	<form method="post" action="{% url 'account_logout' %}">
+		{% csrf_token %}
+		<button class="btn btn-outline btn-block" type="submit">Выйти</button>
+	</form>
+{% endblock content %}

@@ -3,6 +3,12 @@
 	<div class="post-row">
 		<a class="nu" href="{% url 'profile' author.user.username %}" tabindex="-1" aria-hidden="true">{% avatar author %}</a>
 		<div class="post-body">
+			{% if post.hidden_at %}
+				<div class="notice post-hidden" role="note">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>
+					<span>Скрыт модератором{% if post.hidden_reason %}: {{ post.hidden_reason }}{% endif %}. Пост видите только вы.</span>
+				</div>
+			{% endif %}
 			<div class="post-head">
 				<a class="post-name" href="{% url 'profile' author.user.username %}">{{ author.username }}</a>{% badges author %}
 				<span class="muted">@{{ author.user.username }}</span>
@@ -53,7 +59,7 @@
 				{% if user.is_authenticated %}
 					{% include "post/_like.html" %}
 				{% else %}
-					<a class="action" href="{% url 'login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
+					<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
 						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
 						<span class="sr">Нравится:</span><span>{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</a>
@@ -64,12 +70,13 @@
 			</div>
 		</div>
 	</div>
-	{% if user.is_authenticated and user.pk == author.user_id %}
+	{% if user.is_authenticated %}
 		<div class="post-menu menu-wrap">
 			<button class="icon-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="post-menu-{{ post.id }}" aria-label="Действия с постом" data-menu-toggle>
 				<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
 			</button>
 			<div class="menu" id="post-menu-{{ post.id }}" role="menu" hidden>
+				{% if user.pk == author.user_id %}
 				<button class="menu-item" type="button" role="menuitem" data-edit{% if images %} data-has-images{% endif %}>
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать
 				</button>
@@ -78,6 +85,26 @@
 					data-error="Не удалось удалить пост">
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"></use></svg>Удалить
 				</button>
+				{% else %}
+				{% url 'profile' author.user.username as author_url %}
+				<a class="menu-item" role="menuitem" href="{% url 'post-report' post.id %}?next={{ request.get_full_path|urlencode }}">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
+				</a>
+				<form method="post" action="{{ author_url }}">
+					{% csrf_token %}
+					<input type="hidden" name="next" value="{{ request.get_full_path }}">
+					<button class="menu-item" type="submit" role="menuitem" name="mute">
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-mute"></use></svg>Заглушить @{{ author.user.username }}
+					</button>
+				</form>
+				<form method="post" action="{{ author_url }}" data-confirm="Заблокировать @{{ author.user.username }}? Вы перестанете видеть посты друг друга, подписки в обе стороны снимутся.">
+					{% csrf_token %}
+					<input type="hidden" name="next" value="{{ request.get_full_path }}">
+					<button class="menu-item danger" type="submit" role="menuitem" name="block">
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-block"></use></svg>Заблокировать @{{ author.user.username }}
+					</button>
+				</form>
+				{% endif %}
 			</div>
 		</div>
 	{% endif %}

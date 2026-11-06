@@ -9,7 +9,8 @@ from django.core.exceptions import ValidationError
 from customUser.serializers import ProfileSerializer
 from customUser.models import Profile
 from post.services import find_reply_target, publish_post
-from post.views import render_cards
+from azzb.ratelimit import rate_limit
+from post.views import POST_RATES, render_cards
 
 def _getlist(data, key):
 	"""Список значений и из multipart-формы (QueryDict), и из JSON."""
@@ -19,6 +20,7 @@ def _getlist(data, key):
 	return value if isinstance(value, list) else [value]
 
 
+@rate_limit('post', *POST_RATES)
 @api_view(['POST'])
 def create_post(request):
 	"""Новый пост или ответ: текст и до 4 картинок

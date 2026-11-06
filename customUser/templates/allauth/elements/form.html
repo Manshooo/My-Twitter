@@ -1,0 +1,11 @@
+{% load allauth %}
+<form class="form" method="{{ attrs.method }}"{% if attrs.action %} action="{{ attrs.action }}"{% endif %}{% if attrs.id %} id="{{ attrs.id }}"{% endif %}>
+	{% if attrs.form.non_field_errors %}
+		<div class="alert" role="alert">
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>
+			<span>{% for error in attrs.form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+		</div>
+	{% endif %}
+	{% slot body %}{% endslot %}
+	{% if slots.actions %}<div class="form-actions form-actions-auth">{% slot actions %}{% endslot %}</div>{% endif %}
+</form>

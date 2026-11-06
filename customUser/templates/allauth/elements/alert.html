@@ -1,0 +1,2 @@
+{% load allauth %}
+<div class="{% if attrs.level == 'error' or attrs.level == 'danger' %}alert{% else %}notice{% endif %}" role="status">{% slot message %}{% endslot %}</div>

@@ -1,0 +1,35 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Данные и аккаунт{% endblock title %}
+{% block content %}
+	<section class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 24px">
+		<div style="display: flex; align-items: center; gap: 8px; margin-left: -10px">
+			<a class="icon-btn" href="{% url 'edit-profile' %}" aria-label="Назад к настройкам">
+				<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+			</a>
+			<h1 class="display" style="font-size: 22px">Данные и аккаунт</h1>
+		</div>
+
+		<div class="form" style="gap: 10px">
+			<h2 class="section-title">Скачать мои данные</h2>
+			<p class="hint">Архив ZIP: аккаунт, профиль, все посты с прежними версиями и картинками, лайки, подписки, блокировки и жалобы. Подробнее — в <a href="{% url 'privacy' %}">политике конфиденциальности</a>.</p>
+			<form method="post" action="{% url 'account-export' %}">
+				{% csrf_token %}
+				<button class="btn btn-outline" type="submit">Скачать архив</button>
+			</form>
+		</div>
+
+		<hr class="auth-hr">
+
+		<div class="form" style="gap: 10px">
+			<h2 class="section-title" style="color: var(--danger)">Удалить аккаунт</h2>
+			<p class="hint">Аккаунт @{{ user.username }} удалится сразу и насовсем: профиль, посты и ответы с картинками, лайки, подписки. Отменить это нельзя. Удаление отзывает <a href="{% url 'pd-consent' %}">согласие на обработку данных</a>.</p>
+			<form method="post" action="{% url 'account-delete' %}" class="form" data-confirm="Удалить аккаунт @{{ user.username }} навсегда?">
+				{% csrf_token %}
+				{% include "azzb/includes/field.html" with field=delete_form.confirm %}
+				<div class="form-actions" style="justify-content: flex-start">
+					<button class="btn btn-outline btn-danger" type="submit">Удалить аккаунт навсегда</button>
+				</div>
+			</form>
+		</div>
+	</section>
+{% endblock content %}

@@ -15,10 +15,15 @@
 						<button class="btn btn-sm" type="submit" name="subscribe">Подписаться</button>
 					</form>
 				{% else %}
-					<a class="btn btn-sm" href="{% url 'login' %}?next={{ request.path|urlencode }}">Подписаться</a>
+					<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Подписаться</a>
 				{% endif %}
 			</div>
 		{% endfor %}
 	</section>
 {% endif %}
-<p class="footer-links">© {% now "Y" %} AzzB</p>
+<nav class="footer-links" aria-label="Документы">
+	<a href="{% url 'rules' %}">Правила</a>
+	<a href="{% url 'privacy' %}">Конфиденциальность</a>
+	<a href="mailto:{{ support_email }}">Связаться</a>
+	<span>© {% now "Y" %} AzzB</span>
+</nav>

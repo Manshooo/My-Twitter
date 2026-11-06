@@ -1,0 +1,14 @@
+{% extends "azzb/azzb_base.html" %}
+{# Правила, политика конфиденциальности и согласие на обработку ПДн (C5, E6). #}
+{% block content %}
+	<article class="card doc">
+		<p class="hint">Редакция от {{ legal_updated|date:"j E Y" }}</p>
+		{% block doc %}{% endblock doc %}
+		<hr>
+		<nav class="doc-links" aria-label="Документы">
+			<a href="{% url 'rules' %}"{% if request.resolver_match.url_name == 'rules' %} aria-current="page"{% endif %}>Правила сообщества</a>
+			<a href="{% url 'privacy' %}"{% if request.resolver_match.url_name == 'privacy' %} aria-current="page"{% endif %}>Политика конфиденциальности</a>
+			<a href="{% url 'pd-consent' %}"{% if request.resolver_match.url_name == 'pd-consent' %} aria-current="page"{% endif %}>Согласие на обработку данных</a>
+		</nav>
+	</article>
+{% endblock content %}

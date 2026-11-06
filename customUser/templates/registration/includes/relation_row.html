@@ -1,0 +1,13 @@
+{% load azzb_ui %}
+<div class="who-row">
+	<a class="nu" href="{% url 'profile' person.user.username %}">{% avatar person 'sm' %}</a>
+	<a class="who nu" href="{% url 'profile' person.user.username %}" style="color: var(--text); flex: 1; min-width: 0">
+		<b class="clip1">{{ person.username }}</b>
+		<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
+	</a>
+	<form method="post" action="{% url 'profile' person.user.username %}">
+		{% csrf_token %}
+		<input type="hidden" name="next" value="{{ request.path }}">
+		<button class="btn btn-outline btn-sm" type="submit" name="{{ action }}">{{ label }}</button>
+	</form>
+</div>

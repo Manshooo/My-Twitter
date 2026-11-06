@@ -20,7 +20,7 @@
 				{% if user.is_authenticated %}
 					<a class="nu" href="{% url 'profile' user.username %}" aria-label="Мой профиль">{% avatar user.profile 'xs' %}</a>
 				{% else %}
-					<a class="btn btn-sm" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+					<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
 				{% endif %}
 			</div>
 		</header>
@@ -52,7 +52,12 @@
 							<a class="menu-item" role="menuitem" href="{% url 'edit-profile' %}">
 								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки профиля
 							</a>
-							<form method="post" action="{% url 'logout' %}">
+							{% if can_moderate %}
+								<a class="menu-item" role="menuitem" href="{% url 'moderation-queue' %}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg><span style="flex: 1">Модерация</span>{% if open_reports %}<span class="mod-badge">{{ open_reports }}</span>{% endif %}
+								</a>
+							{% endif %}
+							<form method="post" action="{% url 'account_logout' %}">
 								{% csrf_token %}
 								<button class="menu-item" role="menuitem" type="submit">
 									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"></use></svg>Выйти
@@ -76,8 +81,8 @@
 					<div class="card" style="margin-top: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
 						<b style="font-size: 16px">Впервые на AzzB?</b>
 						<span class="muted" style="font-size: 14px; line-height: 1.45">Зарегистрируйтесь, чтобы писать посты, ставить лайки и подписываться.</span>
-						<a class="btn" href="{% url 'signup' %}">Зарегистрироваться</a>
-						<a class="btn btn-outline" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+						<a class="btn" href="{% url 'account_signup' %}">Зарегистрироваться</a>
+						<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
 					</div>
 				{% endif %}
 			</nav>
@@ -106,7 +111,7 @@
 					<svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки
 				</a>
 			{% else %}
-				<a class="tab-item" href="{% url 'login' %}?next={{ request.path|urlencode }}">
+				<a class="tab-item" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">
 					<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Войти
 				</a>
 			{% endif %}
@@ -137,6 +142,6 @@
 			</button>
 			<span class="lb-count" data-lightbox-count aria-live="polite"></span>
 		</div>
-		<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+		<div class="toast" id="toast" role="status" aria-live="polite"{% if messages %} data-flash="{% for message in messages %}{{ message }}{% if not forloop.last %} {% endif %}{% endfor %}"{% endif %} hidden></div>
 	</body>
 </html>

@@ -51,7 +51,7 @@
 		{% else %}
 			<div class="card card-pad" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
 				<span class="muted" style="flex: 1 1 220px">Войдите, чтобы ответить.</span>
-				<a class="btn btn-sm" href="{% url 'login' %}?next={{ request.path|urlencode }}">Войти</a>
+				<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
 			</div>
 		{% endif %}
 

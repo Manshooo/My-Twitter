@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
+from azzb.ratelimit import rate_limit
 
 from .models import Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
@@ -30,8 +31,14 @@ def visible_post(request, pk):
 
 # ---------- Страницы и действия на них (HTMX) ----------
 
+# Лимиты (E2): общие для страниц и API, см. azzb/ratelimit.py.
+POST_RATES = ('8/m', '60/h')
+LIKE_RATES = ('60/m', '600/h')
+
+
 @require_POST
 @htmx_login_required
+@rate_limit('like', *LIKE_RATES)
 def like_post(request, pk):
 	"""Лайк или снятие лайка. htmx заменяет кнопку на ту, что вернулась отсюда."""
 	post = visible_post(request, pk)
@@ -67,6 +74,7 @@ def delete_post(request, pk):
 
 @require_POST
 @htmx_login_required
+@rate_limit('post', *POST_RATES)
 def compose(request):
 	"""Всё, что отправляет composer: новый пост, ответ (reply_to) или правка своего поста (edit).
 	Отдаёт карточку; куда её вставить, решает azzb.js — он знает, что сейчас открыто на странице."""
@@ -146,6 +154,7 @@ def _post_from_request(request):
 	return visible_post(request, post_id)
 
 
+@rate_limit('like', *LIKE_RATES)
 @api_view(['POST'])
 def like(request):
 	post = _post_from_request(request)
@@ -166,6 +175,7 @@ def delete(request):
 	return Response(status=status.HTTP_200_OK)
 
 
+@rate_limit('post', *POST_RATES)
 @api_view(['POST'])
 def edit(request):
 	"""Новый текст своего поста: {"id": ..., "text": ...}. Отдаёт обновлённую карточку."""

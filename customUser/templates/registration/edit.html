@@ -48,7 +48,6 @@
 				{% include "azzb/includes/field.html" with field=form.last_name %}
 			</div>
 			{% include "azzb/includes/field.html" with field=form.bio %}
-			{% include "azzb/includes/field.html" with field=form.email %}
 
 			<fieldset class="choice-row" data-theme-choice>
 				<legend class="field-label">Тема оформления</legend>
@@ -66,6 +65,26 @@
 						<span class="hint">{{ form.likes_public.help_text }}</span>
 					</span>
 				</label>
+			</fieldset>
+
+			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+				<legend class="field-label" style="padding: 0; margin-bottom: 10px">Аккаунт</legend>
+				<div class="account-row">
+					<span><b>Почта</b><span class="hint">{{ user.email|default:"не указана" }}</span></span>
+					<a class="btn btn-outline btn-sm" href="{% url 'account_email' %}">Изменить</a>
+				</div>
+				<div class="account-row">
+					<span><b>Пароль</b></span>
+					<a class="btn btn-outline btn-sm" href="{% url 'account_change_password' %}">Сменить</a>
+				</div>
+				<div class="account-row">
+					<span><b>Блокировки и заглушённые</b><span class="hint">Чьи посты вы не видите</span></span>
+					<a class="btn btn-outline btn-sm" href="{% url 'blocked-accounts' %}">Открыть</a>
+				</div>
+				<div class="account-row">
+					<span><b>Данные и аккаунт</b><span class="hint">Скачать архив своих данных или удалить аккаунт</span></span>
+					<a class="btn btn-outline btn-sm" href="{% url 'account-settings' %}">Открыть</a>
+				</div>
 			</fieldset>
 
 			<div class="form-actions">

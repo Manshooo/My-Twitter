@@ -8,8 +8,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
+def env(name, default=''):
+	"""Переменная окружения; пустая строка (`EMAIL_HOST=` в .env) считается незаданной."""
+	value = os.getenv(name, '').strip()
+	return value or default
+
+
+def env_bool(name, default=False):
+	value = env(name)
+	return value.lower() in ('1', 'true', 'yes', 'on') if value else default
+
+
 # os.getenv возвращает строку, и раньше даже DJANGO_DEBUG=False включало отладку.
-DEBUG = os.getenv('DJANGO_DEBUG', '').strip().lower() in ('1', 'true', 'yes', 'on')
+DEBUG = env_bool('DJANGO_DEBUG')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
@@ -25,6 +36,11 @@ INSTALLED_APPS = [
 	'azzb',
 	'post',
 	'customUser',
+	'moderation',
+
+	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
+	'allauth',
+	'allauth.account',
 
 	'rest_framework',
 	'corsheaders',
@@ -39,6 +55,9 @@ MIDDLEWARE = [
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
+	'allauth.account.middleware.AccountMiddleware',
+	# Забаненным — экран «Аккаунт заблокирован» вместо страниц (E4).
+	'moderation.middleware.BanMiddleware',
 	'customUser.middleware.SetLastVisitMiddleware',
 	'azzb.htmx.HtmxVaryMiddleware',
 ]
@@ -140,9 +159,56 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = 'customUser.CustomUser'
-LOGIN_URL = '/auth/login'
+LOGIN_URL = 'account_login'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+AUTHENTICATION_BACKENDS = [
+	# Вход в /admin/ по логину и паролю.
+	'django.contrib.auth.backends.ModelBackend',
+	# Вход на сайт: по логину или почте, с проверкой подтверждения почты.
+	'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# ---------- django-allauth (E1) ----------
+ACCOUNT_ADAPTER = 'customUser.adapter.AccountAdapter'
+ACCOUNT_FORMS = {
+	'login': 'customUser.forms.LoginForm',
+	'signup': 'customUser.forms.SignupForm',
+}
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
+# Без подтверждённой почты войти нельзя: так боты не наплодят аккаунтов на чужие адреса.
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_UNIQUE_EMAIL = True
+# Одна почта на аккаунт; смена — через подтверждение нового адреса, старый работает до него.
+ACCOUNT_CHANGE_EMAIL = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+# Сессия живёт SESSION_COOKIE_AGE (2 недели) без галочки «Запомнить меня» — как было до allauth.
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_EMAIL_SUBJECT_PREFIX = 'AzzB: '
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http' if DEBUG else 'https'
+# Логин занимает адрес /users/<логин>/ и может совпасть со служебными словами в ссылках и письмах.
+# Лимиты allauth (E2). Ключ «ip» — адрес из CLIENT_IP_HEADER (см. AccountAdapter.get_client_ip),
+# «key» — логин или почта из формы, «user» — пользователь.
+ACCOUNT_RATE_LIMITS = {
+	'login': '30/m/ip',
+	# Перебор паролей: 10 неудач в минуту с одного IP и 5 за 5 минут на один аккаунт.
+	'login_failed': '10/m/ip,5/5m/key',
+	'signup': '5/h/ip,20/d/ip',
+	'reset_password': '10/m/ip,3/h/key',
+	'reset_password_from_key': '20/m/ip',
+	'confirm_email': '1/3m/key',
+	'change_password': '5/m/user',
+	'manage_email': '10/m/user',
+}
+ACCOUNT_USERNAME_BLACKLIST = [
+	'admin', 'administrator', 'root', 'api', 'auth', 'azzb', 'help', 'support', 'moderator',
+	'moderation', 'noreply', 'no-reply', 'postmaster', 'abuse', 'security', 'settings', 'static',
+	'media', 'staff', 'system', 'users', 'www',
+]
 
 LANGUAGE_CODE = 'ru'
 
@@ -159,15 +225,60 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Кэш в PostgreSQL: общий для всех воркеров, на нём держатся лимиты allauth (E2).
+# Таблицу создаёт миграция azzb/migrations/0001_cache_table.py. Когда появится Redis (этап 4),
+# достаточно поменять BACKEND и LOCATION.
+CACHES = {
+	'default': {
+		'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+		'LOCATION': 'azzb_cache',
+	},
+}
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Лимиты частоты (E2). За nginx настоящий IP посетителя приходит в заголовке, который nginx
+# ставит сам: proxy_set_header X-Real-IP $remote_addr; (docs/deploy/security.md).
+CLIENT_IP_HEADER = env('CLIENT_IP_HEADER', '' if DEBUG else 'X-Real-IP')
 
-EMAIL_HOST = 'smtp.mail.ru'
-EMAIL_PORT = 2525
-EMAIL_HOST_USER = "information@azzb.ru"
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-SERVER_EMAIL = EMAIL_HOST_USER
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Капча на регистрации — Yandex SmartCaptcha (E2). Без ключей выключена (разработка, тесты).
+SMARTCAPTCHA_CLIENT_KEY = env('SMARTCAPTCHA_CLIENT_KEY')
+SMARTCAPTCHA_SERVER_KEY = env('SMARTCAPTCHA_SERVER_KEY')
+
+# Куда писать людям: апелляции на бан, вопросы по персональным данным (правила и политика, C5).
+# Ящик должен реально читаться — Postfix на сервере только отправляет (docs/deploy/mail.md).
+SUPPORT_EMAIL = env('SUPPORT_EMAIL', 'support@azzb.ru')
+
+# Правила и политика конфиденциальности (C5, E6). Оператор персональных данных — тот, кто
+# отвечает за сайт по 152-ФЗ: ФИО (для физлица) или наименование ИП/организации.
+LEGAL_OPERATOR = env('LEGAL_OPERATOR', '[ФИО или наименование оператора — задайте LEGAL_OPERATOR в .env]')
+
+# Почта (E0). На проде письма уходят через Postfix на этом же сервере (localhost:25, без пароля),
+# он подписывает их DKIM-ключом azzb.ru — см. docs/deploy/mail.md. Всё переопределяется из .env,
+# например, чтобы временно слать через внешний SMTP. При разработке письма печатаются в консоль.
+EMAIL_BACKEND = env(
+	'EMAIL_BACKEND',
+	'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = env('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(env('EMAIL_PORT', '25'))
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS')
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL')
+# Без таймаута зависший SMTP держал бы воркер, пока пользователь ждёт ответа на «Сбросить пароль».
+EMAIL_TIMEOUT = int(env('EMAIL_TIMEOUT', '10'))
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'AzzB <noreply@azzb.ru>')
+SERVER_EMAIL = env('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
+# Ошибки (в том числе сбои отправки писем) пишем в stderr — их собирает journald (`journalctl -u azzb`).
+# Без этого при DEBUG=False Django отправлял бы их только письмом админам, которых нет.
+LOGGING = {
+	'version': 1,
+	'disable_existing_loggers': False,
+	'handlers': {
+		'console': {'class': 'logging.StreamHandler'},
+	},
+	'root': {'handlers': ['console'], 'level': 'WARNING'},
+	'loggers': {
+		'azzb': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+	},
+}

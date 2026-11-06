@@ -1,0 +1,10 @@
+{% extends "account/base_manage.html" %}
+{% block head_title %}Выход{% endblock head_title %}
+{% block content %}
+	<h1>Выйти из AzzB?</h1>
+	<form method="post" action="{% url 'account_logout' %}" class="form">
+		{% csrf_token %}
+		{{ redirect_field }}
+		<button class="btn btn-lg btn-block" type="submit">Выйти</button>
+	</form>
+{% endblock content %}
