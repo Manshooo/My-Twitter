@@ -1,12 +1,31 @@
-from django.db import models
+from django.db import connection, models
 from django.utils import timezone
-from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
-from django.db.models.functions import Coalesce
+from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
+from django.db.models.query import ModelIterable
 from uuid import uuid4
 from customUser.models import Block, Mute, Profile
 
 
 class PostQuerySet(models.QuerySet):
+	# Для кого досчитать replies_n после загрузки постов (см. for_feed и _fetch_all): (user,) или None.
+	_reply_counts_for = None
+
+	def _clone(self):
+		clone = super()._clone()
+		clone._reply_counts_for = self._reply_counts_for
+		return clone
+
+	def _fetch_all(self):
+		# Число ответов во всей ветке — рекурсивный запрос, его не выразить аннотацией. Считаем его
+		# здесь, когда посты уже загружены: так страница ленты получает счётчики разом, двумя
+		# запросами, а не по запросу на пост, и ни одна вьюха не забудет их досчитать.
+		counting = self._result_cache is None and self._reply_counts_for is not None
+		super()._fetch_all()
+		if counting and self._iterable_class is ModelIterable and self._result_cache:
+			counts = reply_counts(self._result_cache, self._reply_counts_for[0])
+			for post in self._result_cache:
+				post.replies_n = counts[post.pk]
+
 	def visible_to(self, user):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
@@ -38,26 +57,20 @@ class PostQuerySet(models.QuerySet):
 
 	def for_feed(self, user):
 		"""Посты, готовые к выводу карточками: автор, картинки, число лайков и ответов,
-		«мой ли лайк» и на что это ответ — одним запросом на страницу, без запросов на каждый пост."""
+		«мой ли лайк» и на что это ответ — запросами на страницу, а не на каждый пост.
+		Число ответов (replies_n) досчитывается после загрузки, см. _fetch_all."""
 		if user is not None and user.is_authenticated:
 			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
 		else:
 			liked = Value(False, output_field=BooleanField())
-		# Считаем только ответы, которые пользователь и так увидит в ветке.
-		replies = (
-			self.model.objects.visible_to(user).filter(reply_to=OuterRef('pk'))
-			.order_by().values('reply_to').annotate(n=Count('pk')).values('n')
-		)
-		return (
+		posts = (
 			self.visible_to(user)
 			.select_related('author__user', 'reply_to__author__user')
 			.prefetch_related('images')
-			.annotate(
-				likes_n=Count('likes', distinct=True),
-				is_liked=liked,
-				replies_n=Coalesce(Subquery(replies, output_field=IntegerField()), 0),
-			)
+			.annotate(likes_n=Count('likes', distinct=True), is_liked=liked)
 		)
+		posts._reply_counts_for = (user,)
+		return posts
 
 
 class Post(models.Model):
@@ -97,6 +110,60 @@ class Post(models.Model):
 			# Ветка: ответы на пост по времени.
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
 		]
+
+def reply_counts(posts, user):
+	"""{id поста: сколько ответов во всей его ветке} — с ответами на ответы на любой глубине.
+
+	Считаются только ответы, до которых пользователь дойдёт по ветке: если ответ ему не виден
+	(автор заблокирован, забанен, ответ скрыт модератором), не считается и всё, что под ним.
+	Два запроса на любое число постов: рекурсивный — все потомки, второй — какие из них видны.
+	"""
+	roots = [post.pk for post in posts]
+	counts = dict.fromkeys(roots, 0)
+	if not roots:
+		return counts
+	qn = connection.ops.quote_name
+	table, pk, parent = qn(Post._meta.db_table), qn(Post._meta.pk.column), qn(Post._meta.get_field('reply_to').column)
+	marks = ', '.join(['%s'] * len(roots))
+	# UNION, а не UNION ALL: если на странице и ответ, и его родитель, ветка ответа
+	# встретится дважды — повторы отбрасываем.
+	sql = f'''
+		WITH RECURSIVE tree(id, parent) AS (
+			SELECT {pk}, {parent} FROM {table} WHERE {parent} IN ({marks})
+			UNION
+			SELECT p.{pk}, p.{parent} FROM {table} p JOIN tree ON p.{parent} = tree.id
+		)
+		SELECT id, parent FROM tree
+	'''
+	with connection.cursor() as cursor:
+		cursor.execute(sql, roots)
+		edges = cursor.fetchall()
+	if not edges:
+		return counts
+	visible = set(Post.objects.visible_to(user).filter(pk__in=[child for child, _ in edges]).values_list('pk', flat=True))
+	children = {}
+	for child, parent_id in edges:
+		if child in visible:
+			children.setdefault(parent_id, []).append(child)
+	# Размер поддерева — обходом «сначала дети» на своём стеке, без рекурсии Python: ветки
+	# бывают длинными. Пост страницы может оказаться внутри ветки другого — тогда его размер
+	# уже посчитан и берётся готовым.
+	size = {}
+	for root in roots:
+		stack = [(root, False)]
+		while stack:
+			node, kids_done = stack.pop()
+			if node in size:
+				continue
+			kids = children.get(node, ())
+			if kids_done:
+				size[node] = sum(1 + size[kid] for kid in kids)
+			else:
+				stack.append((node, True))
+				stack.extend((kid, False) for kid in kids if kid not in size)
+		counts[root] = size[root]
+	return counts
+
 
 class PostRevision(models.Model):
 	"""Прежняя версия текста поста. Пишется при каждом редактировании; видна в админке —

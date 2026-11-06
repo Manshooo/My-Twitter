@@ -45,7 +45,9 @@
 				{% endwith %}
 			{% endif %}
 			<div class="actions" role="group" aria-label="Действия с постом">
-				{% if user.is_authenticated %}
+				{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
+				   поста (variant "main") она открывает composer — ответить этому посту. {% endcomment %}
+				{% if variant == "main" and user.is_authenticated %}
 					<button class="action" type="button" title="Ответить" data-reply data-reply-name="@{{ author.user.username }}">
 						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
 						<span class="sr">Ответить. Ответов:</span><span data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
@@ -53,7 +55,7 @@
 				{% else %}
 					<a class="action" href="{% url 'post' post.id %}" title="Ответы">
 						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответов:</span><span>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+						<span class="sr">Ответов:</span><span data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
 					</a>
 				{% endif %}
 				{% if user.is_authenticated %}

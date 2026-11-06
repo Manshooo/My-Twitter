@@ -184,7 +184,7 @@ class RepliesTests(TestCase):
 		page = page[page.index('<main'):]
 		self.assertLess(page.index('Первый ответ'), page.index('Второй ответ'))
 		self.assertNotIn('Ответ на ответ', page)  # только прямые ответы
-		self.assertIn('data-reply-count>2<', page)
+		self.assertIn('data-reply-count>3<', page)  # счётчик — вся ветка, с ответом на ответ
 
 		nested = Post.objects.get(text='Ответ на ответ')
 		page = self.client.get(f'/p/{nested.pk}/').content.decode()
@@ -235,9 +235,9 @@ class RepliesTests(TestCase):
 			Post.objects.create(author=self.bob.profile, text='ответ', reply_to=post, is_reply=True)
 		self.client.force_login(self.bob)
 		self.client.get('/')  # прогрев: сессия, last_visit
-		# сессия, пользователь, профиль, посты, картинки, право модерировать (пункт меню),
-		# «Кого почитать» — сколько бы ни было ответов.
-		with self.assertNumQueries(7):
+		# сессия, пользователь, профиль, посты, картинки, ответы в ветках и какие из них видны,
+		# право модерировать (пункт меню), «Кого почитать» — сколько бы ни было ответов.
+		with self.assertNumQueries(9):
 			self.client.get('/')
 
 

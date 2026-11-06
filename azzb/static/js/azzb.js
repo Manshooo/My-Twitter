@@ -248,6 +248,10 @@
 		page.content.querySelectorAll('[data-post-id]').forEach((fresh) => {
 			document.querySelectorAll('[data-post-id="' + fresh.dataset.postId + '"]').forEach((card) => {
 				const body = fresh.querySelector('.post-body').cloneNode(true);
+				// Кнопки действий оставляем прежние: у главного поста «Ответить» открывает composer,
+				// а в свежей карточке (вид ленты) это ссылка на страницу поста.
+				const actions = card.querySelector('.actions');
+				if (actions) body.querySelector('.actions').replaceWith(actions);
 				card.querySelector('.post-body').replaceWith(body);
 				htmx.process(body);
 			});
@@ -266,11 +270,20 @@
 		nodes.forEach((node) => htmx.process(node));
 	}
 
+	// Счётчик ответов считает всю ветку, поэтому меняем его у поста и у всех постов выше
+	// по ветке, что есть на странице (идём вверх по data-reply-of).
 	function bumpReplyCount(postId, delta) {
-		document.querySelectorAll('[data-post-id="' + postId + '"] [data-reply-count]').forEach((el) => {
-			const n = Math.max(0, (Number(el.textContent) || 0) + delta);
-			el.textContent = n ? String(n) : '';
-		});
+		const seen = new Set();
+		while (postId && !seen.has(postId)) {
+			seen.add(postId);
+			const cards = Array.from(document.querySelectorAll('[data-post-id="' + postId + '"]'));
+			cards.forEach((card) => card.querySelectorAll('[data-reply-count]').forEach((el) => {
+				const n = Math.max(0, (Number(el.textContent) || 0) + delta);
+				el.textContent = n ? String(n) : '';
+			}));
+			const child = cards.find((card) => card.dataset.replyOf);
+			postId = child ? child.dataset.replyOf : null;
+		}
 	}
 
 	function closeComposer() {
@@ -644,8 +657,12 @@
 
 	document.addEventListener('azzb:post-deleted', (event) => {
 		const { id, replyOf } = event.detail;
-		document.querySelectorAll('[data-post-id="' + id + '"]').forEach((card) => card.remove());
-		if (replyOf) bumpReplyCount(replyOf, -1);
+		const cards = document.querySelectorAll('[data-post-id="' + id + '"]');
+		// Ответы на удалённый пост остаются, но отрываются от ветки — выше по ней их больше не считаем.
+		const counter = cards.length ? cards[0].querySelector('[data-reply-count]') : null;
+		const subtree = counter ? Number(counter.textContent) || 0 : 0;
+		cards.forEach((card) => card.remove());
+		if (replyOf) bumpReplyCount(replyOf, -(1 + subtree));
 	});
 
 	// Ошибка запроса не из composer (у него свой блок ошибок) — короткий тост.
