@@ -1,3 +1,5 @@
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import connection, models
 from django.utils import timezone
 from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
@@ -135,6 +137,10 @@ class Post(models.Model):
 	# госорганов, затем стирается (purged_at); строка остаётся, чтобы ветка не рвалась.
 	deleted_at = models.DateTimeField("Удалён автором", null=True, blank=True)
 	purged_at = models.DateTimeField("Содержимое стёрто", null=True, blank=True)
+	# Поиск (D3): вектор считает сама база при каждой записи текста, словарь — русский (морфология).
+	search_vector = models.GeneratedField(
+		expression=SearchVector('text', config='russian'), output_field=SearchVectorField(), db_persist=True,
+	)
 
 	objects = PostQuerySet.as_manager()
 	def get_likes(self):
@@ -151,6 +157,7 @@ class Post(models.Model):
 			models.Index(fields=['is_reply', '-created_at'], name='post_top_level_recent'),
 			# Ветка: ответы на пост по времени.
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
+			GinIndex(fields=['search_vector'], name='post_search'),
 		]
 		constraints = [
 			models.UniqueConstraint(

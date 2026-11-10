@@ -1,4 +1,6 @@
+from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.core import validators
+from django.db.models.functions import Upper
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.deconstruct import deconstructible
@@ -77,6 +79,13 @@ class CustomUser(AbstractUser):
 	deleted_at = models.DateTimeField("Удалил аккаунт", null=True, blank=True)
 	erased_at = models.DateTimeField("Данные стёрты", null=True, blank=True)
 
+	class Meta(AbstractUser.Meta):
+		indexes = [
+			# Поиск людей (D3): подстрока (icontains → UPPER(...) LIKE) и похожие написания (%).
+			GinIndex(OpClass(Upper('username'), name='gin_trgm_ops'), name='user_username_upper_trgm'),
+			GinIndex(fields=['username'], opclasses=['gin_trgm_ops'], name='user_username_trgm'),
+		]
+
 	@property
 	def is_banned(self):
 		return self.banned_until is not None and self.banned_until > timezone.now()
@@ -138,6 +147,12 @@ class Profile(models.Model):
 	def initial(self):
 		name = (self.username or self.user.username or '?').strip()
 		return name[:1].upper() or '?'
+
+	class Meta:
+		indexes = [
+			GinIndex(OpClass(Upper('username'), name='gin_trgm_ops'), name='profile_name_upper_trgm'),
+			GinIndex(fields=['username'], opclasses=['gin_trgm_ops'], name='profile_name_trgm'),
+		]
 
 	def save(self,  *args, **kwargs):
 		if not self.username:

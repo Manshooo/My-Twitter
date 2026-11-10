@@ -31,6 +31,8 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
+	# Полнотекстовый поиск и триграммы (D3).
+	'django.contrib.postgres',
 
 	'api',
 	'azzb',

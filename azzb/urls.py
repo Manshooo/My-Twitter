@@ -4,7 +4,7 @@ from django.urls import include, path, re_path
 from django.conf.urls.static import static
 from django.conf import settings
 
-from .views import index, follows_updates, hot_news, legal_page
+from .views import index, follows_updates, hot_news, legal_page, search
 from customUser.account import account_settings, delete_account, export_data
 from customUser.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
 from moderation.views import report_post, report_profile
@@ -13,6 +13,7 @@ from post.views import bookmark_post, bookmarks, compose, delete_post, hashtag, 
 urlpatterns = [
 	path('', index, name='index'),
 	path("hot/", hot_news, name="hot-news"),
+	path("search/", search, name="search"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
 	path('p/<uuid:pk>/like/', like_post, name='post-like'),
 	path('p/<uuid:pk>/repost/', repost_post, name='post-repost'),

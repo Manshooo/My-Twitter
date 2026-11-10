@@ -17,6 +17,9 @@
 				<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
 					<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
 				</button>
+				<a class="icon-btn" href="{% url 'search' %}" aria-label="Поиск"{% if request.resolver_match.url_name == 'search' %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+				</a>
 				{% if user.is_authenticated %}
 					<a class="icon-btn" href="{% url 'bookmarks' %}" aria-label="Закладки"{% if request.resolver_match.url_name == 'bookmarks' %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>
@@ -35,6 +38,9 @@
 				</div>
 				<a class="nav-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'hot-news' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
 					<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
+				</a>
+				<a class="nav-item" href="{% url 'search' %}"{% if url_name == 'search' %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>Поиск
 				</a>
 				{% if user.is_authenticated %}
 					<a class="nav-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
@@ -102,6 +108,7 @@
 			</main>
 
 			<aside class="rail" aria-label="Дополнительно">
+				{% if url_name != 'search' %}{% include "azzb/includes/search_box.html" with box_id="search-rail" query="" %}{% endif %}
 				{% block rail %}{% include "azzb/includes/rail.html" %}{% endblock rail %}
 			</aside>
 		</div>
