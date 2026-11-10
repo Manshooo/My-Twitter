@@ -37,6 +37,34 @@
 					<input class="attachment-alt" type="text" maxlength="{{ alt_max_length }}" placeholder="Описание (alt)" data-attachment-alt>
 				</li>
 			</template>
+			{# Опрос (B7): поля уходят в форму как есть — poll_option (2–4) и poll_duration. Включается кнопкой в инструментах. #}
+			<fieldset class="poll-editor" data-poll-editor hidden disabled>
+				<legend class="sr">Опрос</legend>
+				<div class="poll-editor-options" data-poll-options>
+					{% for i in "1234" %}
+						<div class="poll-editor-row"{% if forloop.counter > 2 %} hidden{% endif %} data-poll-row>
+							<label class="sr" for="poll-option-{{ i }}">Вариант {{ i }}</label>
+							<input id="poll-option-{{ i }}" type="text" name="poll_option" maxlength="{{ poll_option_max_length }}" placeholder="Вариант {{ i }}{% if forloop.counter > 2 %} (необязательно){% endif %}" autocomplete="off" data-poll-input>
+							{% if forloop.counter > 2 %}
+								<button class="icon-btn" type="button" aria-label="Убрать вариант {{ i }}" data-poll-remove>
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>
+								</button>
+							{% endif %}
+						</div>
+					{% endfor %}
+				</div>
+				<div class="poll-editor-foot">
+					<button class="btn btn-ghost btn-sm" type="button" data-poll-add>
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"></use></svg>Добавить вариант
+					</button>
+					<label class="poll-duration">Длится
+						<select name="poll_duration">
+							{% for hours, label in poll_durations %}<option value="{{ hours }}"{% if hours == 24 %} selected{% endif %}>{{ label }}</option>{% endfor %}
+						</select>
+					</label>
+					<button class="btn btn-ghost btn-sm btn-danger" type="button" data-poll-toggle>Убрать опрос</button>
+				</div>
+			</fieldset>
 			<p class="hint" data-composer-edit-note hidden>Картинки в посте останутся как есть: изменить можно только текст.</p>
 			<div class="alert" role="alert" data-composer-error hidden>
 				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg><span data-composer-error-text>Пост не отправлен. Попробуйте ещё раз.</span>
@@ -46,6 +74,9 @@
 					<input class="sr" type="file" id="composer-file" accept="{{ image_accept }}" multiple tabindex="-1" data-composer-file>
 					<button class="icon-btn" type="button" aria-label="Прикрепить картинку" title="Картинка: до {{ max_images }} шт., до {{ max_upload_mb }} МБ" data-composer-attach>
 						<svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>
+					</button>
+					<button class="icon-btn" type="button" aria-label="Опрос" title="Опрос: от 2 до 4 вариантов" aria-pressed="false" data-poll-toggle>
+						<svg class="icon" aria-hidden="true"><use href="#i-poll"></use></svg>
 					</button>
 				</div>
 				<span class="hint composer-keys" aria-hidden="true">Ctrl+Enter — отправить</span>

@@ -6,7 +6,7 @@ from moderation.models import Report
 from moderation.services import can_moderate
 from notifications.services import unread_count
 from post.media import ACCEPT, MAX_UPLOAD_MB
-from post.models import ALT_MAX_LENGTH, MAX_IMAGES
+from post.models import ALT_MAX_LENGTH, MAX_IMAGES, POLL_DURATIONS, POLL_OPTION_MAX_LENGTH
 from post.serializer import POST_MAX_LENGTH
 
 from .cookies import CATEGORIES, cookie_choice
@@ -38,6 +38,8 @@ def ui(request):
 		'max_images': MAX_IMAGES,
 		'max_upload_mb': MAX_UPLOAD_MB,
 		'alt_max_length': ALT_MAX_LENGTH,
+		'poll_durations': list(POLL_DURATIONS.items()),
+		'poll_option_max_length': POLL_OPTION_MAX_LENGTH,
 		'support_email': settings.SUPPORT_EMAIL,
 		# Баннер cookie и счётчик Метрики (azzb/cookies.py).
 		'cookie_choice': cookie_choice(request),

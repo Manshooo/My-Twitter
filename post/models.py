@@ -5,7 +5,9 @@ from uuid import UUID, uuid4
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import connection, models
-from django.db.models import BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models import (
+	BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Prefetch, Q, Subquery, Value,
+)
 from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
 from django.utils import timezone
 
@@ -14,6 +16,18 @@ from accounts.models import Block, FollowThrough, Mute, Profile
 if TYPE_CHECKING:
 	# Есть только в django-stubs (requirements-dev.txt), поэтому импорт — лишь для проверки типов.
 	from django_stubs_ext.db.models.manager import RelatedManager
+
+
+def poll_prefetches(user):
+	"""Варианты опросов с числом голосов и голос пользователя — запросом на страницу, и только
+	если на странице есть опросы (Django не делает prefetch для пустого набора)."""
+	result = []
+	for prefix in ('poll', 'repost_of__poll'):
+		result.append(Prefetch(f'{prefix}__options', queryset=PollOption.objects.annotate(votes_n=Count('votes'))))
+		if user is not None and user.is_authenticated:
+			mine = PollVote.objects.filter(profile_id=user.profile.pk)
+			result.append(Prefetch(f'{prefix}__votes', queryset=mine, to_attr='mine'))
+	return result
 
 
 class PostQuerySet(models.QuerySet['Post']):
@@ -81,7 +95,11 @@ class PostQuerySet(models.QuerySet['Post']):
 				'author__user', 'reply_to__author__user', 'quote_of__author__user',
 				'repost_of__author__user', 'repost_of__reply_to__author__user', 'repost_of__quote_of__author__user',
 			)
-			.prefetch_related('images', 'quote_of__images', 'repost_of__images', 'repost_of__quote_of__images')
+			.select_related('poll', 'repost_of__poll')
+			.prefetch_related(
+				'images', 'quote_of__images', 'repost_of__images', 'repost_of__quote_of__images',
+				*poll_prefetches(user),
+			)
 			.annotate(shown_id=Coalesce('repost_of_id', 'id'), shown_quote_id=Coalesce('repost_of__quote_of_id', 'quote_of_id'))
 			.annotate(
 				likes_n=Coalesce(Subquery(likes, output_field=IntegerField()), 0),
@@ -316,6 +334,52 @@ class Mention(models.Model):
 		verbose_name = 'Упоминание'
 		verbose_name_plural = 'Упоминания'
 		constraints = [models.UniqueConstraint(fields=['post', 'profile'], name='mention_once')]
+
+
+POLL_MIN_OPTIONS, POLL_MAX_OPTIONS = 2, 4
+POLL_OPTION_MAX_LENGTH = 50
+# Сколько длится опрос: часы → подпись в composer.
+POLL_DURATIONS = {1: '1 час', 24: '1 день', 72: '3 дня', 168: '7 дней'}
+
+
+class Poll(models.Model):
+	"""Опрос (B7) — часть поста: варианты, срок, один голос на человека. Результаты видны
+	автору, проголосовавшим и всем после окончания. Создаётся только через post.services.publish_post."""
+	post = models.OneToOneField(Post, on_delete=models.CASCADE, related_name='poll', verbose_name='Пост')
+	ends_at = models.DateTimeField('Заканчивается')
+
+	class Meta:
+		verbose_name = 'Опрос'
+		verbose_name_plural = 'Опросы'
+
+	def __str__(self):
+		return f'Опрос к {self.post_id}'
+
+	@property
+	def is_open(self):
+		return self.ends_at > timezone.now()
+
+
+class PollOption(models.Model):
+	poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='options')
+	text = models.CharField('Вариант', max_length=POLL_OPTION_MAX_LENGTH)
+	position = models.PositiveSmallIntegerField(default=0)
+
+	class Meta:
+		ordering = ['position']
+
+	def __str__(self):
+		return self.text
+
+
+class PollVote(models.Model):
+	poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='votes')
+	option = models.ForeignKey(PollOption, on_delete=models.CASCADE, related_name='votes')
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='poll_votes')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		constraints = [models.UniqueConstraint(fields=['poll', 'profile'], name='poll_vote_once')]
 
 
 class Bookmark(models.Model):

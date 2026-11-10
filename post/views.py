@@ -20,7 +20,7 @@ from .models import Bookmark, Hashtag, Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from .services import (
 	delete_post as soft_delete_post, edit_post, find_post_target, find_reply_target, original, publish_post,
-	toggle_bookmark, toggle_like, toggle_pin, toggle_repost,
+	toggle_bookmark, toggle_like, toggle_pin, toggle_repost, vote,
 )
 
 
@@ -72,6 +72,22 @@ def bookmark_post(request, pk):
 		return redirect('post', pk=post.pk)
 	response = render(request, 'post/_bookmark.html', {'post': post, 'bookmarked': bookmarked})
 	return trigger(response, {'azzb:toast': 'Добавлено в закладки' if bookmarked else 'Убрано из закладок'})
+
+
+@require_POST
+@htmx_login_required
+@rate_limit('like', *LIKE_RATES)
+def vote_poll(request, pk):
+	"""Голос в опросе (B7). htmx заменяет блок опроса на результаты."""
+	post = visible_original(request, pk)
+	try:
+		vote(post, request.user.profile, request.POST.get('option', ''))
+	except ValidationError as error:
+		return htmx_errors(error.messages)
+	if not is_htmx(request):
+		return redirect('post', pk=post.pk)
+	fresh = Post.objects.for_feed(request.user).get(pk=post.pk)
+	return render(request, 'post/_poll_fragment.html', {'post': fresh})
 
 
 @require_POST
@@ -191,6 +207,8 @@ def compose(request):
 				data.getlist('alt'),
 				reply_to=find_reply_target(request.user, data.get('reply_to')),
 				quote_of=find_post_target(request.user, data.get('quote_of'), 'quote'),
+				poll_options=data.getlist('poll_option'),
+				poll_duration=data.get('poll_duration'),
 			)
 			record(request, Action.POST_CREATE, post=post)
 	except ValidationError as error:

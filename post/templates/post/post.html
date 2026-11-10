@@ -56,6 +56,7 @@
 				</div>
 				{% endwith %}
 			{% endif %}
+			{% if post.poll %}{% load show_posts %}{% poll_block post %}{% endif %}
 			{% if quote %}{% include "post/_quote.html" %}{% endif %}
 			<div class="actions" role="group" aria-label="Действия с постом">
 				{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице

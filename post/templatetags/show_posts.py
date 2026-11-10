@@ -49,3 +49,29 @@ def show_posts(context, variant=""):
 		"quote": quote, "quote_available": quote is not None and quote_available,
 		"variant": variant, "request": request, "user": request.user,
 	}
+
+
+@register.inclusion_tag(filename='post/_poll.html', takes_context=True)
+def poll_block(context, post):
+	"""Опрос в карточке. Числа отдаём в HTML только тем, кому положено их видеть: автору,
+	проголосовавшим и всем после окончания, — иначе результаты подсмотрели бы в коде страницы."""
+	poll = post.poll
+	user = context["request"].user
+	mine = getattr(poll, "mine", None)
+	if mine is None:
+		mine = list(poll.votes.filter(profile_id=user.profile.pk)) if user.is_authenticated else []
+	my_option = mine[0].option_id if mine else None
+	options = list(poll.options.all())
+	for option in options:
+		if not hasattr(option, "votes_n"):
+			option.votes_n = option.votes.count()
+	total = sum(option.votes_n for option in options)
+	for option in options:
+		option.percent = round(100 * option.votes_n / total) if total else 0
+	is_author = user.is_authenticated and post.author_id == user.pk
+	return {
+		"post": post, "poll": poll, "options": options, "total": total, "my_option": my_option,
+		"show_results": is_author or my_option is not None or not poll.is_open,
+		"can_vote": user.is_authenticated and not is_author and my_option is None and poll.is_open,
+		"request": context["request"], "user": user,
+	}

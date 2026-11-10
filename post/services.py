@@ -1,5 +1,6 @@
 """Создание, правка, удаление постов и лайки. Одна точка и для страниц (HTMX), и для API."""
 import uuid
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -11,7 +12,8 @@ from notifications.services import notify, retract
 
 from .media import process_post_image
 from .models import (
-	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Hashtag, Image, Like, Mention, Post, PostHashtag, PostRevision,
+	ALT_MAX_LENGTH, MAX_IMAGES, POLL_DURATIONS, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX_LENGTH,
+	Bookmark, Hashtag, Image, Like, Mention, Poll, PollOption, PollVote, Post, PostHashtag, PostRevision,
 	shift_ancestor_counts, shift_repost_counts,
 )
 from .serializer import POST_MAX_LENGTH
@@ -82,9 +84,55 @@ def sync_entities(post):
 			notify(profile, post.author, Notification.Verb.MENTION, post)
 
 
-def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=None):
-	"""Новый пост, ответ или цитата. reply_to и quote_of — посты, которые автор видит
-	(проверяет вызывающий, см. find_post_target)."""
+def clean_poll(options, duration, text, has_images):
+	"""Варианты и срок опроса из формы. None — опроса нет. ValidationError — понятные сообщения."""
+	options = [option.strip() for option in options or [] if option and option.strip()]
+	if not options:
+		return None
+	errors = []
+	if not POLL_MIN_OPTIONS <= len(options) <= POLL_MAX_OPTIONS:
+		errors.append(f'В опросе от {POLL_MIN_OPTIONS} до {POLL_MAX_OPTIONS} вариантов.')
+	if any(len(option) > POLL_OPTION_MAX_LENGTH for option in options):
+		errors.append(f'Вариант ответа — не длиннее {POLL_OPTION_MAX_LENGTH} символов.')
+	if len({option.casefold() for option in options}) != len(options):
+		errors.append('Варианты ответа не должны повторяться.')
+	if not (text or '').strip():
+		errors.append('Напишите вопрос опроса.')
+	if has_images:
+		errors.append('К опросу нельзя прикрепить картинки.')
+	try:
+		hours = int(duration)
+	except (TypeError, ValueError):
+		hours = None
+	if hours not in POLL_DURATIONS:
+		errors.append('Выберите срок опроса.')
+	if errors:
+		raise ValidationError(errors)
+	return options, hours
+
+
+def vote(post, profile, option_id):
+	"""Голос в опросе поста. Один на человека, только пока опрос идёт, автор не голосует.
+	ValidationError с понятным сообщением, если нельзя."""
+	poll = getattr(post, 'poll', None)
+	if poll is None:
+		raise ValidationError('В посте нет опроса.')
+	if post.author_id == profile.user_id:
+		raise ValidationError('В своём опросе голосовать нельзя.')
+	if not poll.is_open:
+		raise ValidationError('Опрос уже закончился.')
+	option = poll.options.filter(pk=option_id).first() if str(option_id).isdigit() else None
+	if option is None:
+		raise ValidationError('Такого варианта нет.')
+	_, created = PollVote.objects.get_or_create(poll=poll, profile=profile, defaults={'option': option})
+	if not created:
+		raise ValidationError('Вы уже проголосовали.')
+
+
+def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=None, poll_options=(), poll_duration=None):
+	"""Новый пост, ответ или цитата, по желанию — с опросом. reply_to и quote_of — посты,
+	которые автор видит (проверяет вызывающий, см. find_post_target)."""
+	poll = clean_poll(poll_options, poll_duration, text, bool(uploads))
 	text, images = clean_post_input(text, uploads, alts)
 	saved = []
 	try:
@@ -99,6 +147,12 @@ def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=N
 				shift_repost_counts([post.pk], +1)
 				notify(quote_of.author, author, Notification.Verb.QUOTE, post)
 			sync_entities(post)
+			if poll is not None:
+				options, hours = poll
+				created = Poll.objects.create(post=post, ends_at=timezone.now() + timedelta(hours=hours))
+				PollOption.objects.bulk_create(
+					[PollOption(poll=created, text=option, position=index) for index, option in enumerate(options)]
+				)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
@@ -167,6 +221,7 @@ def purge_posts(posts):
 		Bookmark.objects.filter(post_id__in=ids).delete()
 		PostHashtag.objects.filter(post_id__in=ids).delete()
 		Mention.objects.filter(post_id__in=ids).delete()
+		Poll.objects.filter(post_id__in=ids).delete()
 		Post.objects.filter(pk__in=ids).update(text='', purged_at=timezone.now())
 	return len(ids)
 

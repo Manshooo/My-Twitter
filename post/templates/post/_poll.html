@@ -1,0 +1,29 @@
+{% load azzb_ui %}<div class="poll" data-poll>
+	{% if can_vote %}
+		<div class="poll-options" role="group" aria-label="Варианты ответа">
+			{% for option in options %}
+				<button class="poll-choice" type="button" hx-post="{% url 'post-vote' post.id %}" hx-vals='{"option": "{{ option.id }}"}'
+					hx-target="closest [data-poll]" hx-swap="outerHTML" hx-disabled-elt="closest .poll-options button" data-error="Не удалось проголосовать">{{ option.text }}</button>
+			{% endfor %}
+		</div>
+	{% elif show_results %}
+		<ul class="poll-results" aria-label="Результаты опроса">
+			{% for option in options %}
+				<li class="poll-row{% if option.id == my_option %} mine{% endif %}">
+					<span class="poll-bar" style="width: {{ option.percent }}%" aria-hidden="true"></span>
+					<span class="poll-label">{{ option.text }}{% if option.id == my_option %} <svg class="icon icon-sm" role="img" aria-label="ваш выбор"><use href="#i-check"></use></svg>{% endif %}</span>
+					<b class="poll-percent">{{ option.percent }}%</b>
+				</li>
+			{% endfor %}
+		</ul>
+	{% else %}
+		<ul class="poll-results" aria-label="Варианты ответа">
+			{% for option in options %}<li class="poll-row"><span class="poll-label">{{ option.text }}</span></li>{% endfor %}
+		</ul>
+	{% endif %}
+	<p class="poll-meta muted">
+		{% if show_results %}{{ total }} {{ total|plural_ru:"голос,голоса,голосов" }} · {% endif %}
+		{% if poll.is_open %}до {{ poll.ends_at|date:"j E, H:i" }}{% else %}Опрос завершён{% endif %}
+		{% if not user.is_authenticated and poll.is_open %} · <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войдите, чтобы проголосовать</a>{% endif %}
+	</p>
+</div>

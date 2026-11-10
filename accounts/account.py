@@ -25,7 +25,7 @@ from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
 from moderation.models import Ban, Report
 from notifications.models import Notification
-from post.models import Bookmark, Like, Mention, Post
+from post.models import Bookmark, Like, Mention, PollVote, Post
 from post.services import delete_posts, purge_posts
 
 from .models import DEFAULT_AVATAR, Block, FollowRequest, FollowThrough, Mute
@@ -58,6 +58,13 @@ def _media_name(field, folder):
 	return str(PurePosixPath(folder) / PurePosixPath(field.name).name)
 
 
+def _poll(post):
+	poll = getattr(post, 'poll', None)
+	if poll is None:
+		return None
+	return {'ends_at': poll.ends_at, 'options': [option.text for option in poll.options.all()]}
+
+
 def collect_user_data(user):
 	"""Всё, что AzzB хранит о пользователе, — в виде словаря для data.json, плюс файлы для архива."""
 	profile = user.profile
@@ -72,7 +79,7 @@ def collect_user_data(user):
 
 	posts = []
 	own_posts = Post.objects.filter(author=profile, purged_at__isnull=True)
-	for post in own_posts.prefetch_related('images', 'revisions').order_by('created_at'):
+	for post in own_posts.select_related('poll').prefetch_related('images', 'revisions', 'poll__options').order_by('created_at'):
 		posts.append({
 			'id': post.pk,
 			'created_at': post.created_at,
@@ -82,6 +89,7 @@ def collect_user_data(user):
 			'reply_to': post.reply_to_id,
 			'repost_of': post.repost_of_id,
 			'quote_of': post.quote_of_id,
+			'poll': _poll(post),
 			'hidden_by_moderator': bool(post.hidden_at),
 			'images': [{'file': attach(image.file, f'posts/{post.pk}'), 'alt': image.alt} for image in post.images.all()],
 			'previous_versions': [
@@ -120,6 +128,10 @@ def collect_user_data(user):
 		'likes': [
 			{'post': like.post_id, 'at': like.created_at}
 			for like in Like.objects.filter(profile=profile).order_by('created_at')
+		],
+		'poll_votes': [
+			{'post': vote.poll.post_id, 'option': vote.option.text, 'at': vote.created_at}
+			for vote in PollVote.objects.filter(profile=profile).select_related('poll', 'option')
 		],
 		'bookmarks': [
 			{'post': bookmark.post_id, 'at': bookmark.created_at}
@@ -193,6 +205,7 @@ def erase_account(user):
 		Like.objects.filter(profile=profile).delete()
 		Bookmark.objects.filter(profile=profile).delete()
 		Mention.objects.filter(profile=profile).delete()
+		PollVote.objects.filter(profile=profile).delete()
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()

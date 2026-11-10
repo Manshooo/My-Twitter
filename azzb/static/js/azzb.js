@@ -236,6 +236,7 @@
 		form.querySelector('[data-composer-quoting-name]').textContent = mode.name || '';
 		// У правки картинки не меняются — прячем всё, что про вложения.
 		form.querySelector('.composer-tools').hidden = mode.kind === 'edit';
+		if (mode.kind === 'edit' && pollActive(form)) setPoll(form, false);
 		form.querySelector('[data-composer-edit-note]').hidden = !(mode.kind === 'edit' && mode.hasImages);
 		modal.querySelector('[data-composer-title]').textContent = labels.title;
 		const textarea = form.querySelector('textarea');
@@ -390,9 +391,14 @@
 		counter.classList.toggle('over', n > max);
 		const keepsImages = composerMode.kind === 'edit' && composerMode.hasImages;
 		const hasContent = textarea.value.trim() || filesOf(form).length || keepsImages;
-		form.querySelector('[type="submit"]').disabled = Boolean(form.dataset.busy) || !hasContent || n > max;
+		// Опрос: нужен вопрос (текст) и хотя бы два варианта. Картинки и опрос — не вместе.
+		const poll = pollActive(form);
+		const pollReady = !poll || (textarea.value.trim() && filledPollOptions(form) >= 2);
+		form.querySelector('[type="submit"]').disabled = Boolean(form.dataset.busy) || !hasContent || !pollReady || n > max;
 		const attach = form.querySelector('[data-composer-attach]');
-		if (attach) attach.disabled = filesOf(form).length >= Number(form.dataset.maxImages || 4);
+		if (attach) attach.disabled = poll || filesOf(form).length >= Number(form.dataset.maxImages || 4);
+		const pollButton = form.querySelector('.composer-tools [data-poll-toggle]');
+		if (pollButton) pollButton.disabled = filesOf(form).length > 0;
 	}
 
 	// Описания, которые уже ввели, переносим из полей в список перед перерисовкой и отправкой.
@@ -457,7 +463,59 @@
 		if (attach) attach.focus();
 	}
 
+	// ---------- Опрос в composer (B7) ----------
+	function pollEditor(form) {
+		return form.querySelector('[data-poll-editor]');
+	}
+
+	function pollActive(form) {
+		const editor = pollEditor(form);
+		return Boolean(editor && !editor.hidden);
+	}
+
+	function filledPollOptions(form) {
+		return Array.from(form.querySelectorAll('[data-poll-input]')).filter((input) => input.value.trim()).length;
+	}
+
+	function setPoll(form, on) {
+		const editor = pollEditor(form);
+		if (!editor) return;
+		editor.hidden = !on;
+		editor.disabled = !on; // выключенный fieldset не попадает в отправку формы
+		form.querySelector('.composer-tools [data-poll-toggle]').setAttribute('aria-pressed', String(on));
+		if (!on) {
+			editor.querySelectorAll('[data-poll-input]').forEach((input) => { input.value = ''; });
+			editor.querySelectorAll('[data-poll-row]').forEach((row, index) => { row.hidden = index >= 2; });
+		}
+		syncPollAdd(form);
+		updateCounter(form);
+		if (on) editor.querySelector('[data-poll-input]').focus();
+	}
+
+	function syncPollAdd(form) {
+		const add = form.querySelector('[data-poll-add]');
+		if (add) add.hidden = !form.querySelector('[data-poll-row][hidden]');
+	}
+
+	function addPollOption(form) {
+		const row = form.querySelector('[data-poll-row][hidden]');
+		if (!row) return;
+		row.hidden = false;
+		row.querySelector('input').focus();
+		syncPollAdd(form);
+	}
+
+	function removePollOption(btn) {
+		const row = btn.closest('[data-poll-row]');
+		const form = btn.form;
+		row.querySelector('input').value = '';
+		row.hidden = true;
+		syncPollAdd(form);
+		updateCounter(form);
+	}
+
 	function resetComposer(form) {
+		setPoll(form, false);
 		form.querySelector('textarea').value = '';
 		filesOf(form).forEach((item) => URL.revokeObjectURL(item.url));
 		attachments.set(form, []);
@@ -1055,6 +1113,9 @@
 		if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
 		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
+		if (target.matches('[data-poll-toggle]')) { event.preventDefault(); setPoll(target.form, !pollActive(target.form)); return; }
+		if (target.matches('[data-poll-add]')) { event.preventDefault(); addPollOption(target.form); return; }
+		if (target.matches('[data-poll-remove]')) { event.preventDefault(); removePollOption(target); return; }
 		if (target.matches('[data-cookie-accept]')) { event.preventDefault(); saveCookieChoice(target.dataset.cookieAccept); return; }
 		if (target.matches('[data-cookie-customize]')) { event.preventDefault(); showCookieOptions(cookieBanner()); return; }
 		if (target.matches('[data-cookie-settings]')) { event.preventDefault(); openCookieSettings(); return; }
@@ -1130,6 +1191,7 @@
 			saveDraftSoon(event.target.form);
 			suggestMentions(event.target);
 		}
+		if (event.target.matches('[data-poll-input]')) updateCounter(event.target.form);
 		if (event.target.matches('[data-crop-zoom]')) setCropZoom(Number(event.target.value));
 	});
 
