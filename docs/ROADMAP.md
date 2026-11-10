@@ -185,6 +185,7 @@ E0 → E1 → E2 → E3 → E4 → C5 + E6
 
 ### Этап 3. Социальные механики (≈ 4–6 недель) — ✅ готово (2026-11-10)
 Выкладка на сервер — [`docs/deploy/stage3.md`](deploy/stage3.md).
+Обновление сервера: зависимости — `docs/deploy/security.md`, раздел 6; переход на Debian 13 — [`docs/deploy/debian13.md`](deploy/debian13.md).
 D1 → D4 → D5 → D2 → D3 → D6, D7 · G1 · E5 · B7, B8
 
 Что сделано:

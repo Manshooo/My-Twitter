@@ -17,8 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.11 — как на сервере, 3.14 — самая новая версия, которую поддерживает Django 5.2.
-        python-version: ["3.11", "3.14"]
+        # 3.11 — Debian 12 (сейчас на сервере), 3.13 — Debian 13 (docs/deploy/debian13.md),
+        # 3.14 — самая новая версия, которую поддерживает Django 5.2.
+        python-version: ["3.11", "3.13", "3.14"]
     services:
       postgres:
         # 15 — то, что ставит `apt install postgresql` в Debian 12 на сервере.
