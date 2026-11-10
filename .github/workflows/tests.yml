@@ -17,8 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.11 — как на сервере, 3.14 — самая новая версия, которую поддерживает Django 5.2.
-        python-version: ["3.11", "3.14"]
+        # 3.11 — Debian 12 (сейчас на сервере), 3.13 — Debian 13 (docs/deploy/debian13.md),
+        # 3.14 — самая новая версия, которую поддерживает Django 5.2.
+        python-version: ["3.11", "3.13", "3.14"]
     services:
       postgres:
         # 15 — то, что ставит `apt install postgresql` в Debian 12 на сервере.
@@ -53,6 +54,13 @@ jobs:
 
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+
+      # Известные уязвимости в закреплённых версиях (база PyPI/OSV). Новая уязвимость в уже
+      # закреплённой версии сделает CI красным даже без изменений в коде — это и есть сигнал обновиться.
+      - name: Audit dependencies
+        run: |
+          python -m pip install pip-audit==2.10.1
+          pip-audit -r requirements.txt
 
       - name: Show database backend
         run: python -c "import django, os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'azzb.settings'); django.setup(); from django.db import connection; print(connection.vendor)"
