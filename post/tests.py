@@ -281,8 +281,8 @@ class RepliesTests(TestCase):
 		self.client.force_login(self.bob)
 		self.client.get('/')  # прогрев: сессия, last_visit
 		# сессия, пользователь, профиль, посты, картинки, непрочитанные уведомления,
-		# право модерировать (пункт меню), «Кого почитать» — сколько бы ни было ответов.
-		with self.assertNumQueries(8):
+		# право модерировать (пункт меню), тренды (из кэша), «Кого почитать» — сколько бы ни было ответов.
+		with self.assertNumQueries(9):
 			self.client.get('/')
 
 

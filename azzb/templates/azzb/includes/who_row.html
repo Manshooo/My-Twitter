@@ -1,0 +1,17 @@
+{% load azzb_ui %}<div class="who-row">
+	<a class="nu" href="{% url 'profile' person.user.username %}" tabindex="-1" aria-hidden="true">{% avatar person 'sm' %}</a>
+	<a class="who" href="{% url 'profile' person.user.username %}">
+		<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
+		<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
+		{% if person.mutual %}<span class="muted" style="font-size: 12px">Читают {{ person.mutual }} из ваших подписок</span>{% endif %}
+	</a>
+	{% if user.is_authenticated %}
+		<form method="post" action="{% url 'profile' person.user.username %}">
+			{% csrf_token %}
+			<input type="hidden" name="next" value="{{ request.get_full_path }}">
+			<button class="btn btn-sm" type="submit" name="subscribe">Подписаться</button>
+		</form>
+	{% else %}
+		<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Подписаться</a>
+	{% endif %}
+</div>

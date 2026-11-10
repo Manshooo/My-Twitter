@@ -1,0 +1,17 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Кого почитать{% endblock title %}
+{% block content %}
+	<h1 class="display" style="font-size: 22px; padding: 4px 6px">Кого почитать</h1>
+	{% if people %}
+		<section class="card card-pad people">
+			<p class="hint">Сначала те, кого читают ваши подписки, затем популярные авторы.</p>
+			{% for person in people %}{% include "azzb/includes/who_row.html" %}{% endfor %}
+		</section>
+	{% else %}
+		<div class="card empty">
+			<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people"></use></svg></span>
+			<h2>Вы уже читаете всех</h2>
+			<p>Новые люди появятся здесь, когда зарегистрируются.</p>
+		</div>
+	{% endif %}
+{% endblock content %}

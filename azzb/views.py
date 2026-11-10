@@ -2,7 +2,10 @@ from datetime import date
 
 from django.shortcuts import render
 
+from django.contrib.auth.decorators import login_required
+
 from . import search as finder
+from .discover import who_to_follow
 from .ratelimit import rate_limit
 from django.views.generic import TemplateView
 
@@ -43,6 +46,15 @@ def hot_news(request):
 	)
 	posts, next_page = number_page(queryset, request.GET.get("page"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})
+
+
+SUGGESTIONS_PAGE = 30
+
+
+@login_required
+def suggested_people(request):
+	"""Полный список «Кого почитать» (D6): на телефоне правой колонки нет, сюда ведут ссылки."""
+	return render(request, 'azzb/who_to_follow.html', {'people': who_to_follow(request.user, SUGGESTIONS_PAGE)})
 
 
 SEARCH_TABS = ('posts', 'people', 'tags')
