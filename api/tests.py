@@ -1,11 +1,12 @@
 import json
 
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from accounts.models import CustomUser
 from post.models import Post
 
-User = get_user_model()
+# Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
+User = CustomUser
 
 
 class ProfileApiPermissionsTests(TestCase):
@@ -132,7 +133,7 @@ class LikeAndDeleteApiTests(TestCase):
 
 class FeedPermissionsTests(TestCase):
 	def test_following_feed_shows_only_followed_authors(self):
-		from customUser.models import FollowThrough
+		from accounts.models import FollowThrough
 		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345')
 		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345')
 		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345')
@@ -159,7 +160,7 @@ class MentionApiTests(TestCase):
 		return [row['username'] for row in self.client.get('/api/users/mention/', {'q': q}).json()['results']]
 
 	def test_suggestions_prefix_name_and_followed_first(self):
-		from customUser import relations
+		from accounts import relations
 		self.assertEqual(self.suggest('@ann'), ['anna', 'annabel'])
 		self.assertEqual(self.suggest('аннуш'), ['zed'])
 		relations.follow(self.me.profile, self.annabel.profile)
@@ -168,7 +169,7 @@ class MentionApiTests(TestCase):
 		self.assertEqual(self.suggest(''), [])
 
 	def test_suggestions_skip_blocked_and_inactive(self):
-		from customUser import relations
+		from accounts import relations
 		relations.block(self.anna.profile, self.me.profile)
 		self.annabel.is_active = False
 		self.annabel.save()

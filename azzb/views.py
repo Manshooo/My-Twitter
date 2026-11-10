@@ -1,5 +1,8 @@
 from datetime import date
+from uuid import NAMESPACE_URL, uuid5
 
+from django.conf import settings
+from django.http import JsonResponse
 from django.shortcuts import render
 
 from django.contrib.auth.decorators import login_required
@@ -83,3 +86,12 @@ LEGAL_UPDATED = date(2026, 11, 6)
 
 def legal_page(template):
 	return TemplateView.as_view(template_name=template, extra_context={'legal_updated': LEGAL_UPDATED})
+
+
+def devtools_workspace(request):
+	"""Chrome DevTools, открытые на localhost, запрашивают /.well-known/appspecific/com.chrome.devtools.json,
+	чтобы связать сайт с папкой проекта (Automatic Workspace Folders): тогда правки CSS и JS прямо
+	в DevTools можно сохранять в файлы. Подключается только при DEBUG (azzb/urls.py)."""
+	root = settings.BASE_DIR.as_posix()
+	# uuid должен быть постоянным для папки, иначе DevTools каждый раз заводит новое рабочее пространство.
+	return JsonResponse({'workspace': {'root': root, 'uuid': str(uuid5(NAMESPACE_URL, root))}})

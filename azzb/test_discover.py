@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from customUser import relations
+from accounts import relations
 from post.models import Post
 from post.services import delete_post, publish_post
 

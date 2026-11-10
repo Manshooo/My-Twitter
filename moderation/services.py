@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from customUser.models import BAN_FOREVER
+from accounts.models import BAN_FOREVER
 
 from .models import Ban, Report
 

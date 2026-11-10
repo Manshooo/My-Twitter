@@ -1,8 +1,9 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
+
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,7 +38,7 @@ INSTALLED_APPS = [
 	'api',
 	'azzb',
 	'post',
-	'customUser',
+	'accounts',
 	'moderation',
 	'notifications',
 
@@ -61,7 +62,7 @@ MIDDLEWARE = [
 	'allauth.account.middleware.AccountMiddleware',
 	# Забаненным — экран «Аккаунт заблокирован» вместо страниц (E4).
 	'moderation.middleware.BanMiddleware',
-	'customUser.middleware.SetLastVisitMiddleware',
+	'accounts.middleware.SetLastVisitMiddleware',
 	'azzb.htmx.HtmxVaryMiddleware',
 ]
 
@@ -174,10 +175,10 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # ---------- django-allauth (E1) ----------
-ACCOUNT_ADAPTER = 'customUser.adapter.AccountAdapter'
+ACCOUNT_ADAPTER = 'accounts.adapter.AccountAdapter'
 ACCOUNT_FORMS = {
-	'login': 'customUser.forms.LoginForm',
-	'signup': 'customUser.forms.SignupForm',
+	'login': 'accounts.forms.LoginForm',
+	'signup': 'accounts.forms.SignupForm',
 }
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']

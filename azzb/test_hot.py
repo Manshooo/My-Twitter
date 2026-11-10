@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from customUser import relations
+from accounts import relations
 from post.models import HOT_WINDOW, Post
 from post.services import publish_post, toggle_like, toggle_repost
 

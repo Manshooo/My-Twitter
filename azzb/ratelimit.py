@@ -7,7 +7,7 @@
 import random
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 
 from django.conf import settings
@@ -62,7 +62,7 @@ def hit(key, rate):
 	limit, period = parse_rate(rate)
 	now = _now()
 	window = int(now // period)
-	expires_at = datetime.fromtimestamp((window + 1) * period, tz=timezone.utc)
+	expires_at = datetime.fromtimestamp((window + 1) * period, tz=UTC)
 	table = RateCounter._meta.db_table
 	with connection.cursor() as cursor:
 		cursor.execute(
@@ -72,7 +72,7 @@ def hit(key, rate):
 		)
 		hits = cursor.fetchone()[0]
 	if random.random() < CLEANUP_CHANCE:
-		RateCounter.objects.filter(expires_at__lt=datetime.now(timezone.utc) - timedelta(minutes=1)).delete()
+		RateCounter.objects.filter(expires_at__lt=datetime.now(UTC) - timedelta(minutes=1)).delete()
 	return hits > limit
 
 

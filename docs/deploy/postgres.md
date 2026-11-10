@@ -68,8 +68,8 @@ python manage.py sqlsequencereset customUser auth post | python manage.py dbshel
 Сравните количество записей в новой и старой базе:
 
 ```bash
-python manage.py shell -c "from customUser.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
-python manage.py shell --settings=azzb.settings_sqlite -c "from customUser.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
+python manage.py shell -c "from accounts.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
+python manage.py shell --settings=azzb.settings_sqlite -c "from accounts.models import CustomUser; from post.models import Post, Like; print(CustomUser.objects.count(), Post.objects.count(), Like.objects.count())"
 ```
 
 Числа должны совпасть. Затем запустите сайт (`sudo systemctl start azzb`), войдите, опубликуйте и удалите пост, поставьте лайк.

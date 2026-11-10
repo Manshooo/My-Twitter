@@ -1,16 +1,19 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.decorators import login_required
-from django.urls import include, path, re_path
-from django.conf.urls.static import static
-from django.conf import settings
+from django.urls import include, path
 
-from .views import index, follows_updates, hot_news, legal_page, search, suggested_people
-from customUser.account import account_settings, delete_account, export_data
-from customUser.views import (
+from accounts.account import account_settings, delete_account, export_data
+from accounts.views import (
 	ChangeProfileView, UserProfileDetailView, answer_follow_request, blocked_accounts, follow_requests, set_theme,
 )
 from moderation.views import report_post, report_profile
-from post.views import bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, post_detail, repost_post
+from post.views import (
+	bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, post_conversation, post_detail, repost_post,
+)
+
+from .views import devtools_workspace, follows_updates, hot_news, index, legal_page, search, suggested_people
 
 urlpatterns = [
 	path('', index, name='index'),
@@ -18,6 +21,7 @@ urlpatterns = [
 	path("search/", search, name="search"),
 	path("people/suggested/", suggested_people, name="who-to-follow"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
+	path('p/<uuid:pk>/conversation/', post_conversation, name='post-conversation'),
 	path('p/<uuid:pk>/like/', like_post, name='post-like'),
 	path('p/<uuid:pk>/repost/', repost_post, name='post-repost'),
 	path('p/<uuid:pk>/bookmark/', bookmark_post, name='post-bookmark'),
@@ -50,5 +54,8 @@ urlpatterns = [
 ]
 if settings.DEBUG:
 	# Статику при DEBUG и так раздаёт runserver (django.contrib.staticfiles); здесь — загрузки и toolbar.
-	urlpatterns += [path("__debug__/", include("debug_toolbar.urls"))]
+	urlpatterns += [
+		path("__debug__/", include("debug_toolbar.urls")),
+		path(".well-known/appspecific/com.chrome.devtools.json", devtools_workspace),
+	]
 	urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

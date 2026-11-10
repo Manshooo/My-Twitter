@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+{# Страница-карточка без меню и лент: ошибки 404/429/500 и экран бана. Входу и регистрации — allauth/layouts/base.html. #}
+<html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+	<head>
+		<title>{% block title %}AzzB{% endblock title %} · AzzB</title>
+		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов.{% endblock meta_description %}">
+		{% include "azzb/includes/head.html" %}
+		{% include "azzb/includes/og_default.html" %}
+	</head>
+	<body>
+		{% include "azzb/includes/icons.html" %}
+		<div class="auth">
+			{% include "azzb/includes/logo.html" %}
+			<main class="card auth-card">
+				{% block content %}{% endblock content %}
+			</main>
+		</div>
+	</body>
+</html>

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 
-from customUser.models import Theme
+from accounts.models import Theme
 from moderation.models import Report
 from moderation.services import can_moderate
 from notifications.services import unread_count

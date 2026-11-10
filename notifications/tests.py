@@ -7,8 +7,8 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from customUser import relations
-from customUser.account import erase_account
+from accounts import relations
+from accounts.account import erase_account
 from post.services import delete_post, publish_post, toggle_like
 
 from .models import Notification

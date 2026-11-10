@@ -2,7 +2,7 @@
 from django.db import models
 from django.db.models import Q
 
-from customUser.models import Profile
+from accounts.models import Profile
 from post.models import Post
 
 

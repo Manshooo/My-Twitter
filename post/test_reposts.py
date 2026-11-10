@@ -5,7 +5,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from customUser import relations
+from accounts import relations
 from notifications.models import Notification
 
 from .models import Post

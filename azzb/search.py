@@ -4,7 +4,7 @@ from django.db.models import Count, F, Q
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
-from customUser.models import Block, Profile
+from accounts.models import Block, Profile
 from post.models import Hashtag, Post
 from post.text import HASHTAG_MAX_LENGTH
 
@@ -29,14 +29,13 @@ def posts(user, query):
 
 
 def people(user, query):
-	"""Активные незабаненные люди по логину или отображаемому имени: подстрока или похожее
+	"""Люди из Profile.objects.public(), кроме забаненных, по логину или отображаемому имени: подстрока или похожее
 	написание (pg_trgm). Без тех, с кем у пользователя блокировка в любую сторону."""
 	query = query.lstrip('@')
 	if not query:
 		return Profile.objects.none()
 	found = (
-		Profile.objects.select_related('user')
-		.filter(user__is_active=True, user__deleted_at__isnull=True)
+		Profile.objects.public().select_related('user')
 		.exclude(user__banned_until__gt=timezone.now())
 		.filter(
 			Q(user__username__icontains=query) | Q(username__icontains=query)

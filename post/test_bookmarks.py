@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from customUser import relations
-from customUser.account import collect_user_data, erase_account
+from accounts import relations
+from accounts.account import collect_user_data, erase_account
 from notifications.models import Notification
 
 from .models import Bookmark, Post

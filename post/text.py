@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 HASHTAG_MAX_LENGTH = 64
 # \w в Python — с кириллицей. Перед знаком не должно быть буквы: «a#b» и «почта@site.ru» — не теги.
 HASHTAG_RE = re.compile(r'(?<![\w#])#(\w{1,%d})' % HASHTAG_MAX_LENGTH)
-# Те же символы, что разрешены в логине (customUser.models.UsernameValidator).
+# Те же символы, что разрешены в логине (accounts.models.UsernameValidator).
 MENTION_RE = re.compile(r'(?<![\w@])@([a-zA-Z0-9_.-]{1,30})')
 TOKEN_RE = re.compile(f'{HASHTAG_RE.pattern}|{MENTION_RE.pattern}')
 

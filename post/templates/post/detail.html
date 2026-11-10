@@ -63,7 +63,7 @@
 
 		<div class="feed" style="display: flex; flex-direction: column; gap: 14px" data-replies="{{ post.id }}">
 			{% if replies %}
-				{% include "azzb/includes/post_page.html" with posts=replies %}
+				{% include "post/_replies.html" with posts=replies %}
 			{% else %}
 				<div class="card empty" data-feed-empty>
 					<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-reply"></use></svg></span>

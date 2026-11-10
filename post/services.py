@@ -3,20 +3,19 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
+from accounts.models import Profile
 from notifications.models import Notification
 from notifications.services import notify, retract
 
-from customUser.models import Profile
-
 from .media import process_post_image
-from .text import hashtags, mentions
-from django.utils import timezone
-
 from .models import (
-	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Hashtag, Image, Like, Mention, Post, PostHashtag, PostRevision, shift_ancestor_counts, shift_repost_counts,
+	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Hashtag, Image, Like, Mention, Post, PostHashtag, PostRevision,
+	shift_ancestor_counts, shift_repost_counts,
 )
 from .serializer import POST_MAX_LENGTH
+from .text import hashtags, mentions
 
 
 def clean_post_input(text, uploads, alts):

@@ -5,7 +5,7 @@ from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from customUser.models import Block, Mute, Profile
+from accounts.models import Block, Mute, Profile
 from post.models import Post
 
 from .models import Notification

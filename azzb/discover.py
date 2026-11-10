@@ -6,7 +6,7 @@ from django.db.models import Count, IntegerField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from customUser.models import Block, FollowThrough, Mute, Profile
+from accounts.models import Block, FollowThrough, Mute, Profile
 from post.models import Hashtag
 
 TRENDS_WINDOW = timedelta(hours=24)
@@ -16,11 +16,10 @@ TRENDS_LIMIT = 10
 
 def who_to_follow(user, limit=3):
 	"""Друзья друзей — кого читают мои подписки, по числу таких связей (mutual), — затем
-	популярные авторы. Без меня, моих подписок, заглушённых, блокировок в любую сторону,
-	отключённых, удалённых и забаненных. Гостю — просто популярные."""
+	популярные авторы. Только Profile.objects.public(), без меня, моих подписок, заглушённых,
+	блокировок в любую сторону и забаненных. Гостю — просто популярные."""
 	profiles = (
-		Profile.objects.select_related('user')
-		.filter(user__is_active=True, user__deleted_at__isnull=True)
+		Profile.objects.public().select_related('user')
 		.exclude(user__banned_until__gt=timezone.now())
 		.annotate(followers_count=Count('followed_by', distinct=True))
 	)

@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from customUser import relations
+from accounts import relations
 from post.services import delete_post, edit_post, publish_post, toggle_repost
 
 User = get_user_model()

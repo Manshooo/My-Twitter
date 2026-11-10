@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from customUser import relations
+from accounts import relations
 from notifications.models import Notification
 
 from .models import Mention

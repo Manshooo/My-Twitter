@@ -1,24 +1,2 @@
 {% load show_posts %}{% for post in posts %}{% show_posts %}{% endfor %}
-{% if next_url %}
-	{% comment %} Без JS — обычная ссылка на следующую страницу. С htmx — подгрузка порции карточек на место блока:
-	   по клику или сама, когда кнопка доезжает до экрана (бесконечная прокрутка).
-	   Пока порция грузится, вместо кнопки видны скелетоны карточек (класс htmx-request на блоке). {% endcomment %}
-	<div class="load-more">
-		<a class="btn btn-outline load-more-btn" href="{{ next_url }}"
-			hx-get="{{ next_url }}" hx-trigger="click, revealed" hx-target="closest .load-more" hx-swap="outerHTML"
-			hx-indicator="closest .load-more" hx-disabled-elt="this"
-			data-error="Не удалось загрузить посты">Показать ещё</a>
-		<div class="skel-cards" aria-hidden="true">
-			{% for i in "12" %}
-				<div class="card skel-card">
-					<span class="skel skel-avatar"></span>
-					<span class="skel-lines">
-						<span class="skel skel-line" style="width: 38%"></span>
-						<span class="skel skel-line"></span>
-						<span class="skel skel-line" style="width: 72%"></span>
-					</span>
-				</div>
-			{% endfor %}
-		</div>
-	</div>
-{% endif %}
+{% include "azzb/includes/load_more.html" %}
