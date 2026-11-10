@@ -2,8 +2,10 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import connection, models
 from django.utils import timezone
-from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
-from django.db.models.functions import Coalesce
+from datetime import timedelta
+
+from django.db.models import BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
 from uuid import uuid4
 from customUser.models import Block, Mute, Profile
 
@@ -86,6 +88,19 @@ class PostQuerySet(models.QuerySet):
 		"""Посты, которые пользователь видит, готовые к выводу карточками."""
 		return self.visible_to(user)._cards(user)
 
+	def hot(self):
+		"""«Горячее» (G1): (лайки + 2·ответы + 3·репосты) / (часы + 2)^1.5 — свежее обсуждаемое выше
+		старого популярного. Считается в запросе: ответы и репосты хранятся в посте, лайки уже
+		посчитаны для карточек (likes_n), поэтому вызывать после for_feed(). Окно HOT_WINDOW
+		ограничивает работу базы: через месяц пост с любым числом лайков в топ уже не попадёт."""
+		hours = Extract(Now() - F('created_at'), 'epoch') / Value(3600.0)
+		engagement = Cast(F('likes_n') + 2 * F('replies_count') + 3 * F('reposts_count'), FloatField())
+		return (
+			self.filter(is_repost=False, created_at__gte=timezone.now() - HOT_WINDOW)
+			.annotate(hot_score=engagement / Power(hours + Value(2.0), Value(1.5)))
+			.order_by('-hot_score', '-created_at', '-id')
+		)
+
 	def in_thread(self, user):
 		"""Посты для ветки обсуждения: и те, что пользователь не видит, — они выводятся заглушкой
 		(available=False), чтобы ветка не рвалась, а счётчик ответов сходился с тем, что в ней.
@@ -95,6 +110,9 @@ class PostQuerySet(models.QuerySet):
 			self.exclude(deleted_at__isnull=False, replies_count=0)
 			._cards(user).annotate(available=available)
 		)
+
+
+HOT_WINDOW = timedelta(days=30)
 
 
 class Post(models.Model):
