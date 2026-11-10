@@ -18,6 +18,9 @@
 					<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
 				</button>
 				{% if user.is_authenticated %}
+					<a class="icon-btn" href="{% url 'bookmarks' %}" aria-label="Закладки"{% if request.resolver_match.url_name == 'bookmarks' %} aria-current="page"{% endif %}>
+						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>
+					</a>
 					<a class="nu" href="{% url 'profile' user.username %}" aria-label="Мой профиль">{% avatar user.profile 'xs' %}</a>
 				{% else %}
 					<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
@@ -37,6 +40,9 @@
 					<a class="nav-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
 						{% include "notifications/_badge.html" with badge_id="notif-badge-side" %}
+					</a>
+					<a class="nav-item" href="{% url 'bookmarks' %}"{% if url_name == 'bookmarks' %} aria-current="page"{% endif %}>
+						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>Закладки
 					</a>
 					<a class="nav-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль

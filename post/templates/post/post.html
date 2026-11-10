@@ -82,6 +82,7 @@
 						<span class="sr">Нравится:</span><span>{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</a>
 				{% endif %}
+				{% if user.is_authenticated %}{% include "post/_bookmark.html" %}{% endif %}
 				<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
 					<svg class="icon" aria-hidden="true"><use href="#i-share"></use></svg>
 				</button>

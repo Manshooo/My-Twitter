@@ -176,6 +176,7 @@ img { max-width: 100%; }
 	display: grid; place-items: center; cursor: pointer; flex: none; padding: 0;
 }
 .icon-btn:hover { background: var(--surface-3); }
+.icon-btn[aria-current="page"] { background: var(--brand-soft); color: var(--text); }
 
 /* ---------- Карточки и поверхности ---------- */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
@@ -300,6 +301,8 @@ img { max-width: 100%; }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
 .action.reposted { color: var(--accent); font-weight: 800; }
+.action.bookmarked { color: var(--accent); }
+.action.bookmarked .icon { fill: currentColor; }
 .repost-wrap { position: relative; }
 .repost-by { display: flex; align-items: center; gap: 6px; margin: -4px 0 8px 46px; font-size: 13px; font-weight: 600; }
 .repost-by a { color: inherit; font-weight: 800; }

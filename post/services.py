@@ -11,7 +11,7 @@ from .media import process_post_image
 from django.utils import timezone
 
 from .models import (
-	ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision, shift_ancestor_counts, shift_repost_counts,
+	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Image, Like, Post, PostRevision, shift_ancestor_counts, shift_repost_counts,
 )
 from .serializer import POST_MAX_LENGTH
 
@@ -131,6 +131,7 @@ def purge_posts(posts):
 		Image.objects.filter(post_id__in=ids).delete()
 		PostRevision.objects.filter(post_id__in=ids).delete()
 		Like.objects.filter(post_id__in=ids).delete()
+		Bookmark.objects.filter(post_id__in=ids).delete()
 		Post.objects.filter(pk__in=ids).update(text='', purged_at=timezone.now())
 	return len(ids)
 
@@ -145,6 +146,14 @@ def toggle_like(post, profile):
 		Like.objects.get_or_create(post=post, profile=profile)
 		notify(post.author, profile, Notification.Verb.LIKE, post)
 	return not deleted, Like.objects.filter(post=post).count()
+
+
+def toggle_bookmark(post, profile):
+	"""Добавить в закладки или убрать. Возвращает True, если закладка есть."""
+	deleted, _ = Bookmark.objects.filter(post=post, profile=profile).delete()
+	if not deleted:
+		Bookmark.objects.get_or_create(post=post, profile=profile)
+	return not deleted
 
 
 def toggle_repost(post, profile):

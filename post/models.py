@@ -57,8 +57,9 @@ class PostQuerySet(models.QuerySet):
 			reposted = Exists(Post.objects.filter(
 				repost_of_id=OuterRef('shown_id'), author_id=user.pk, deleted_at__isnull=True,
 			))
+			bookmarked = Exists(Bookmark.objects.filter(post_id=OuterRef('shown_id'), profile_id=user.profile.pk))
 		else:
-			liked = reposted = Value(False, output_field=BooleanField())
+			liked = reposted = bookmarked = Value(False, output_field=BooleanField())
 		likes = (
 			Like.objects.filter(post_id=OuterRef('shown_id')).order_by()
 			.values('post_id').annotate(n=Count('*')).values('n')
@@ -74,6 +75,7 @@ class PostQuerySet(models.QuerySet):
 				likes_n=Coalesce(Subquery(likes, output_field=IntegerField()), 0),
 				is_liked=liked,
 				is_reposted=reposted,
+				is_bookmarked=bookmarked,
 				quote_available=Exists(Post.objects.visible_to(user).filter(pk=OuterRef('shown_quote_id'))),
 			)
 		)
@@ -235,6 +237,22 @@ class Like(models.Model):
 
 	def __str__(self):
 		return f'{self.profile} → {self.post_id}'
+
+
+class Bookmark(models.Model):
+	"""Закладка (D5): видна только владельцу, автор поста о ней не узнаёт."""
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='bookmarks')
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='bookmarks')
+	created_at = models.DateTimeField("Когда добавлена", auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Закладка'
+		verbose_name_plural = 'Закладки'
+		constraints = [models.UniqueConstraint(fields=['profile', 'post'], name='bookmark_once')]
+		indexes = [models.Index(fields=['profile', '-created_at'], name='bookmark_recent')]
+
+	def __str__(self):
+		return f'{self.profile} 🔖 {self.post_id}'
 
 
 def post_image_path(instance, filename):

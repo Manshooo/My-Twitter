@@ -26,7 +26,7 @@ from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
 from moderation.models import Ban, Report
 from notifications.models import Notification
-from post.models import Like, Post
+from post.models import Bookmark, Like, Post
 from post.services import delete_posts, purge_posts
 
 from .models import DEFAULT_AVATAR, Block, FollowThrough, Mute
@@ -121,6 +121,10 @@ def collect_user_data(user):
 			{'post': like.post_id, 'at': like.created_at}
 			for like in Like.objects.filter(profile=profile).order_by('created_at')
 		],
+		'bookmarks': [
+			{'post': bookmark.post_id, 'at': bookmark.created_at}
+			for bookmark in Bookmark.objects.filter(profile=profile).order_by('created_at')
+		],
 		'following': people(FollowThrough.objects.filter(follower=profile).select_related('followee__user'), 'followee'),
 		'followers': people(FollowThrough.objects.filter(followee=profile).select_related('follower__user'), 'follower'),
 		'blocked': people(Block.objects.filter(blocker=profile).select_related('blocked__user'), 'blocked'),
@@ -179,6 +183,7 @@ def erase_account(user):
 		delete_posts(posts)
 		purge_posts(posts)
 		Like.objects.filter(profile=profile).delete()
+		Bookmark.objects.filter(profile=profile).delete()
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()

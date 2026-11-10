@@ -1,0 +1,6 @@
+{# Закладка. После нажатия htmx заменяет кнопку целиком на ту, что вернёт post-bookmark. #}
+<button class="action{% if bookmarked %} bookmarked{% endif %}" type="button" aria-pressed="{% if bookmarked %}true{% else %}false{% endif %}"
+	aria-label="{% if bookmarked %}Убрать из закладок{% else %}В закладки{% endif %}" title="{% if bookmarked %}Убрать из закладок{% else %}В закладки{% endif %}"
+	hx-post="{% url 'post-bookmark' post.id %}" hx-swap="outerHTML" hx-disabled-elt="this" data-error="Не удалось изменить закладку">
+	<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>
+</button>

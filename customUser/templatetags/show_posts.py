@@ -5,7 +5,7 @@ from post.models import Post
 register = template.Library()
 
 # Аннотации из Post.objects.for_feed(), которые у репоста посчитаны для исходного поста (по shown_id).
-SHOWN_ANNOTATIONS = ('likes_n', 'is_liked', 'is_reposted', 'quote_available')
+SHOWN_ANNOTATIONS = ('likes_n', 'is_liked', 'is_reposted', 'is_bookmarked', 'quote_available')
 
 
 @register.inclusion_tag(filename='post/post.html', name="show_posts", takes_context=True)
@@ -41,6 +41,7 @@ def show_posts(context, variant=""):
 	return {
 		"post": post, "liked": liked, "likes_total": likes_total, "replies_total": post.replies_count,
 		"reposted": getattr(post, "is_reposted", False), "reposts_total": post.reposts_count,
+		"bookmarked": getattr(post, "is_bookmarked", False),
 		"reposted_by": reposted_by, "repost_row": row if reposted_by else None,
 		# Одна и та же карточка может стоять на странице дважды (пост и его репост): id меню — по строке.
 		"key": row.pk,

@@ -1,6 +1,8 @@
 import uuid
 
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import OuterRef, Subquery
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,11 +15,11 @@ from azzb.activity import Action, record
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
 from azzb.ratelimit import rate_limit
 
-from .models import Post
+from .models import Bookmark, Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from .services import (
 	delete_post as soft_delete_post, edit_post, find_post_target, find_reply_target, original, publish_post,
-	toggle_like, toggle_repost,
+	toggle_bookmark, toggle_like, toggle_repost,
 )
 
 
@@ -55,6 +57,31 @@ def like_post(request, pk):
 	if not is_htmx(request):
 		return redirect('post', pk=post.pk)
 	return render(request, 'post/_like.html', {'post': post, 'liked': liked, 'likes_total': total})
+
+
+@require_POST
+@htmx_login_required
+@rate_limit('bookmark', *LIKE_RATES)
+def bookmark_post(request, pk):
+	"""Закладка или её снятие. htmx заменяет кнопку на ту, что вернулась отсюда."""
+	post = visible_original(request, pk)
+	bookmarked = toggle_bookmark(post, request.user.profile)
+	if not is_htmx(request):
+		return redirect('post', pk=post.pk)
+	response = render(request, 'post/_bookmark.html', {'post': post, 'bookmarked': bookmarked})
+	return trigger(response, {'azzb:toast': 'Добавлено в закладки' if bookmarked else 'Убрано из закладок'})
+
+
+@login_required
+def bookmarks(request):
+	"""Мои закладки, от новых к старым по времени закладки. Только посты, которые я всё ещё вижу."""
+	mine = Bookmark.objects.filter(post_id=OuterRef('pk'), profile=request.user.profile).values('created_at')[:1]
+	queryset = Post.objects.for_feed(request.user).annotate(bookmarked_at=Subquery(mine)).filter(bookmarked_at__isnull=False)
+	posts, cursor = cursor_page(queryset, request.GET.get('cursor'), field='bookmarked_at')
+	next_url = page_url(request, cursor=cursor) if cursor else None
+	if is_load_more(request):
+		return render(request, PAGE_TEMPLATE, {'posts': posts, 'next_url': next_url})
+	return render(request, 'post/bookmarks.html', {'posts': posts, 'next_url': next_url})
 
 
 @require_POST

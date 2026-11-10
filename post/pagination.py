@@ -29,8 +29,8 @@ def page_url(request, **params):
 	return f"{request.path}?{query.urlencode()}"
 
 
-def encode_cursor(post):
-	raw = f"{post.created_at.isoformat()}|{post.pk.hex}"
+def encode_cursor(post, field='created_at'):
+	raw = f"{getattr(post, field).isoformat()}|{post.pk.hex}"
 	return base64.urlsafe_b64encode(raw.encode()).decode().rstrip('=')
 
 
@@ -46,24 +46,23 @@ def decode_cursor(cursor):
 		return None
 
 
-def cursor_page(queryset, cursor, size=PAGE_SIZE, ascending=False):
+def cursor_page(queryset, cursor, size=PAGE_SIZE, ascending=False, field='created_at'):
 	"""Страница постов после курсора: от новых к старым, а для ветки ответов (ascending) —
-	от старых к новым. Возвращает (посты, курсор следующей)."""
+	от старых к новым. field — время, по которому листаем (закладки — по времени закладки).
+	Возвращает (посты, курсор следующей)."""
 	if ascending:
-		queryset = queryset.order_by('created_at', 'id')
+		queryset = queryset.order_by(field, 'id')
 	else:
-		queryset = queryset.order_by('-created_at', '-id')
+		queryset = queryset.order_by(f'-{field}', '-id')
 	after = decode_cursor(cursor)
 	if after:
-		created, pk = after
-		if ascending:
-			queryset = queryset.filter(Q(created_at__gt=created) | Q(created_at=created, id__gt=pk))
-		else:
-			queryset = queryset.filter(Q(created_at__lt=created) | Q(created_at=created, id__lt=pk))
+		moment, pk = after
+		op = 'gt' if ascending else 'lt'
+		queryset = queryset.filter(Q(**{f'{field}__{op}': moment}) | Q(**{field: moment, f'id__{op}': pk}))
 	items = list(queryset[:size + 1])
 	if len(items) > size:
 		items = items[:size]
-		return items, encode_cursor(items[-1])
+		return items, encode_cursor(items[-1], field)
 	return items, None
 
 
