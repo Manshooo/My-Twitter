@@ -34,6 +34,10 @@
 					<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
 				</a>
 				{% if user.is_authenticated %}
+					<a class="nav-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
+						<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
+						{% include "notifications/_badge.html" with badge_id="notif-badge-side" %}
+					</a>
 					<a class="nav-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль
 					</a>
@@ -104,11 +108,12 @@
 				<svg class="icon" aria-hidden="true"><use href="#i-flame"></use></svg>Горячее
 			</a>
 			{% if user.is_authenticated %}
+				<a class="tab-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
+					{% include "notifications/_badge.html" with badge_id="notif-badge-tab" badge_class="tab-badge" %}
+				</a>
 				<a class="tab-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
 					<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль
-				</a>
-				<a class="tab-item" href="{% url 'edit-profile' %}"{% if url_name == 'edit-profile' %} aria-current="page"{% endif %}>
-					<svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки
 				</a>
 			{% else %}
 				<a class="tab-item" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">
@@ -119,6 +124,8 @@
 		{% endwith %}
 
 		{% if user.is_authenticated %}
+			{# Счётчик уведомлений: опрос раз в 30 с, пока вкладка на экране (D1; позже — WebSocket, F3). #}
+			<div hidden data-silent hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible']" hx-swap="none"></div>
 			{% if request.resolver_match.url_name != 'edit-profile' %}
 				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
 					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>

@@ -666,6 +666,7 @@
 	function requestFailed(event) {
 		if (composerOf(event)) return;
 		const elt = event.detail.elt;
+		if (elt && elt.hasAttribute('data-silent')) return;
 		toast(errorsOf(event.detail.xhr, (elt && elt.dataset.error) || 'Что-то пошло не так. Попробуйте ещё раз.')[0]);
 	}
 	document.addEventListener('htmx:responseError', requestFailed);

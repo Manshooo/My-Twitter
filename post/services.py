@@ -4,6 +4,9 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from notifications.models import Notification
+from notifications.services import notify, retract
+
 from .media import process_post_image
 from django.utils import timezone
 
@@ -50,6 +53,7 @@ def publish_post(author, text='', uploads=(), alts=(), reply_to=None):
 			post = Post.objects.create(author=author, text=text, reply_to=reply_to, is_reply=reply_to is not None)
 			if reply_to is not None:
 				shift_ancestor_counts([post.pk], +1)
+				notify(reply_to.author, author, Notification.Verb.REPLY, post)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
@@ -120,9 +124,12 @@ def purge_posts(posts):
 def toggle_like(post, profile):
 	"""Поставить или снять лайк. Возвращает (лайк стоит?, сколько лайков теперь)."""
 	deleted, _ = Like.objects.filter(post=post, profile=profile).delete()
-	if not deleted:
+	if deleted:
+		retract(post.author, profile, Notification.Verb.LIKE, post)
+	else:
 		# Двойной клик или два запроса разом: второй не должен упасть на уникальном индексе.
 		Like.objects.get_or_create(post=post, profile=profile)
+		notify(post.author, profile, Notification.Verb.LIKE, post)
 	return not deleted, Like.objects.filter(post=post).count()
 
 

@@ -1,0 +1,1 @@
+<span class="mod-badge {{ badge_class }}" id="{{ badge_id }}"{% if oob %} hx-swap-oob="true"{% endif %}{% if not unread_notifications %} hidden{% endif %}>{% if unread_notifications > 99 %}99+{% else %}{{ unread_notifications }}{% endif %}<span class="sr"> новых</span></span>

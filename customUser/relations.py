@@ -2,6 +2,9 @@
 from django.db import transaction
 from django.db.models import Q
 
+from notifications.models import Notification
+from notifications.services import notify, retract
+
 from .models import Block, FollowThrough, Mute
 
 
@@ -22,11 +25,13 @@ def follow(follower, followee):
 	if follower.pk == followee.pk or is_blocked_between(follower, followee):
 		return False
 	FollowThrough.objects.get_or_create(follower=follower, followee=followee)
+	notify(followee, follower, Notification.Verb.FOLLOW)
 	return True
 
 
 def unfollow(follower, followee):
 	FollowThrough.objects.filter(follower=follower, followee=followee).delete()
+	retract(followee, follower, Notification.Verb.FOLLOW)
 
 
 @transaction.atomic

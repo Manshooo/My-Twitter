@@ -5,6 +5,7 @@ from django.utils.functional import SimpleLazyObject
 from customUser.models import Block, Mute, Profile, Theme
 from moderation.models import Report
 from moderation.services import can_moderate
+from notifications.services import unread_count
 from post.media import ACCEPT, MAX_UPLOAD_MB
 from post.models import ALT_MAX_LENGTH, MAX_IMAGES
 from post.serializer import POST_MAX_LENGTH
@@ -53,4 +54,7 @@ def ui(request):
 		# Пункт «Модерация» в меню и число открытых жалоб на нём (E4).
 		'can_moderate': SimpleLazyObject(lambda: can_moderate(request.user)),
 		'open_reports': SimpleLazyObject(lambda: Report.objects.filter(status=Report.Status.OPEN).count()),
+		'unread_notifications': SimpleLazyObject(
+			lambda: unread_count(request.user) if request.user.is_authenticated else 0,
+		),
 	}

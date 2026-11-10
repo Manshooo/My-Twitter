@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 	'post',
 	'customUser',
 	'moderation',
+	'notifications',
 
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',

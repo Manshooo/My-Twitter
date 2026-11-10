@@ -25,6 +25,7 @@ from azzb.activity import Action, record
 from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
 from moderation.models import Ban, Report
+from notifications.models import Notification
 from post.models import Like, Post
 from post.services import delete_posts, purge_posts
 
@@ -179,6 +180,7 @@ def erase_account(user):
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()
+		Notification.objects.filter(Q(recipient=profile) | Q(actor=profile)).delete()
 		EmailAddress.objects.filter(user=user).delete()
 		for field in media:
 			storage, name = field.storage, field.name

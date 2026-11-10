@@ -24,6 +24,7 @@ urlpatterns = [
 	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='profile'),
 	path('users/<str:username>/report/', report_profile, name='profile-report'),
 	path('moderation/', include('moderation.urls')),
+	path('notifications/', include('notifications.urls')),
 	path("edit/", login_required(ChangeProfileView.as_view()), name="edit-profile"),
 	path("settings/theme/", set_theme, name="set-theme"),
 	path("settings/blocked/", login_required(blocked_accounts), name="blocked-accounts"),

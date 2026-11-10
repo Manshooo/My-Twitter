@@ -1,0 +1,16 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Уведомления{% endblock title %}
+{% block content %}
+	<h1 class="display" style="font-size: 22px; padding: 4px 6px">Уведомления</h1>
+	<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+		{% if groups %}
+			{% include "notifications/_page.html" %}
+		{% else %}
+			<div class="card empty">
+				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-bell"></use></svg></span>
+				<h2>Пока ничего</h2>
+				<p>Здесь появятся лайки, ответы и новые подписчики.</p>
+			</div>
+		{% endif %}
+	</div>
+{% endblock content %}
