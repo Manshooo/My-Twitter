@@ -7,7 +7,10 @@ from rest_framework.response import Response
 from django.core.exceptions import ValidationError
 
 from customUser.serializers import ProfileSerializer
-from customUser.models import Profile
+from django.db.models import Exists, OuterRef, Q
+from django.db.models.functions import Length
+
+from customUser.models import USERNAME_MAX_LENGTH, Block, FollowThrough, Profile
 from post.services import find_post_target, find_reply_target, publish_post
 from azzb.activity import Action, record
 from azzb.ratelimit import rate_limit
@@ -97,3 +100,52 @@ def profile_details(request, pk):
 		serializer.save()
 		return Response(serializer.data)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ---------- @упоминания: подсказки в composer и проверка ссылок (D2) ----------
+
+MENTION_SUGGESTIONS = 8
+EXISTS_MAX_NAMES = 50
+
+
+def _mentionable():
+	"""Кого можно упомянуть: живые аккаунты (не отключённые и не удалённые)."""
+	return Profile.objects.select_related('user').filter(user__is_active=True, user__deleted_at__isnull=True)
+
+
+@rate_limit('mention', '120/m', '2000/h')
+@api_view(['GET'])
+def mention_suggestions(request):
+	"""Подсказки для @ в composer: логин начинается с q или имя содержит q. Сначала те,
+	на кого я подписан. Без меня и без тех, с кем блокировка в любую сторону."""
+	query = (request.query_params.get('q') or '').lstrip('@').strip()[:USERNAME_MAX_LENGTH]
+	if not query:
+		return Response({'results': []})
+	me = request.user.profile
+	people = (
+		_mentionable()
+		.filter(Q(user__username__istartswith=query) | Q(username__icontains=query))
+		.exclude(pk=me.pk)
+		.exclude(pk__in=Block.objects.filter(blocker=me).values('blocked'))
+		.exclude(pk__in=Block.objects.filter(blocked=me).values('blocker'))
+		.annotate(followed=Exists(FollowThrough.objects.filter(follower=me, followee=OuterRef('pk'))))
+		.order_by('-followed', Length('user__username'), 'user__username')[:MENTION_SUGGESTIONS]
+	)
+	return Response({'results': [{
+		'username': person.user.username,
+		'name': person.username,
+		'avatar': person.avatar.url if person.has_custom_avatar else None,
+		'initial': person.initial,
+		'tone': person.avatar_tone,
+		'verified': person.is_verified,
+	} for person in people]})
+
+
+@rate_limit('mention', '120/m', '2000/h')
+@api_view(['GET'])
+def existing_users(request):
+	"""Какие из логинов (?names=a,b) существуют. По ответу azzb.js превращает ссылки
+	на несуществующие @логины в обычный текст: в ленте их ставят по виду, без запроса к базе."""
+	names = [name for name in (request.query_params.get('names') or '').split(',') if name][:EXISTS_MAX_NAMES]
+	found = _mentionable().filter(user__username__in=names).values_list('user__username', flat=True)
+	return Response({'existing': sorted(found)})

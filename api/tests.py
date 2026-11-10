@@ -143,3 +143,44 @@ class FeedPermissionsTests(TestCase):
 		response = self.client.get('/follows-updates/')
 		self.assertContains(response, 'От подписки')
 		self.assertNotContains(response, 'От незнакомца')
+
+
+class MentionApiTests(TestCase):
+	def setUp(self):
+		self.me = User.objects.create_user('me', 'me@example.com', 'pass-12345')
+		self.anna = User.objects.create_user('anna', 'anna@example.com', 'pass-12345')
+		self.annabel = User.objects.create_user('annabel', 'annabel@example.com', 'pass-12345')
+		self.zed = User.objects.create_user('zed', 'zed@example.com', 'pass-12345')
+		self.zed.profile.username = 'Аннушка'
+		self.zed.profile.save()
+		self.client.force_login(self.me)
+
+	def suggest(self, q):
+		return [row['username'] for row in self.client.get('/api/users/mention/', {'q': q}).json()['results']]
+
+	def test_suggestions_prefix_name_and_followed_first(self):
+		from customUser import relations
+		self.assertEqual(self.suggest('@ann'), ['anna', 'annabel'])
+		self.assertEqual(self.suggest('аннуш'), ['zed'])
+		relations.follow(self.me.profile, self.annabel.profile)
+		self.assertEqual(self.suggest('ann'), ['annabel', 'anna'])
+		self.assertEqual(self.suggest('me'), [])
+		self.assertEqual(self.suggest(''), [])
+
+	def test_suggestions_skip_blocked_and_inactive(self):
+		from customUser import relations
+		relations.block(self.anna.profile, self.me.profile)
+		self.annabel.is_active = False
+		self.annabel.save()
+		self.assertEqual(self.suggest('ann'), [])
+
+	def test_exists(self):
+		self.zed.is_active = False
+		self.zed.save()
+		response = self.client.get('/api/users/exists/', {'names': 'anna,zed,nobody,'})
+		self.assertEqual(response.json(), {'existing': ['anna']})
+
+	def test_guests_forbidden(self):
+		self.client.logout()
+		self.assertEqual(self.client.get('/api/users/mention/', {'q': 'ann'}).status_code, 403)
+		self.assertEqual(self.client.get('/api/users/exists/', {'names': 'anna'}).status_code, 403)

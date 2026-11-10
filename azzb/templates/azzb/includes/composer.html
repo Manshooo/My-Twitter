@@ -20,7 +20,10 @@
 				{% avatar user.profile %}
 				<div style="flex: 1; min-width: 0">
 					<label for="composer-text" class="sr">Текст поста</label>
-					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-placeholder="Что нового, {{ user.username }}?" data-composer-text></textarea>
+					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-placeholder="Что нового, {{ user.username }}?" data-composer-text
+						role="combobox" aria-autocomplete="list" aria-controls="mention-list" aria-expanded="false"></textarea>
+					{# Подсказки при наборе @логина: заполняет azzb.js из /api/users/mention/. #}
+					<ul class="mention-list" id="mention-list" role="listbox" aria-label="Кого упомянуть" hidden data-mention-list></ul>
 				</div>
 			</div>
 			<ul class="attachments" aria-label="Прикреплённые картинки" data-attachments hidden></ul>
