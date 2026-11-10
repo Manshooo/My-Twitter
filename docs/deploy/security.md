@@ -124,3 +124,32 @@ curl -sI https://azzb.ru/static/css/azzb.css | grep -i strict-transport
 его почти невозможно отменить.
 
 Если что-то пошло не так — поставьте `max-age=0`: браузеры забудут правило при следующем заходе.
+
+## 6. Python-зависимости на сервере
+
+`pip install -r requirements.txt` ставит недостающее и меняет версии закреплённых пакетов, но
+**не удаляет** лишнее и не трогает то, что поставлено руками. За годы в окружении копятся старые
+пакеты с уязвимостями. Проверить, что стоит на сервере:
+
+```bash
+venv/bin/pip install pip-audit
+venv/bin/pip-audit
+```
+
+Окружение проще пересоздать начисто, чем чистить. uWSGI стоит не в окружении, а в системе
+(пакет Debian), поэтому окружение меняется без пересборки uWSGI. Простой — секунды на перезапуск:
+
+```bash
+cd /var/www/azzb
+python3 -m venv venv.new
+venv.new/bin/pip install -r requirements.txt
+venv.new/bin/python manage.py check        # с новым окружением всё импортируется
+mv venv venv.old && mv venv.new venv
+sudo systemctl restart azzb
+```
+
+Проверить сайт; если что-то не так — `mv venv venv.new && mv venv.old venv` и снова
+`restart`. Когда всё работает — `rm -rf venv.old`.
+
+В CI (`.github/workflows/tests.yml`) `pip-audit` проверяет `requirements.txt` при каждом пуше:
+если для закреплённой версии опубликуют уязвимость, CI станет красным.
