@@ -293,11 +293,15 @@ img { max-width: 100%; }
 }
 .actions { display: flex; align-items: center; gap: 8px; margin-left: -10px; max-width: 440px; }
 .action {
-	display: inline-flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px;
+	display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px;
 	border: 0; border-radius: 12px; background: transparent; color: var(--text-2);
 	font-weight: 700; font-size: 14px; cursor: pointer;
 }
 .action:hover { background: var(--surface-3); text-decoration: none; }
+/* Счётчик у кнопки. При нуле он пустой и прячется: иначе пустой flex-элемент добавляет gap,
+   и иконка съезжает влево. Текст .sr в раскладке не участвует (position: absolute) —
+   его читают только скринридеры: «Нравится 5», «Ответы» без числа при нуле. */
+.action-n:empty { display: none; }
 .action.liked { color: var(--like); }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
