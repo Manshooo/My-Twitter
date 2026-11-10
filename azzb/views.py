@@ -81,7 +81,7 @@ def search(request):
 
 
 # Дата текущей редакции правил, политики и согласия (C5, E6). Меняете текст — меняйте и дату.
-LEGAL_UPDATED = date(2026, 11, 6)
+LEGAL_UPDATED = date(2026, 11, 10)
 
 
 def legal_page(template):

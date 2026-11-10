@@ -9,6 +9,7 @@ from post.media import ACCEPT, MAX_UPLOAD_MB
 from post.models import ALT_MAX_LENGTH, MAX_IMAGES
 from post.serializer import POST_MAX_LENGTH
 
+from .cookies import CATEGORIES, cookie_choice
 from .discover import trends, who_to_follow
 
 THEMES = (Theme.LIGHT, Theme.DARK)
@@ -38,6 +39,10 @@ def ui(request):
 		'max_upload_mb': MAX_UPLOAD_MB,
 		'alt_max_length': ALT_MAX_LENGTH,
 		'support_email': settings.SUPPORT_EMAIL,
+		# Баннер cookie и счётчик Метрики (azzb/cookies.py).
+		'cookie_choice': cookie_choice(request),
+		'cookie_categories': CATEGORIES,
+		'metrika_id': settings.YANDEX_METRIKA_ID if settings.YANDEX_METRIKA_ID.isdigit() else '',
 		'legal_operator': settings.LEGAL_OPERATOR,
 		# Пункт «Модерация» в меню и число открытых жалоб на нём (E4).
 		'can_moderate': SimpleLazyObject(lambda: can_moderate(request.user)),

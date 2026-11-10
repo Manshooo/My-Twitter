@@ -49,6 +49,7 @@ urlpatterns = [
 	path("rules/", legal_page("legal/rules.html"), name="rules"),
 	path("privacy/", legal_page("legal/privacy.html"), name="privacy"),
 	path("privacy/consent/", legal_page("legal/consent.html"), name="pd-consent"),
+	path("cookies/", legal_page("legal/cookies.html"), name="cookies"),
 	path('api/', include('api.urls')),
 	path('follows-updates/', login_required(follows_updates), name="follows-updates"),
 ]

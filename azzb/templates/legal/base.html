@@ -9,6 +9,7 @@
 			<a href="{% url 'rules' %}"{% if request.resolver_match.url_name == 'rules' %} aria-current="page"{% endif %}>Правила сообщества</a>
 			<a href="{% url 'privacy' %}"{% if request.resolver_match.url_name == 'privacy' %} aria-current="page"{% endif %}>Политика конфиденциальности</a>
 			<a href="{% url 'pd-consent' %}"{% if request.resolver_match.url_name == 'pd-consent' %} aria-current="page"{% endif %}>Согласие на обработку данных</a>
+			<a href="{% url 'cookies' %}"{% if request.resolver_match.url_name == 'cookies' %} aria-current="page"{% endif %}>Политика cookie</a>
 		</nav>
 	</article>
 {% endblock content %}

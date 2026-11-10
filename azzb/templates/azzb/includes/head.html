@@ -11,5 +11,7 @@
 		<link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
 		<link rel="manifest" href="{% static 'site.webmanifest' %}">
 		<meta property="og:site_name" content="AzzB">
+		{# Счётчик Метрики: azzb.js загрузит его, только если посетитель разрешил аналитику. #}
+		{% if metrika_id %}<meta name="azzb-metrika" content="{{ metrika_id }}"{% if "analytics" in cookie_choice %} data-allowed{% endif %}>{% endif %}
 		<script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
 		<script src="{% static 'js/azzb.js' %}" defer></script>

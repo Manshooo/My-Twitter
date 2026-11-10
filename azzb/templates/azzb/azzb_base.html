@@ -110,6 +110,8 @@
 
 			<main class="main" id="main">
 				{% block content %}{% endblock content %}
+				{# Без правой колонки (узкий экран) документы и «Настройки cookie» — под лентой. #}
+				<div class="main-footer">{% include "azzb/includes/footer_links.html" %}</div>
 			</main>
 
 			<aside class="rail" aria-label="Дополнительно">
@@ -167,6 +169,7 @@
 			</button>
 			<span class="lb-count" data-lightbox-count aria-live="polite"></span>
 		</div>
+		{% include "azzb/includes/cookie_banner.html" %}
 		<div class="toast" id="toast" role="status" aria-live="polite"{% if messages %} data-flash="{% for message in messages %}{{ message }}{% if not forloop.last %} {% endif %}{% endfor %}"{% endif %} hidden></div>
 	</body>
 </html>

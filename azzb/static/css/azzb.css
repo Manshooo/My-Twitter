@@ -484,6 +484,31 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .doc p, .doc ul { margin: 0; }
 .doc ul { padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .doc hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0 0; }
+.doc h3 { font-size: 16px; font-weight: 800; margin-top: 4px; }
+.doc-table { overflow-x: auto; }
+.doc-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.doc-table th, .doc-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.doc-table th { color: var(--text-2); font-weight: 700; }
+
+/* ---------- Баннер cookie ---------- */
+.cookie-banner {
+	position: fixed; z-index: 40; left: 16px; bottom: 16px; width: min(440px, calc(100vw - 32px));
+	padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow);
+}
+.cookie-banner[hidden] { display: none; }
+.cookie-text { font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.cookie-options { display: flex; flex-direction: column; gap: 10px; }
+.cookie-options .check > span { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.cookie-options input:disabled { cursor: not-allowed; }
+.cookie-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Над нижним таб-баром телефона. */
+@media (max-width: 760px) {
+	.cookie-banner { left: 12px; bottom: 76px; width: calc(100vw - 24px); padding: 14px 16px; }
+	.auth ~ .cookie-banner { bottom: 12px; }
+}
+.main-footer { display: none; padding: 8px 6px 0; }
+@media (max-width: 1180px) { .main-footer { display: block; } }
+.link-btn { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .doc-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
 .doc-links a[aria-current="page"] { color: var(--text); font-weight: 700; }
 @media (max-width: 560px) { .doc { padding: 20px 18px; } }

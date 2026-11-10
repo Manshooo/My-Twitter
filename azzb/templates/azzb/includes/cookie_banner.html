@@ -1,0 +1,22 @@
+{% comment %} Баннер cookie: виден, пока посетитель не выбрал; ссылка «Настройки cookie» в подвале открывает его снова.
+   Выбор сохраняет azzb.js в cookie cookie_consent (azzb/cookies.py). {% endcomment %}
+<section class="cookie-banner card" role="region" aria-labelledby="cookie-banner-title" data-cookie-banner{% if cookie_choice is not None %} hidden{% endif %}>
+	<h2 id="cookie-banner-title" class="section-title">Мы используем cookie</h2>
+	<p class="cookie-text">Необходимые cookie нужны, чтобы вы могли войти и сайт работал безопасно, — без них AzzB не работает. Аналитические (Яндекс Метрика) помогают понять, какими разделами пользуются и что улучшать; их мы включаем только с вашего разрешения. Подробнее — в <a href="{% url 'cookies' %}">политике cookie</a>.</p>
+	<form class="cookie-options" data-cookie-options hidden>
+		<label class="check">
+			<input type="checkbox" checked disabled>
+			<span><b>Необходимые</b><span class="hint">Всегда включены: вход в аккаунт, защита форм, выбранная тема, этот выбор.</span></span>
+		</label>
+		<label class="check">
+			<input type="checkbox" name="analytics"{% if 'analytics' in cookie_choice %} checked{% endif %} data-cookie-category="analytics">
+			<span><b>Аналитика</b><span class="hint">Яндекс Метрика: сколько людей заходит, откуда и какие страницы смотрят. Без рекламы и записи действий на экране.</span></span>
+		</label>
+	</form>
+	<div class="cookie-actions">
+		<button class="btn btn-sm" type="button" data-cookie-accept="all">Разрешить все</button>
+		<button class="btn btn-outline btn-sm" type="button" data-cookie-accept="necessary">Только необходимые</button>
+		<button class="btn btn-ghost btn-sm" type="button" data-cookie-customize>Настроить</button>
+		<button class="btn btn-sm" type="button" data-cookie-accept="custom" hidden>Сохранить выбор</button>
+	</div>
+</section>

@@ -963,6 +963,80 @@
 		if (event.target.matches('[data-composer-text]')) suggestMentions(event.target);
 	});
 
+	// ---------- Cookie и Яндекс Метрика ----------
+	// Выбор хранится в cookie cookie_consent (формат и версия — azzb/cookies.py). Метрику грузим,
+	// только если её номер задан на сервере (<meta name="azzb-metrika">) и аналитика разрешена.
+	const CONSENT_COOKIE = 'cookie_consent';
+	const CONSENT_VERSION = 'v1';
+	const METRIKA_COOKIES = ['_ym_uid', '_ym_d', '_ym_isad', '_ym_visorc', '_ym_hostIndex'];
+	let metrikaLoaded = false;
+
+	function loadMetrika() {
+		const meta = document.querySelector('meta[name="azzb-metrika"]');
+		if (!meta || metrikaLoaded) return;
+		metrikaLoaded = true;
+		const id = Number(meta.content);
+		window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+		window.ym.l = Date.now();
+		const script = document.createElement('script');
+		script.async = true;
+		script.src = 'https://mc.yandex.ru/metrika/tag.js';
+		document.head.append(script);
+		// Вебвизор выключен намеренно: запись действий на экране — лишнее для соцсети.
+		window.ym(id, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+	}
+
+	function dropMetrikaCookies() {
+		const host = window.location.hostname;
+		const domains = ['', host, '.' + host, '.' + host.split('.').slice(-2).join('.')];
+		METRIKA_COOKIES.forEach((name) => domains.forEach((domain) => {
+			document.cookie = name + '=; path=/; max-age=0' + (domain ? '; domain=' + domain : '');
+		}));
+	}
+
+	function cookieBanner() {
+		return document.querySelector('[data-cookie-banner]');
+	}
+
+	function saveCookieChoice(kind) {
+		const banner = cookieBanner();
+		let analytics = kind === 'all';
+		if (kind === 'custom' && banner) analytics = banner.querySelector('[data-cookie-category="analytics"]').checked;
+		const value = CONSENT_VERSION + ':' + (analytics ? 'analytics' : 'necessary');
+		document.cookie = CONSENT_COOKIE + '=' + value + '; path=/; max-age=31536000; SameSite=Lax'
+			+ (window.location.protocol === 'https:' ? '; Secure' : '');
+		if (banner) {
+			banner.querySelector('[data-cookie-category="analytics"]').checked = analytics;
+			banner.hidden = true;
+		}
+		if (analytics) {
+			loadMetrika();
+		} else {
+			dropMetrikaCookies();
+			// Уже загруженный счётчик из страницы не выгрузить — перестанет грузиться со следующей.
+		}
+		toast(analytics ? 'Аналитика разрешена' : 'Используем только необходимые cookie');
+	}
+
+	function openCookieSettings() {
+		const banner = cookieBanner();
+		if (!banner) return;
+		banner.hidden = false;
+		showCookieOptions(banner);
+		banner.querySelector('[data-cookie-category="analytics"]').focus();
+	}
+
+	function showCookieOptions(banner) {
+		banner.querySelector('[data-cookie-options]').hidden = false;
+		banner.querySelector('[data-cookie-customize]').hidden = true;
+		banner.querySelector('[data-cookie-accept="custom"]').hidden = false;
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		const meta = document.querySelector('meta[name="azzb-metrika"]');
+		if (meta && meta.hasAttribute('data-allowed')) loadMetrika();
+	});
+
 	// ---------- Делегирование событий ----------
 	document.addEventListener('click', (event) => {
 		const target = event.target.closest('button, a');
@@ -977,6 +1051,9 @@
 		if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
 		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
+		if (target.matches('[data-cookie-accept]')) { event.preventDefault(); saveCookieChoice(target.dataset.cookieAccept); return; }
+		if (target.matches('[data-cookie-customize]')) { event.preventDefault(); showCookieOptions(cookieBanner()); return; }
+		if (target.matches('[data-cookie-settings]')) { event.preventDefault(); openCookieSettings(); return; }
 		if (target.matches('[data-reply]')) { event.preventDefault(); openReply(target); return; }
 		if (target.matches('[data-quote]')) { event.preventDefault(); openQuote(target); return; }
 		if (target.matches('[data-edit]')) { event.preventDefault(); openEdit(target); return; }
