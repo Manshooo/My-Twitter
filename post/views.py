@@ -15,7 +15,8 @@ from azzb.ratelimit import rate_limit
 
 from .models import Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
-from .services import delete_post as soft_delete_post, edit_post, find_reply_target, publish_post, toggle_like
+from .services import delete_post as soft_delete_post
+from .services import edit_post, find_reply_target, publish_post, toggle_like
 
 
 def render_cards(request, posts):
@@ -128,25 +129,94 @@ def thread_ancestors(post, user):
 	return ancestors, gap
 
 
+# Сколько сообщений разговора показывать за раз; дальше — «Показать продолжение».
+CONVERSATION_PAGE = 20
+REPLIES_TEMPLATE = "post/_replies.html"
+
+
+def next_in_conversation(post_pk, author_id, partner_id):
+	"""Следующее сообщение разговора после поста: (id, автор) или None, и сколько ответов
+	на пост остаются в стороне от линии.
+
+	Один ответ — он и есть продолжение. Если ответов несколько, продолжением считаем самый
+	ранний ответ самого автора (дописывает мысль) или его собеседника — автора поста выше
+	(отвечает обратно). Остальные ответы — в стороне, на них ведёт ссылка. Если ни один
+	ответ не подходит, разговор здесь расходится на ветки и линия заканчивается."""
+	replies = Post.objects.thread_members().filter(reply_to_id=post_pk).order_by('created_at', 'id')
+	first = list(replies.values_list('pk', 'author_id')[:2])
+	if len(first) < 2:
+		return (first[0] if first else None), 0
+	total = replies.count()
+	pick = replies.filter(author_id__in={author_id, partner_id} - {None}).values_list('pk', 'author_id').first()
+	return pick, total - (1 if pick else 0)
+
+
+def follow_conversation(start, user, limit=CONVERSATION_PAGE):
+	"""Разговор под постом start одной линией (правило — next_in_conversation).
+
+	Возвращает то, что нужно шаблону post/_conversation.html: сообщения после start с числом
+	ответов в стороне у каждого, сколько ответов в стороне у самого start и id поста, с которого
+	продолжать, если линия длиннее limit. Один лёгкий запрос на шаг и один — за карточками."""
+	steps = []
+	node, partner = (start.pk, start.author_id), (start.reply_to.author_id if start.reply_to_id else None)
+	continue_from = None
+	while True:
+		following, aside = next_in_conversation(node[0], node[1], partner)
+		steps.append((node[0], aside))
+		if following is None:
+			break
+		if len(steps) > limit:
+			continue_from = node[0]
+			break
+		partner, node = node[1], following
+	cards = Post.objects.in_thread(user).in_bulk([pk for pk, _ in steps[1:]])
+	return {
+		"start": start,
+		"lead_aside": steps[0][1],
+		"rows": [(cards[pk], aside) for pk, aside in steps[1:] if pk in cards],
+		"continue_from": continue_from,
+	}
+
+
 def post_detail(request, pk):
 	"""Страница одного поста /p/<uuid>/: ветка выше, сам пост и ответы на него по времени.
 	Открыта и гостям: ссылкой на пост делятся. Недоступный пост (удалён, скрыт, автор
-	забанен или в блокировке) показывается заглушкой — ради ответов под ним."""
+	забанен или в блокировке) показывается заглушкой — ради ответов под ним.
+	Если ответ всего один, разговор под ним сразу раскрыт одной линией: это переписка,
+	и ходить по ней постом за постом неудобно."""
 	post = get_object_or_404(Post.objects.in_thread(request.user), pk=pk)
+	cursor_in = request.GET.get("cursor")
 	replies, cursor = cursor_page(
-		Post.objects.in_thread(request.user).filter(reply_to=post), request.GET.get("cursor"), ascending=True,
+		Post.objects.in_thread(request.user).filter(reply_to=post), cursor_in, ascending=True,
 	)
 	next_url = page_url(request, cursor=cursor) if cursor else None
 	if is_load_more(request):
-		return render(request, PAGE_TEMPLATE, {"posts": replies, "next_url": next_url})
+		return render(request, REPLIES_TEMPLATE, {"posts": replies, "next_url": next_url})
+	conversation = None
+	if not cursor_in and len(replies) == 1 and replies[0].replies_count:
+		conversation = follow_conversation(replies[0], request.user)
 	ancestors, gap = thread_ancestors(post, request.user)
 	return render(request, "post/detail.html", {
 		"post": post,
 		"ancestors": ancestors,
 		"thread_gap": gap,
 		"replies": replies,
+		"conversation": conversation,
 		"next_url": next_url,
 	})
+
+
+def post_conversation(request, pk):
+	"""Разговор под постом одной линией — для кнопок «Показать ветку» и «Показать продолжение»
+	(?more=1: начало линии уже на странице, ссылку на ответы в стороне у него не повторяем).
+	Без htmx — просто страница поста: там разговор под единственным ответом раскрыт и так."""
+	if not is_htmx(request):
+		return redirect('post', pk=pk)
+	start = get_object_or_404(Post.objects.in_thread(request.user), pk=pk)
+	conversation = follow_conversation(start, request.user)
+	if request.GET.get("more"):
+		conversation["lead_aside"] = 0
+	return render(request, "post/_conversation.html", {"conversation": conversation})
 
 
 # ---------- JSON API (для будущего мобильного клиента, A1) ----------

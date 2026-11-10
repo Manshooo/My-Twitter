@@ -1,18 +1,17 @@
 import json
-
 import re
 
 from allauth.account.models import EmailAddress
-from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
 
-from customUser.forms import SignupForm
-from customUser.models import FollowThrough
+from accounts.forms import SignupForm
+from accounts.models import CustomUser, FollowThrough
 from post.models import Post
 
-User = get_user_model()
+# Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
+User = CustomUser
 
 
 def make_user(login, **extra):
@@ -286,6 +285,7 @@ class RateLimitTests(TestCase):
 
 	def test_client_ip_from_trusted_header(self):
 		from django.test import RequestFactory, override_settings
+
 		from azzb.ratelimit import client_ip
 		request = RequestFactory().get('/', REMOTE_ADDR='127.0.0.1', HTTP_X_REAL_IP='203.0.113.7')
 		with override_settings(CLIENT_IP_HEADER='X-Real-IP'):
@@ -295,6 +295,7 @@ class RateLimitTests(TestCase):
 
 	def test_signup_requires_captcha_when_enabled(self):
 		from unittest import mock
+
 		from django.test import override_settings
 		self.client.logout()
 		data = {
@@ -304,11 +305,11 @@ class RateLimitTests(TestCase):
 		}
 		with override_settings(SMARTCAPTCHA_CLIENT_KEY='client', SMARTCAPTCHA_SERVER_KEY='server'):
 			self.assertContains(self.client.get('/auth/signup/'), 'data-sitekey="client"')
-			with mock.patch('customUser.captcha.check', return_value=False) as check:
+			with mock.patch('accounts.captcha.check', return_value=False) as check:
 				response = self.client.post('/auth/signup/', data)
 			self.assertContains(response, 'не робот')
 			self.assertFalse(User.objects.filter(username='newbie').exists())
-			with mock.patch('customUser.captcha.check', return_value=True):
+			with mock.patch('accounts.captcha.check', return_value=True):
 				self.client.post('/auth/signup/', {**data, 'smart-token': 'ok'})
 			self.assertTrue(User.objects.filter(username='newbie').exists())
 		check.assert_called_once()

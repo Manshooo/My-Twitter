@@ -50,12 +50,12 @@
 				{% if variant == "main" and user.is_authenticated %}
 					<button class="action" type="button" title="Ответить" data-reply data-reply-name="@{{ author.user.username }}">
 						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответить. Ответов:</span><span data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+						<span class="sr">Ответить. Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
 					</button>
 				{% else %}
 					<a class="action" href="{% url 'post' post.id %}" title="Ответы">
 						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответов:</span><span data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+						<span class="sr">Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
 					</a>
 				{% endif %}
 				{% if user.is_authenticated %}
@@ -63,7 +63,7 @@
 				{% else %}
 					<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
 						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-						<span class="sr">Нравится:</span><span>{% if likes_total %}{{ likes_total }}{% endif %}</span>
+						<span class="sr">Нравится </span><span class="action-n">{% if likes_total %}{{ likes_total }}{% endif %}</span>
 					</a>
 				{% endif %}
 				<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">

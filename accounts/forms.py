@@ -1,18 +1,19 @@
+from allauth.account import forms as allauth_forms
+from allauth.core import context as allauth_context
 from django import forms
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
-from django.core.exceptions import ValidationError
-from django.db import transaction
-from allauth.account import forms as allauth_forms
-from allauth.core import context as allauth_context
 
 from azzb.ratelimit import client_ip
 from post.media import ACCEPT, parse_crop, process_cropped_image
 
 from . import captcha
 from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser
+
 
 class LoginForm(allauth_forms.LoginForm):
 	def __init__(self, *args, **kwargs):

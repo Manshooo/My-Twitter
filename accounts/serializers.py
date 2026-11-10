@@ -1,5 +1,7 @@
 from rest_framework import serializers
+
 from .models import Profile
+
 
 class ProfileSerializer(serializers.ModelSerializer):
 	# Явный список полей: "__all__" отдавал наружу всё, что появится в модели.

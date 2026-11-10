@@ -1,19 +1,21 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.decorators import login_required
-from django.urls import include, path, re_path
-from django.conf.urls.static import static
-from django.conf import settings
+from django.urls import include, path
 
-from .views import index, follows_updates, hot_news, legal_page
-from customUser.account import account_settings, delete_account, export_data
-from customUser.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
+from accounts.account import account_settings, delete_account, export_data
+from accounts.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
 from moderation.views import report_post, report_profile
-from post.views import compose, delete_post, like_post, post_detail
+from post.views import compose, delete_post, like_post, post_conversation, post_detail
+
+from .views import devtools_workspace, follows_updates, hot_news, index, legal_page
 
 urlpatterns = [
 	path('', index, name='index'),
 	path("hot/", hot_news, name="hot-news"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
+	path('p/<uuid:pk>/conversation/', post_conversation, name='post-conversation'),
 	path('p/<uuid:pk>/like/', like_post, name='post-like'),
 	path('p/<uuid:pk>/delete/', delete_post, name='post-delete'),
 	path('p/<uuid:pk>/report/', report_post, name='post-report'),
@@ -39,5 +41,8 @@ urlpatterns = [
 ]
 if settings.DEBUG:
 	# Статику при DEBUG и так раздаёт runserver (django.contrib.staticfiles); здесь — загрузки и toolbar.
-	urlpatterns += [path("__debug__/", include("debug_toolbar.urls"))]
+	urlpatterns += [
+		path("__debug__/", include("debug_toolbar.urls")),
+		path(".well-known/appspecific/com.chrome.devtools.json", devtools_workspace),
+	]
 	urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

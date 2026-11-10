@@ -11,7 +11,7 @@
 				<div class="actions">
 					<a class="action" href="{% url 'post' post.id %}" title="Ответы">
 						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответов:</span><span data-reply-count>{{ post.replies_count }}</span>
+						<span class="sr">Ответы </span><span class="action-n" data-reply-count>{{ post.replies_count }}</span>
 					</a>
 				</div>
 			{% endif %}

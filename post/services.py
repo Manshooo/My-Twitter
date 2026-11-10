@@ -3,10 +3,9 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
-from .media import process_post_image
 from django.utils import timezone
 
+from .media import process_post_image
 from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision, shift_ancestor_counts
 from .serializer import POST_MAX_LENGTH
 

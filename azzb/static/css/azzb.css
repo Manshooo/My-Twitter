@@ -211,8 +211,10 @@ img { max-width: 100%; }
 	background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
 	top: calc(100% + 4px); right: 0;
 }
-.menu-left { left: 0; right: auto; }
-.menu-up { top: auto; bottom: calc(100% + 4px); }
+.menu-start { left: 0; right: auto; }
+/* Открытое меню живёт в верхнем слое (popover, см. «Меню» в azzb.js): top и left ставит скрипт
+   от положения кнопки. Сбрасываем стили popover по умолчанию (inset: 0, margin: auto, цвета Canvas). */
+.menu[popover] { position: fixed; inset: auto; margin: 0; color: var(--text); overflow: visible; }
 .menu-item {
 	display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px;
 	border: 0; border-radius: 10px; background: transparent; color: var(--text);
@@ -291,11 +293,15 @@ img { max-width: 100%; }
 }
 .actions { display: flex; align-items: center; gap: 8px; margin-left: -10px; max-width: 440px; }
 .action {
-	display: inline-flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px;
+	display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px;
 	border: 0; border-radius: 12px; background: transparent; color: var(--text-2);
 	font-weight: 700; font-size: 14px; cursor: pointer;
 }
 .action:hover { background: var(--surface-3); text-decoration: none; }
+/* Счётчик у кнопки. При нуле он пустой и прячется: иначе пустой flex-элемент добавляет gap,
+   и иконка съезжает влево. Текст .sr в раскладке не участвует (position: absolute) —
+   его читают только скринридеры: «Нравится 5», «Ответы» без числа при нуле. */
+.action-n:empty { display: none; }
 .action.liked { color: var(--like); }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
@@ -320,6 +326,33 @@ img { max-width: 100%; }
 .gone-text { color: var(--text-2); font-size: 15px; font-style: italic; }
 .post-main .post-text { font-size: 18px; }
 .replies { display: flex; flex-direction: column; gap: 14px; }
+/* Открытый пост из середины ветки прокручивается к верху экрана (azzb.js) — не под мобильную шапку. */
+.post-main { scroll-margin-top: 16px; }
+@media (max-width: 760px) { .post-main { scroll-margin-top: 72px; } }
+
+/* Разговор под ответом одной линией (post/_conversation.html): карточки и ссылки «Ещё N ответов»
+   соединены той же линией, что и посты выше по ветке. Линия идёт от ответа к первому сообщению
+   разговора, между сообщениями и через ссылки — но не в кнопку и не после последнего. */
+.chain { display: flex; flex-direction: column; gap: 14px; }
+.post:has(+ .chain > :is(.post, .chain-aside):first-child),
+.chain > .post:has(+ :is(.post, .chain-aside)) { overflow: visible; }
+.post:has(+ .chain > :is(.post, .chain-aside):first-child)::after,
+.chain > .post:has(+ :is(.post, .chain-aside))::after {
+	content: ''; position: absolute; left: 39px; top: 62px; bottom: -15px; width: 2px;
+	background: var(--border-strong); border-radius: 2px;
+}
+.chain > .chain-aside:has(+ .post)::before {
+	content: ''; position: absolute; left: 40px; top: 0; bottom: -15px; width: 2px;
+	background: var(--border-strong); border-radius: 2px;
+}
+/* Ссылки под карточками — по левому краю текста карточки (рамка + отступ + аватар + зазор). */
+.chain-link {
+	position: relative; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
+	min-height: 32px; padding-left: 75px; color: var(--text-2); font-size: 14px; font-weight: 700;
+}
+.chain-link:hover { color: var(--text); }
+.chain-link[disabled], .chain-link.htmx-request { opacity: .6; cursor: progress; }
+.chain-more { display: flex; }
 
 /* ---------- Пустые состояния, скелетоны, тосты ---------- */
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 24px; }

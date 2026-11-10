@@ -14,6 +14,8 @@ class RateCounter(models.Model):
 	expires_at = models.DateTimeField(db_index=True)
 
 	class Meta:
+		verbose_name = 'Счётчик лимита'
+		verbose_name_plural = 'Счётчики лимитов'
 		constraints = [models.UniqueConstraint(fields=['key', 'window'], name='rate_counter_key_window')]
 
 	def __str__(self):

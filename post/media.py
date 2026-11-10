@@ -10,7 +10,8 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from PIL import Image as PILImage, ImageOps, ImageSequence, UnidentifiedImageError
+from PIL import Image as PILImage
+from PIL import ImageOps, ImageSequence, UnidentifiedImageError
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_UPLOAD_MB = MAX_UPLOAD_BYTES // (1024 * 1024)

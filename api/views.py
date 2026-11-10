@@ -1,17 +1,16 @@
+from django.core.exceptions import ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from django.core.exceptions import ValidationError
-
-from customUser.serializers import ProfileSerializer
-from customUser.models import Profile
-from post.services import find_reply_target, publish_post
+from accounts.models import Profile
+from accounts.serializers import ProfileSerializer
 from azzb.activity import Action, record
 from azzb.ratelimit import rate_limit
+from post.services import find_reply_target, publish_post
 from post.views import POST_RATES, render_cards
+
 
 def _getlist(data, key):
 	"""Список значений и из multipart-формы (QueryDict), и из JSON."""
@@ -50,7 +49,7 @@ def profiles_list(request):
 	"""
 	nextPage = 1
 	previousPage = 1
-	profiles = Profile.objects.select_related('user').order_by('pk')
+	profiles = Profile.objects.public().select_related('user').order_by('pk')
 	page = request.GET.get('page', 1)
 	paginator = Paginator(profiles, 10)
 	try:
@@ -74,7 +73,7 @@ def profile_details(request, pk):
 	# DELETE убран: удаление профиля без пользователя ломало сайт для этого аккаунта
 	# (везде используется request.user.profile). Удаление аккаунта — отдельная задача (E6).
 	try:
-		profile = Profile.objects.select_related('user').get(pk=pk)
+		profile = Profile.objects.public().select_related('user').get(pk=pk)
 	except Profile.DoesNotExist:
 		return Response(status=status.HTTP_404_NOT_FOUND)
 

@@ -1,11 +1,12 @@
 import json
 
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from accounts.models import CustomUser
 from post.models import Post
 
-User = get_user_model()
+# Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
+User = CustomUser
 
 
 class ProfileApiPermissionsTests(TestCase):
@@ -132,7 +133,7 @@ class LikeAndDeleteApiTests(TestCase):
 
 class FeedPermissionsTests(TestCase):
 	def test_following_feed_shows_only_followed_authors(self):
-		from customUser.models import FollowThrough
+		from accounts.models import FollowThrough
 		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345')
 		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345')
 		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345')

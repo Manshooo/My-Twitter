@@ -1,0 +1,11 @@
+# Только для разработки: линтер, форматирование, проверка типов. На сервер не ставится.
+# Установка: .venv/Scripts/pip install -r requirements-dev.txt
+-r requirements.txt
+
+# Линтер и форматирование (настройки — [tool.ruff] в pyproject.toml). Zed берёт тот же ruff.
+ruff==0.17.4
+# Проверка типов из командной строки — тем же движком, что и в Zed: .venv/Scripts/basedpyright
+basedpyright==1.40.2
+# Типы Django и DRF: без них редактор не знает про Model.objects, поля моделей и т. п.
+django-stubs==6.1.2
+djangorestframework-stubs==3.18.2

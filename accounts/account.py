@@ -7,6 +7,7 @@ import tempfile
 import zipfile
 from pathlib import PurePosixPath
 
+from allauth.account.models import EmailAddress
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -18,8 +19,6 @@ from django.http import FileResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
-from allauth.account.models import EmailAddress
 
 from azzb.activity import Action, record
 from azzb.models import ActivityRecord
@@ -51,7 +50,7 @@ class DeleteAccountForm(forms.Form):
 
 @login_required
 def account_settings(request):
-	return render(request, 'registration/account.html', {'delete_form': DeleteAccountForm(request.user)})
+	return render(request, 'accounts/account_settings.html', {'delete_form': DeleteAccountForm(request.user)})
 
 
 def _media_name(field, folder):
@@ -208,7 +207,7 @@ def delete_account(request):
 	user = request.user
 	form = DeleteAccountForm(user, request.POST)
 	if not form.is_valid():
-		return render(request, 'registration/account.html', {'delete_form': form}, status=400)
+		return render(request, 'accounts/account_settings.html', {'delete_form': form}, status=400)
 	with transaction.atomic():
 		record(request, Action.ACCOUNT_DELETE)
 		user.deleted_at = timezone.now()
