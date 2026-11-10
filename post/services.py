@@ -193,7 +193,7 @@ def edit_post(post, text):
 
 def delete_posts(posts):
 	"""Мягкое удаление: посты пропадают отовсюду, у веток над ними −1 в счётчиках ответов.
-	Содержимое остаётся до purge_posts — его требует хранить 149-ФЗ (см. azzb/retention.py)."""
+	Содержимое остаётся до purge_posts на случай законных запросов (см. azzb/retention.py)."""
 	with transaction.atomic():
 		ids = list(posts.filter(deleted_at__isnull=True).select_for_update().values_list('pk', flat=True))
 		if not ids:
@@ -257,7 +257,7 @@ def toggle_bookmark(post, profile):
 
 def toggle_repost(post, profile):
 	"""Сделать или отменить репост (post — исходный). Возвращает (репост есть?, репостов и цитат теперь).
-	Отмена — мягкое удаление строки репоста: факт передачи хранится, как у постов (149-ФЗ)."""
+	Отмена — мягкое удаление строки репоста: факт передачи хранится, как у постов (azzb/retention.py)."""
 	with transaction.atomic():
 		# Блокируем исходный: два быстрых нажатия не создадут двух репостов и не собьют счётчик.
 		Post.objects.select_for_update().filter(pk=post.pk).first()

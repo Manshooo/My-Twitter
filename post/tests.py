@@ -145,7 +145,7 @@ class CreatePostWithImagesTests(TestCase):
 		storage, name = image.file.storage, image.file.name
 		with self.captureOnCommitCallbacks(execute=True):
 			self.client.post('/api/delete-post/', json.dumps({'id': str(image.post_id)}), content_type='application/json')
-		self.assertTrue(storage.exists(name))  # хранится полгода (149-ФЗ)
+		self.assertTrue(storage.exists(name))  # хранится полгода (azzb/retention.py)
 		with self.captureOnCommitCallbacks(execute=True):
 			purge_posts(Post.objects.filter(pk=image.post_id))
 		self.assertFalse(storage.exists(name))
@@ -256,7 +256,7 @@ class RepliesTests(TestCase):
 		self.reply(self.alice, middle, 'Ответ под удалённым')
 		self.client.force_login(self.bob)
 		self.client.post(f'/p/{middle.pk}/delete/', headers={'HX-Request': 'true'})
-		self.assertTrue(Post.objects.filter(pk=middle.pk).exists())  # хранится полгода (149-ФЗ)
+		self.assertTrue(Post.objects.filter(pk=middle.pk).exists())  # хранится полгода (azzb/retention.py)
 		self.assertNotContains(self.client.get('/users/bob/?tab=replies'), 'Удалю потом')
 		page = self.client.get(f'/p/{self.root.pk}/')
 		self.assertContains(page, 'Пост удалён')

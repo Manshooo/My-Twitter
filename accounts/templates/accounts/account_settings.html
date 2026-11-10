@@ -22,7 +22,7 @@
 
 		<div class="form" style="gap: 10px">
 			<h2 class="section-title" style="color: var(--danger)">Удалить аккаунт</h2>
-			<p class="hint">Аккаунт @{{ user.username }} сразу пропадёт для всех: профиль, посты и ответы, лайки, подписки. Войти в него будет нельзя, отменить удаление — тоже. По закону удалённое хранится ещё полгода и затем стирается; раньше — по письму на <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Удаление отзывает <a href="{% url 'pd-consent' %}">согласие на обработку данных</a>. Подробнее — в <a href="{% url 'privacy' %}">политике конфиденциальности</a>.</p>
+			<p class="hint">Аккаунт @{{ user.username }} сразу пропадёт для всех: профиль, посты и ответы, лайки, подписки. Войти в него будет нельзя, отменить удаление — тоже. Удалённое хранится ещё полгода на случай законных запросов и затем стирается; раньше — по письму на <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Удаление отзывает <a href="{% url 'pd-consent' %}">согласие на обработку данных</a>. Подробнее — в <a href="{% url 'privacy' %}">политике конфиденциальности</a>.</p>
 			<form method="post" action="{% url 'account-delete' %}" class="form" data-confirm="Удалить аккаунт @{{ user.username }} навсегда?">
 				{% csrf_token %}
 				{% include "azzb/includes/field.html" with field=delete_form.confirm %}

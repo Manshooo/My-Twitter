@@ -121,7 +121,7 @@ class LikeAndDeleteApiTests(TestCase):
 		self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
 		self.client.force_login(self.author)
 		self.assertEqual(self.call('/api/delete-post/', {'id': str(self.post.pk)}).status_code, 200)
-		self.assertIsNotNone(Post.objects.get(pk=self.post.pk).deleted_at)  # удаление мягкое (149-ФЗ)
+		self.assertIsNotNone(Post.objects.get(pk=self.post.pk).deleted_at)  # удаление мягкое (azzb/retention.py)
 
 	def test_bad_or_missing_id_is_400_or_404_not_500(self):
 		self.client.force_login(self.other)

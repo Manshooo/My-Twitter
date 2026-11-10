@@ -50,7 +50,7 @@ class MuteAdmin(admin.ModelAdmin):
 
 @admin.register(ActivityRecord)
 class ActivityRecordAdmin(admin.ModelAdmin):
-	"""Журнал по 149-ФЗ: только смотреть — для ответа на законный запрос госорганов."""
+	"""Журнал действий: только смотреть — для ответа на законный запрос госорганов."""
 	list_display = ("created_at", "username", "action", "ip", "post_id")
 	list_filter = ("action",)
 	search_fields = ("username", "email", "ip", "post_id")

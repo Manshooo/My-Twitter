@@ -28,8 +28,8 @@ class LoginForm(allauth_forms.LoginForm):
 
 
 class SignupForm(allauth_forms.SignupForm):
-	# Две отдельные галочки: с 1 сентября 2025 года согласие на обработку ПДн по 152-ФЗ
-	# оформляется отдельно от других документов (правил, оферты).
+	# Две отдельные галочки: согласие на обработку ПДн даётся отдельно от других документов
+	# (правил), а не одной общей галочкой.
 	accept_rules = forms.BooleanField(required=True, error_messages={'required': 'Без согласия с правилами зарегистрироваться нельзя.'})
 	pd_consent = forms.BooleanField(required=True, error_messages={'required': 'Без согласия на обработку данных мы не можем создать аккаунт.'})
 

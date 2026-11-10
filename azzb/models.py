@@ -24,9 +24,9 @@ class RateCounter(models.Model):
 
 class ActivityRecord(models.Model):
 	"""Журнал действий пользователей: кто, когда и с какого адреса входил, публиковал, правил
-	и удалял. Его требует ст. 10.1 закона 149-ФЗ «Об информации»: сведения о фактах приёма
+	и удалял. Нужен, чтобы отвечать на законные запросы госорганов: сведения о фактах приёма
 	и передачи сообщений и о пользователях хранятся год (RETENTION_METADATA в azzb/retention.py)
-	и выдаются только по законному запросу госорганов. Логин и почта копируются в запись:
+	и выдаются только по такому запросу. Логин и почта копируются в запись:
 	они должны пережить стирание аккаунта. Пишется через azzb.activity.record."""
 
 	class Action(models.TextChoices):
@@ -53,7 +53,7 @@ class ActivityRecord(models.Model):
 	class Meta:
 		ordering = ['-created_at']
 		verbose_name = 'Действие пользователя'
-		verbose_name_plural = 'Журнал действий (149-ФЗ)'
+		verbose_name_plural = 'Журнал действий'
 		indexes = [models.Index(fields=['user', '-created_at'], name='activity_user_recent')]
 
 	def __str__(self):

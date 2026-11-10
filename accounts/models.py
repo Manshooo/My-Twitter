@@ -70,7 +70,7 @@ class CustomUser(AbstractUser):
 	# Бессрочный бан — BAN_FOREVER. Ставится только через moderation.services.ban_user.
 	banned_until = models.DateTimeField("Забанен до", null=True, blank=True)
 	ban_reason = models.CharField("Причина бана", max_length=500, blank=True, default="")
-	# Когда человек принял правила и дал согласие на обработку ПДн (E6, 152-ФЗ). Пусто — аккаунт
+	# Когда человек принял правила и дал согласие на обработку ПДн (E6). Пусто — аккаунт
 	# заведён до появления галочек на регистрации.
 	terms_accepted_at = models.DateTimeField("Принял правила", null=True, blank=True)
 	pd_consent_at = models.DateTimeField("Согласие на обработку ПДн", null=True, blank=True)
