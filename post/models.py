@@ -1,33 +1,59 @@
+from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import connection, models
-from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
+from django.db.models import (
+	BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Prefetch, Q, Subquery, Value,
+)
+from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
 from django.utils import timezone
 
-from accounts.models import Block, Mute, Profile
+from accounts.models import Block, FollowThrough, Mute, Profile
 
 if TYPE_CHECKING:
 	# Есть только в django-stubs (requirements-dev.txt), поэтому импорт — лишь для проверки типов.
 	from django_stubs_ext.db.models.manager import RelatedManager
 
 
+def poll_prefetches(user):
+	"""Варианты опросов с числом голосов и голос пользователя — запросом на страницу, и только
+	если на странице есть опросы (Django не делает prefetch для пустого набора)."""
+	result = []
+	for prefix in ('poll', 'repost_of__poll'):
+		result.append(Prefetch(f'{prefix}__options', queryset=PollOption.objects.annotate(votes_n=Count('votes'))))
+		if user is not None and user.is_authenticated:
+			mine = PollVote.objects.filter(profile_id=user.profile.pk)
+			result.append(Prefetch(f'{prefix}__votes', queryset=mine, to_attr='mine'))
+	return result
+
+
 class PostQuerySet(models.QuerySet['Post']):
 	def visible_to(self, user):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
-		Все ленты, профиль, лайки (а позже поиск и уведомления) берут посты только отсюда.
+		Все ленты, профиль, лайки, уведомления (а позже поиск) берут посты только отсюда.
 		Скрываем удалённые, посты отключённых и забаненных аккаунтов (E4), скрытые модераторами
 		(кроме собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка
-		в любую сторону (E3). Сюда же лягут закрытые аккаунты (E5).
+		в любую сторону (E3). Посты закрытых аккаунтов видят только автор и его подписчики (E5).
+		Репост виден, только если виден и сам исходный пост (D4).
 		"""
+		posts = self._visible(user)
+		originals = Post.objects.all()._visible(user).values('pk')
+		return posts.filter(Q(is_repost=False) | Q(repost_of__in=originals))
+
+	def _visible(self, user):
 		posts = (
 			self.filter(deleted_at__isnull=True, author__user__is_active=True)
 			.exclude(author__user__banned_until__gt=timezone.now())
 		)
 		if user is None or not user.is_authenticated:
-			return posts.filter(hidden_at__isnull=True)
+			return posts.filter(hidden_at__isnull=True, author__is_private=False)
 		posts = posts.filter(Q(hidden_at__isnull=True) | Q(author_id=user.pk))
+		followed = FollowThrough.objects.filter(follower__user_id=user.pk).values('followee__user_id')
+		posts = posts.filter(Q(author__is_private=False) | Q(author_id=user.pk) | Q(author_id__in=followed))
 		# author_id — это id пользователя (to_field='user'), поэтому сравниваем с user_id профилей.
 		return posts.exclude(
 			author_id__in=Block.objects.filter(blocker__user_id=user.pk).values('blocked__user_id'),
@@ -39,28 +65,67 @@ class PostQuerySet(models.QuerySet['Post']):
 		"""Для лент: без постов заглушённых (E3). Профиль и ветка обсуждения их по-прежнему показывают."""
 		if user is None or not user.is_authenticated:
 			return self
-		return self.exclude(author_id__in=Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id'))
+		muted = Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id')
+		return self.exclude(author_id__in=muted).exclude(repost_of__author_id__in=muted)
 
 	def top_level(self):
 		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
 		return self.filter(is_reply=False)
 
 	def _cards(self, user):
-		"""Всё, что нужно карточке: автор, картинки, число лайков и «мой ли лайк» — запросами
-		на страницу, а не на каждый пост. Число ответов хранится в самом посте (replies_count)."""
+		"""Всё, что нужно карточке: автор, картинки, число лайков, «мой ли лайк», «мой ли репост»
+		и цитируемый пост — запросами на страницу, а не на каждый пост. Счётчики ответов
+		и репостов хранятся в самом посте.
+
+		Карточка репоста показывает исходный пост, поэтому лайки и прочее считаются по shown_id."""
 		if user is not None and user.is_authenticated:
-			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
+			liked = Exists(Like.objects.filter(post_id=OuterRef('shown_id'), profile_id=user.profile.pk))
+			reposted = Exists(Post.objects.filter(
+				repost_of_id=OuterRef('shown_id'), author_id=user.pk, deleted_at__isnull=True,
+			))
+			bookmarked = Exists(Bookmark.objects.filter(post_id=OuterRef('shown_id'), profile_id=user.profile.pk))
 		else:
-			liked = Value(False, output_field=BooleanField())
+			liked = reposted = bookmarked = Value(False, output_field=BooleanField())
+		likes = (
+			Like.objects.filter(post_id=OuterRef('shown_id')).order_by()
+			.values('post_id').annotate(n=Count('*')).values('n')
+		)
 		return (
-			self.select_related('author__user', 'reply_to__author__user')
-			.prefetch_related('images')
-			.annotate(likes_n=Count('likes', distinct=True), is_liked=liked)
+			self.select_related(
+				'author__user', 'reply_to__author__user', 'quote_of__author__user',
+				'repost_of__author__user', 'repost_of__reply_to__author__user', 'repost_of__quote_of__author__user',
+			)
+			.select_related('poll', 'repost_of__poll')
+			.prefetch_related(
+				'images', 'quote_of__images', 'repost_of__images', 'repost_of__quote_of__images',
+				*poll_prefetches(user),
+			)
+			.annotate(shown_id=Coalesce('repost_of_id', 'id'), shown_quote_id=Coalesce('repost_of__quote_of_id', 'quote_of_id'))
+			.annotate(
+				likes_n=Coalesce(Subquery(likes, output_field=IntegerField()), 0),
+				is_liked=liked,
+				is_reposted=reposted,
+				is_bookmarked=bookmarked,
+				quote_available=Exists(Post.objects.visible_to(user).filter(pk=OuterRef('shown_quote_id'))),
+			)
 		)
 
 	def for_feed(self, user):
 		"""Посты, которые пользователь видит, готовые к выводу карточками."""
 		return self.visible_to(user)._cards(user)
+
+	def hot(self):
+		"""«Горячее» (G1): (лайки + 2·ответы + 3·репосты) / (часы + 2)^1.5 — свежее обсуждаемое выше
+		старого популярного. Считается в запросе: ответы и репосты хранятся в посте, лайки уже
+		посчитаны для карточек (likes_n), поэтому вызывать после for_feed(). Окно HOT_WINDOW
+		ограничивает работу базы: через месяц пост с любым числом лайков в топ уже не попадёт."""
+		hours = Extract(Now() - F('created_at'), 'epoch') / Value(3600.0)
+		engagement = Cast(F('likes_n') + 2 * F('replies_count') + 3 * F('reposts_count'), FloatField())
+		return (
+			self.filter(is_repost=False, created_at__gte=timezone.now() - HOT_WINDOW)
+			.annotate(hot_score=engagement / Power(hours + Value(2.0), Value(1.5)))
+			.order_by('-hot_score', '-created_at', '-id')
+		)
 
 	def in_thread(self, user):
 		"""Посты для ветки обсуждения: и те, что пользователь не видит, — они выводятся заглушкой
@@ -72,6 +137,9 @@ class PostQuerySet(models.QuerySet['Post']):
 	def thread_members(self):
 		"""Кто вообще есть в ветке, без аннотаций для карточек: всё, кроме удалённых постов без ответов."""
 		return self.exclude(deleted_at__isnull=False, replies_count=0)
+
+
+HOT_WINDOW = timedelta(days=30)
 
 
 class Post(models.Model):
@@ -90,6 +158,18 @@ class Post(models.Model):
 		'self', verbose_name="Ответ на", null=True, blank=True, on_delete=models.SET_NULL, related_name='replies',
 	)
 	is_reply = models.BooleanField("Это ответ", default=False)
+	# Репост (D4) — пустой пост со ссылкой на исходный; в ленте выводится карточкой исходного.
+	# is_repost, как is_reply, переживает стирание исходного из базы (repost_of = NULL).
+	repost_of = models.ForeignKey(
+		'self', verbose_name="Репост", null=True, blank=True, on_delete=models.SET_NULL, related_name='reposts',
+	)
+	is_repost = models.BooleanField("Это репост", default=False)
+	# Цитата — обычный пост со своим текстом и карточкой цитируемого внутри.
+	quote_of = models.ForeignKey(
+		'self', verbose_name="Цитата", null=True, blank=True, on_delete=models.SET_NULL, related_name='quotes',
+	)
+	# Репосты и цитаты этого поста, кроме удалённых. Меняется только через shift_repost_counts.
+	reposts_count = models.PositiveIntegerField("Репостов и цитат", default=0)
 	# Когда автор последний раз менял текст. updated не годится: он меняется при любом save().
 	edited_at = models.DateTimeField("Изменён", null=True, blank=True)
 	# Скрыт модератором (E4): пропадает у всех, кроме автора, — тот видит пометку с причиной.
@@ -98,10 +178,14 @@ class Post(models.Model):
 	# Сколько ответов во всей ветке под постом, на любой глубине, кроме удалённых авторами.
 	# Меняется только через shift_ancestor_counts: при ответе и удалении — у всей цепочки вверх.
 	replies_count = models.PositiveIntegerField("Ответов в ветке", default=0)
-	# Удалён автором. Содержимое хранится ещё RETENTION_CONTENT (149-ФЗ, ст. 10.1) для запросов
-	# госорганов, затем стирается (purged_at); строка остаётся, чтобы ветка не рвалась.
+	# Удалён автором. Содержимое хранится ещё RETENTION_CONTENT на случай законных запросов
+	# (azzb/retention.py), затем стирается (purged_at); строка остаётся, чтобы ветка не рвалась.
 	deleted_at = models.DateTimeField("Удалён автором", null=True, blank=True)
 	purged_at = models.DateTimeField("Содержимое стёрто", null=True, blank=True)
+	# Поиск (D3): вектор считает сама база при каждой записи текста, словарь — русский (морфология).
+	search_vector = models.GeneratedField(
+		expression=SearchVector('text', config='russian'), output_field=SearchVectorField(), db_persist=True,
+	)
 
 	# cast — только для подсказок типов: as_manager() теряет методы PostQuerySet (visible_to и т. п.).
 	objects = cast(PostQuerySet, PostQuerySet.as_manager())
@@ -128,6 +212,13 @@ class Post(models.Model):
 			models.Index(fields=['is_reply', '-created_at'], name='post_top_level_recent'),
 			# Ветка: ответы на пост по времени.
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
+			GinIndex(fields=['search_vector'], name='post_search'),
+		]
+		constraints = [
+			models.UniqueConstraint(
+				fields=['author', 'repost_of'], condition=Q(repost_of__isnull=False, deleted_at__isnull=True),
+				name='repost_once',
+			),
 		]
 
 def shift_ancestor_counts(post_ids, delta):
@@ -151,6 +242,24 @@ def shift_ancestor_counts(post_ids, delta):
 	'''
 	with connection.cursor() as cursor:
 		cursor.execute(sql, [*post_ids, delta])
+
+
+def shift_repost_counts(post_ids, delta):
+	"""Прибавить delta к reposts_count постов, которые репостят или цитируют посты из post_ids."""
+	post_ids = list(post_ids)
+	if not post_ids:
+		return
+	marks = ', '.join(['%s'] * len(post_ids))
+	sql = f'''
+		UPDATE post_post SET reposts_count = GREATEST(reposts_count + %s * c.n, 0)
+		FROM (
+			SELECT COALESCE(repost_of_id, quote_of_id) AS id, COUNT(*) AS n FROM post_post
+			WHERE id IN ({marks}) AND COALESCE(repost_of_id, quote_of_id) IS NOT NULL GROUP BY 1
+		) c
+		WHERE post_post.id = c.id
+	'''
+	with connection.cursor() as cursor:
+		cursor.execute(sql, [delta, *post_ids])
 
 
 class PostRevision(models.Model):
@@ -193,6 +302,100 @@ class Like(models.Model):
 
 	def __str__(self):
 		return f'{self.profile} → {self.post_id}'
+
+
+class Hashtag(models.Model):
+	"""Тег (D2). Имя хранится в нижнем регистре: #Москва и #москва — один тег."""
+	name = models.CharField("Тег", max_length=64, unique=True)
+	posts = models.ManyToManyField(Post, through='PostHashtag', related_name='hashtags')
+
+	class Meta:
+		verbose_name = 'Хэштег'
+		verbose_name_plural = 'Хэштеги'
+
+	def __str__(self):
+		return f'#{self.name}'
+
+
+class PostHashtag(models.Model):
+	post = models.ForeignKey(Post, on_delete=models.CASCADE)
+	hashtag = models.ForeignKey(Hashtag, on_delete=models.CASCADE)
+
+	class Meta:
+		constraints = [models.UniqueConstraint(fields=['hashtag', 'post'], name='post_hashtag_once')]
+
+
+class Mention(models.Model):
+	"""@упоминание (D2): кого из существующих людей упомянули в посте."""
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='mentions')
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='mentioned_in')
+
+	class Meta:
+		verbose_name = 'Упоминание'
+		verbose_name_plural = 'Упоминания'
+		constraints = [models.UniqueConstraint(fields=['post', 'profile'], name='mention_once')]
+
+
+POLL_MIN_OPTIONS, POLL_MAX_OPTIONS = 2, 4
+POLL_OPTION_MAX_LENGTH = 50
+# Сколько длится опрос: часы → подпись в composer.
+POLL_DURATIONS = {1: '1 час', 24: '1 день', 72: '3 дня', 168: '7 дней'}
+
+
+class Poll(models.Model):
+	"""Опрос (B7) — часть поста: варианты, срок, один голос на человека. Результаты видны
+	автору, проголосовавшим и всем после окончания. Создаётся только через post.services.publish_post."""
+	post = models.OneToOneField(Post, on_delete=models.CASCADE, related_name='poll', verbose_name='Пост')
+	ends_at = models.DateTimeField('Заканчивается')
+
+	class Meta:
+		verbose_name = 'Опрос'
+		verbose_name_plural = 'Опросы'
+
+	def __str__(self):
+		return f'Опрос к {self.post_id}'
+
+	@property
+	def is_open(self):
+		return self.ends_at > timezone.now()
+
+
+class PollOption(models.Model):
+	poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='options')
+	text = models.CharField('Вариант', max_length=POLL_OPTION_MAX_LENGTH)
+	position = models.PositiveSmallIntegerField(default=0)
+
+	class Meta:
+		ordering = ['position']
+
+	def __str__(self):
+		return self.text
+
+
+class PollVote(models.Model):
+	poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='votes')
+	option = models.ForeignKey(PollOption, on_delete=models.CASCADE, related_name='votes')
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='poll_votes')
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		constraints = [models.UniqueConstraint(fields=['poll', 'profile'], name='poll_vote_once')]
+
+
+class Bookmark(models.Model):
+	"""Закладка (D5): видна только владельцу, автор поста о ней не узнаёт."""
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='bookmarks')
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='bookmarks')
+	created_at = models.DateTimeField("Когда добавлена", auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Закладка'
+		verbose_name_plural = 'Закладки'
+		constraints = [models.UniqueConstraint(fields=['profile', 'post'], name='bookmark_once')]
+		indexes = [models.Index(fields=['profile', '-created_at'], name='bookmark_recent')]
+
+	def __str__(self):
+		return f'{self.profile} 🔖 {self.post_id}'
 
 
 def post_image_path(instance, filename):

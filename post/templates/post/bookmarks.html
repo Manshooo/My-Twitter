@@ -1,0 +1,19 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}Закладки{% endblock title %}
+{% block content %}
+	<div style="padding: 4px 6px">
+		<h1 class="display" style="font-size: 22px">Закладки</h1>
+		<p class="hint">Их видите только вы.</p>
+	</div>
+	<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+		{% if posts %}
+			{% include "azzb/includes/post_page.html" %}
+		{% else %}
+			<div class="card empty">
+				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-bookmark"></use></svg></span>
+				<h2>Закладок пока нет</h2>
+				<p>Нажмите на значок закладки под постом, чтобы вернуться к нему позже.</p>
+			</div>
+		{% endif %}
+	</div>
+{% endblock content %}

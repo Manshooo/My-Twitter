@@ -1,0 +1,36 @@
+{% load azzb_ui show_posts %}{% if group.verb == 'reply' or group.verb == 'quote' or group.verb == 'mention' %}
+	{# Ответ, цитата и упоминание — обычная карточка поста: на неё сразу можно ответить или лайкнуть. #}
+	<div class="notif-reply{% if group.unread %} notif-unread{% endif %}">{% with post=group.post %}{% show_posts %}{% endwith %}</div>
+{% else %}
+<article class="card notif{% if group.unread %} notif-unread{% endif %}">
+	<span class="notif-icon notif-{{ group.verb }}" aria-hidden="true">
+		<svg class="icon"><use href="#{% if group.verb == 'like' %}i-heart{% elif group.verb == 'repost' %}i-repost{% elif group.verb == 'follow_req' %}i-lock{% else %}i-user{% endif %}"></use></svg>
+	</span>
+	<div class="notif-body">
+		<div class="notif-avatars">
+			{% for actor in group.actors %}<a class="nu" href="{% url 'profile' actor.user.username %}" tabindex="-1" aria-hidden="true">{% avatar actor 'sm' %}</a>{% endfor %}
+		</div>
+		<p class="notif-text">
+			{% for actor in group.actors %}<a class="notif-name" href="{% url 'profile' actor.user.username %}">{{ actor.username }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if group.others %} и ещё {{ group.others }}{% endif %}
+			{% if group.verb == 'like' %}
+				{% if group.total > 1 %}лайкнули{% else %}лайкнул(а){% endif %} ваш {% if group.post.is_reply %}ответ{% else %}пост{% endif %}
+			{% elif group.verb == 'repost' %}
+				{% if group.total > 1 %}сделали{% else %}сделал(а){% endif %} репост вашего {% if group.post.is_reply %}ответа{% else %}поста{% endif %}
+			{% elif group.verb == 'follow_req' %}
+				{% if group.total > 1 %}хотят{% else %}хочет{% endif %} подписаться на вас
+			{% elif group.verb == 'follow_ok' %}
+				{% if group.total > 1 %}одобрили{% else %}одобрил(а){% endif %} вашу заявку — теперь вы видите посты
+			{% else %}
+				{% if group.total > 1 %}подписались{% else %}подписался(-ась){% endif %} на вас
+			{% endif %}
+			<span class="muted">· <time datetime="{{ group.latest|date:'c' }}" title="{{ group.latest|date:'j E Y, H:i' }}">{{ group.latest|ago }}</time></span>
+		</p>
+		{% if group.verb == 'follow_req' %}
+			<a class="btn btn-sm" href="{% url 'follow-requests' %}" style="align-self: flex-start">Посмотреть заявки</a>
+		{% endif %}
+		{% if group.verb == 'like' or group.verb == 'repost' %}
+			<a class="notif-quote" href="{% url 'post' group.post.pk %}">{% if group.post.text %}{{ group.post.text|truncatechars:200 }}{% else %}Пост с картинкой{% endif %}</a>
+		{% endif %}
+	</div>
+</article>
+{% endif %}

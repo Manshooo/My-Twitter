@@ -1,29 +1,9 @@
-{% load azzb_ui %}{% if who_to_follow %}
+{% include "azzb/includes/trends.html" %}
+{% if who_to_follow %}
 	<section class="card card-pad" aria-labelledby="who-title" style="display: flex; flex-direction: column; gap: 14px">
 		<h2 id="who-title" class="section-title">Кого почитать</h2>
-		{% for person in who_to_follow %}
-			<div class="who-row">
-				<a class="nu" href="{% url 'profile' person.user.username %}" tabindex="-1" aria-hidden="true">{% avatar person 'sm' %}</a>
-				<a class="who" href="{% url 'profile' person.user.username %}">
-					<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
-					<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
-				</a>
-				{% if user.is_authenticated %}
-					<form method="post" action="{% url 'profile' person.user.username %}">
-						{% csrf_token %}
-						<input type="hidden" name="next" value="{{ request.get_full_path }}">
-						<button class="btn btn-sm" type="submit" name="subscribe">Подписаться</button>
-					</form>
-				{% else %}
-					<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Подписаться</a>
-				{% endif %}
-			</div>
-		{% endfor %}
+		{% for person in who_to_follow %}{% include "azzb/includes/who_row.html" %}{% endfor %}
+		{% if user.is_authenticated %}<a href="{% url 'who-to-follow' %}" style="font-size: 14px; font-weight: 700">Показать ещё</a>{% endif %}
 	</section>
 {% endif %}
-<nav class="footer-links" aria-label="Документы">
-	<a href="{% url 'rules' %}">Правила</a>
-	<a href="{% url 'privacy' %}">Конфиденциальность</a>
-	<a href="mailto:{{ support_email }}">Связаться</a>
-	<span>© {% now "Y" %} AzzB</span>
-</nav>
+{% include "azzb/includes/footer_links.html" %}

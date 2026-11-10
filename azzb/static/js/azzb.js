@@ -149,11 +149,12 @@
 	}
 
 	// Composer один на страницу, а пишут в нём новый пост, ответ на любой пост или правку своего.
-	// Режим: {kind: 'new'} | {kind: 'reply', id, name} | {kind: 'edit', id, hasImages}.
+	// Режим: {kind: 'new'} | {kind: 'reply', id, name} | {kind: 'quote', id, name} | {kind: 'edit', id, hasImages}.
 	// Черновик у каждого режима свой: начатый пост не уедет ответом и наоборот.
 	const COMPOSER_TEXT = {
 		new: { title: 'Новый пост', submit: 'Опубликовать', busy: 'Публикуем…', done: 'Пост опубликован' },
 		reply: { title: 'Ответ', submit: 'Ответить', busy: 'Отправляем…', done: 'Ответ опубликован' },
+		quote: { title: 'Цитата', submit: 'Опубликовать', busy: 'Публикуем…', done: 'Цитата опубликована' },
 		edit: { title: 'Редактирование', submit: 'Сохранить', busy: 'Сохраняем…', done: 'Изменения сохранены' },
 	};
 	const drafts = new Map();
@@ -230,12 +231,16 @@
 		form.querySelector('[data-composer-edit]').value = mode.kind === 'edit' ? mode.id : '';
 		form.querySelector('[data-composer-replying]').hidden = mode.kind !== 'reply';
 		form.querySelector('[data-composer-replying-name]').textContent = mode.name || '';
+		form.querySelector('[data-composer-quote-of]').value = mode.kind === 'quote' ? mode.id : '';
+		form.querySelector('[data-composer-quoting]').hidden = mode.kind !== 'quote';
+		form.querySelector('[data-composer-quoting-name]').textContent = mode.name || '';
 		// У правки картинки не меняются — прячем всё, что про вложения.
 		form.querySelector('.composer-tools').hidden = mode.kind === 'edit';
+		if (mode.kind === 'edit' && pollActive(form)) setPoll(form, false);
 		form.querySelector('[data-composer-edit-note]').hidden = !(mode.kind === 'edit' && mode.hasImages);
 		modal.querySelector('[data-composer-title]').textContent = labels.title;
 		const textarea = form.querySelector('textarea');
-		textarea.placeholder = mode.kind === 'reply' ? 'Ваш ответ' : textarea.dataset.placeholder;
+		textarea.placeholder = mode.kind === 'reply' ? 'Ваш ответ' : mode.kind === 'quote' ? 'Ваш комментарий' : textarea.dataset.placeholder;
 		form.querySelector('[type="submit"]').textContent = labels.submit;
 		lastFocus = document.activeElement;
 		modal.hidden = false;
@@ -285,6 +290,22 @@
 		if (id) openComposer({ kind: 'reply', id: id, name: btn.dataset.replyName || '' });
 	}
 
+	function openQuote(btn) {
+		openComposer({ kind: 'quote', id: btn.dataset.quote, name: btn.dataset.quoteName || '' });
+	}
+
+	// Число репостов у всех карточек поста на странице: пост и его репосты — разные карточки.
+	function setRepostCount(postId, count) {
+		document.querySelectorAll('[data-post-id="' + postId + '"] [data-repost-count]').forEach((el) => {
+			el.textContent = count > 0 ? String(count) : '';
+		});
+	}
+
+	function bumpRepostCount(postId, delta) {
+		const el = document.querySelector('[data-post-id="' + postId + '"] [data-repost-count]');
+		if (el) setRepostCount(postId, (Number(el.textContent) || 0) + delta);
+	}
+
 	function openEdit(btn) {
 		const card = btn.closest('[data-post-id]');
 		const text = card.querySelector('.post-text');
@@ -308,6 +329,7 @@
 				if (actions) body.querySelector('.actions').replaceWith(actions);
 				card.querySelector('.post-body').replaceWith(body);
 				htmx.process(body);
+				checkMentionLinks();
 			});
 		});
 	}
@@ -319,9 +341,11 @@
 		page.innerHTML = html;
 		const nodes = Array.from(page.content.children);
 		if (position === 'before') anchor.before(page.content);
+		else if (position === 'after') anchor.after(page.content);
 		else if (position === 'prepend') anchor.prepend(page.content);
 		else anchor.append(page.content);
 		nodes.forEach((node) => htmx.process(node));
+		checkMentionLinks();
 	}
 
 	// Счётчик ответов считает всю ветку, поэтому меняем его у поста и у всех постов выше
@@ -343,6 +367,7 @@
 	function closeComposer() {
 		const modal = composer();
 		if (!modal || modal.hidden) return;
+		closeMentions();
 		modal.hidden = true;
 		syncModalOpen();
 		if (lastFocus) lastFocus.focus();
@@ -366,9 +391,14 @@
 		counter.classList.toggle('over', n > max);
 		const keepsImages = composerMode.kind === 'edit' && composerMode.hasImages;
 		const hasContent = textarea.value.trim() || filesOf(form).length || keepsImages;
-		form.querySelector('[type="submit"]').disabled = Boolean(form.dataset.busy) || !hasContent || n > max;
+		// Опрос: нужен вопрос (текст) и хотя бы два варианта. Картинки и опрос — не вместе.
+		const poll = pollActive(form);
+		const pollReady = !poll || (textarea.value.trim() && filledPollOptions(form) >= 2);
+		form.querySelector('[type="submit"]').disabled = Boolean(form.dataset.busy) || !hasContent || !pollReady || n > max;
 		const attach = form.querySelector('[data-composer-attach]');
-		if (attach) attach.disabled = filesOf(form).length >= Number(form.dataset.maxImages || 4);
+		if (attach) attach.disabled = poll || filesOf(form).length >= Number(form.dataset.maxImages || 4);
+		const pollButton = form.querySelector('.composer-tools [data-poll-toggle]');
+		if (pollButton) pollButton.disabled = filesOf(form).length > 0;
 	}
 
 	// Описания, которые уже ввели, переносим из полей в список перед перерисовкой и отправкой.
@@ -433,7 +463,59 @@
 		if (attach) attach.focus();
 	}
 
+	// ---------- Опрос в composer (B7) ----------
+	function pollEditor(form) {
+		return form.querySelector('[data-poll-editor]');
+	}
+
+	function pollActive(form) {
+		const editor = pollEditor(form);
+		return Boolean(editor && !editor.hidden);
+	}
+
+	function filledPollOptions(form) {
+		return Array.from(form.querySelectorAll('[data-poll-input]')).filter((input) => input.value.trim()).length;
+	}
+
+	function setPoll(form, on) {
+		const editor = pollEditor(form);
+		if (!editor) return;
+		editor.hidden = !on;
+		editor.disabled = !on; // выключенный fieldset не попадает в отправку формы
+		form.querySelector('.composer-tools [data-poll-toggle]').setAttribute('aria-pressed', String(on));
+		if (!on) {
+			editor.querySelectorAll('[data-poll-input]').forEach((input) => { input.value = ''; });
+			editor.querySelectorAll('[data-poll-row]').forEach((row, index) => { row.hidden = index >= 2; });
+		}
+		syncPollAdd(form);
+		updateCounter(form);
+		if (on) editor.querySelector('[data-poll-input]').focus();
+	}
+
+	function syncPollAdd(form) {
+		const add = form.querySelector('[data-poll-add]');
+		if (add) add.hidden = !form.querySelector('[data-poll-row][hidden]');
+	}
+
+	function addPollOption(form) {
+		const row = form.querySelector('[data-poll-row][hidden]');
+		if (!row) return;
+		row.hidden = false;
+		row.querySelector('input').focus();
+		syncPollAdd(form);
+	}
+
+	function removePollOption(btn) {
+		const row = btn.closest('[data-poll-row]');
+		const form = btn.form;
+		row.querySelector('input').value = '';
+		row.hidden = true;
+		syncPollAdd(form);
+		updateCounter(form);
+	}
+
 	function resetComposer(form) {
+		setPoll(form, false);
 		form.querySelector('textarea').value = '';
 		filesOf(form).forEach((item) => URL.revokeObjectURL(item.url));
 		attachments.set(form, []);
@@ -456,11 +538,15 @@
 			}
 			bumpReplyCount(mode.id, 1);
 		} else {
+			if (mode.kind === 'quote') bumpRepostCount(mode.id, 1);
 			const feed = document.querySelector('[data-feed-prepend]');
 			if (feed) {
 				const empty = feed.querySelector('[data-feed-empty]');
 				if (empty) empty.remove();
-				insertCards(feed, 'prepend', html);
+				// Закреплённый пост в профиле остаётся первым — новый встаёт под ним.
+				const pinned = feed.querySelector(':scope > .post-pinned');
+				if (pinned) insertCards(pinned, 'after', html);
+				else insertCards(feed, 'prepend', html);
 			}
 		}
 	}
@@ -708,6 +794,7 @@
 	// Лайк, удаление и «Показать ещё» — атрибуты hx-* в шаблонах. Сервер дополняет их
 	// событиями в заголовке HX-Trigger: azzb:toast и azzb:post-deleted.
 	document.addEventListener('azzb:toast', (event) => toast(event.detail.value));
+	document.addEventListener('azzb:reposts', (event) => setRepostCount(event.detail.id, event.detail.count));
 
 	document.addEventListener('azzb:post-deleted', (event) => {
 		const { id, replyOf } = event.detail;
@@ -720,6 +807,7 @@
 	function requestFailed(event) {
 		if (composerOf(event)) return;
 		const elt = event.detail.elt;
+		if (elt && elt.hasAttribute('data-silent')) return;
 		toast(errorsOf(event.detail.xhr, (elt && elt.dataset.error) || 'Что-то пошло не так. Попробуйте ещё раз.')[0]);
 	}
 	document.addEventListener('htmx:responseError', requestFailed);
@@ -745,6 +833,272 @@
 		}
 	}
 
+	// ---------- @упоминания ----------
+	// Ссылки на @логин сервер ставит по виду, не проверяя, есть ли такой человек (лента без
+	// лишних запросов). Здесь одним запросом на страницу узнаём, какие логины есть, а ссылки
+	// на несуществующие превращаем в обычный текст. Гостям проверка не нужна: профили открываются после входа.
+	const knownLogins = new Map();
+	let mentionCheckTimer = null;
+
+	function checkMentionLinks() {
+		clearTimeout(mentionCheckTimer);
+		mentionCheckTimer = setTimeout(runMentionCheck, 50);
+	}
+
+	async function runMentionCheck() {
+		const url = document.body.dataset.usersExistUrl;
+		if (!url) return;
+		const links = Array.from(document.querySelectorAll('a.mention-link:not([data-checked])'));
+		const loginOf = (link) => link.textContent.slice(1);
+		const unknown = Array.from(new Set(links.map(loginOf).filter((login) => !knownLogins.has(login))));
+		for (let i = 0; i < unknown.length; i += 50) {
+			const batch = unknown.slice(i, i + 50);
+			try {
+				const response = await fetch(url + '?names=' + encodeURIComponent(batch.join(',')), { headers: { Accept: 'application/json' } });
+				if (!response.ok) return;
+				const existing = new Set((await response.json()).existing);
+				batch.forEach((login) => knownLogins.set(login, existing.has(login)));
+			} catch (e) {
+				return; // сеть подвела — оставляем ссылки как есть
+			}
+		}
+		links.forEach((link) => {
+			if (!knownLogins.has(loginOf(link))) return;
+			if (knownLogins.get(loginOf(link))) link.dataset.checked = '1';
+			else link.replaceWith(document.createTextNode(link.textContent));
+		});
+	}
+
+	document.addEventListener('DOMContentLoaded', checkMentionLinks);
+	document.addEventListener('htmx:afterSettle', checkMentionLinks);
+
+	// Подсказки при наборе @ в composer: стрелки — выбор, Enter или Tab — вставить, Esc — закрыть.
+	const MENTION_BEFORE_CARET = /(?:^|[^\w@])@([a-zA-Z0-9_.-]{1,30})$/;
+	const mention = { start: -1, items: [], active: 0, timer: null, controller: null };
+
+	function mentionList() {
+		return document.querySelector('[data-mention-list]');
+	}
+
+	function closeMentions() {
+		const list = mentionList();
+		clearTimeout(mention.timer);
+		if (mention.controller) mention.controller.abort();
+		mention.start = -1;
+		mention.items = [];
+		if (!list) return;
+		list.hidden = true;
+		list.replaceChildren();
+		const textarea = document.querySelector('[data-composer-text]');
+		textarea.setAttribute('aria-expanded', 'false');
+		textarea.removeAttribute('aria-activedescendant');
+	}
+
+	function suggestMentions(textarea) {
+		const url = document.body.dataset.mentionUrl;
+		if (!url || !mentionList()) return;
+		const before = textarea.value.slice(0, textarea.selectionStart);
+		const match = textarea.selectionStart === textarea.selectionEnd && before.match(MENTION_BEFORE_CARET);
+		if (!match) { closeMentions(); return; }
+		const query = match[1];
+		const start = textarea.selectionStart - query.length - 1;
+		clearTimeout(mention.timer);
+		mention.timer = setTimeout(async () => {
+			if (mention.controller) mention.controller.abort();
+			mention.controller = new AbortController();
+			try {
+				const response = await fetch(url + '?q=' + encodeURIComponent(query), {
+					headers: { Accept: 'application/json' }, signal: mention.controller.signal,
+				});
+				if (!response.ok) { closeMentions(); return; }
+				const results = (await response.json()).results;
+				results.forEach((person) => knownLogins.set(person.username, true));
+				showMentions(textarea, start, results);
+			} catch (e) { /* запрос отменён следующим нажатием или нет сети */ }
+		}, 150);
+	}
+
+	function avatarNode(person) {
+		if (person.avatar) {
+			const img = document.createElement('img');
+			img.className = 'avatar avatar-xs';
+			img.src = person.avatar;
+			img.alt = '';
+			return img;
+		}
+		const span = document.createElement('span');
+		span.className = 'avatar avatar-xs tone-' + person.tone;
+		span.setAttribute('aria-hidden', 'true');
+		span.textContent = person.initial;
+		return span;
+	}
+
+	function showMentions(textarea, start, results) {
+		const list = mentionList();
+		if (!results.length) { closeMentions(); return; }
+		mention.start = start;
+		mention.items = results;
+		mention.active = 0;
+		list.replaceChildren(...results.map((person, index) => {
+			const item = document.createElement('li');
+			item.id = 'mention-option-' + index;
+			item.className = 'mention-option';
+			item.setAttribute('role', 'option');
+			item.dataset.index = String(index);
+			const who = document.createElement('span');
+			who.className = 'who';
+			const name = document.createElement('b');
+			name.className = 'clip1';
+			name.textContent = person.name;
+			const login = document.createElement('span');
+			login.className = 'muted clip1';
+			login.textContent = '@' + person.username;
+			who.append(name, login);
+			item.append(avatarNode(person), who);
+			return item;
+		}));
+		list.hidden = false;
+		textarea.setAttribute('aria-expanded', 'true');
+		highlightMention(0);
+	}
+
+	function highlightMention(index) {
+		const list = mentionList();
+		mention.active = (index + mention.items.length) % mention.items.length;
+		list.querySelectorAll('[role="option"]').forEach((item) => {
+			item.setAttribute('aria-selected', String(Number(item.dataset.index) === mention.active));
+		});
+		document.querySelector('[data-composer-text]').setAttribute('aria-activedescendant', 'mention-option-' + mention.active);
+	}
+
+	function insertMention(index) {
+		const textarea = document.querySelector('[data-composer-text]');
+		const person = mention.items[index];
+		if (!person || mention.start < 0) return;
+		const caret = textarea.selectionStart;
+		const value = textarea.value;
+		const inserted = '@' + person.username + ' ';
+		textarea.value = value.slice(0, mention.start) + inserted + value.slice(caret).replace(/^\s/, '');
+		const position = mention.start + inserted.length;
+		textarea.setSelectionRange(position, position);
+		closeMentions();
+		textarea.dispatchEvent(new Event('input', { bubbles: true }));
+		textarea.focus();
+	}
+
+	function mentionKeydown(event) {
+		const list = mentionList();
+		if (!list || list.hidden || !event.target.matches('[data-composer-text]')) return false;
+		if (event.ctrlKey || event.metaKey || event.altKey) return false;
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlightMention(mention.active + (event.key === 'ArrowDown' ? 1 : -1));
+			return true;
+		}
+		if (event.key === 'Enter' || event.key === 'Tab') {
+			event.preventDefault();
+			insertMention(mention.active);
+			return true;
+		}
+		if (event.key === 'Escape') {
+			// Закрываем только подсказки, сам composer остаётся открытым.
+			event.preventDefault();
+			closeMentions();
+			return true;
+		}
+		return false;
+	}
+
+	// mousedown, а не click: иначе поле потеряет фокус раньше, чем мы вставим логин.
+	document.addEventListener('mousedown', (event) => {
+		const option = event.target.closest('.mention-option');
+		if (!option) return;
+		event.preventDefault();
+		insertMention(Number(option.dataset.index));
+	});
+	document.addEventListener('focusout', (event) => {
+		if (event.target.matches('[data-composer-text]')) setTimeout(() => {
+			if (document.activeElement !== event.target) closeMentions();
+		}, 0);
+	});
+	document.addEventListener('click', (event) => {
+		if (event.target.matches('[data-composer-text]')) suggestMentions(event.target);
+	});
+
+	// ---------- Cookie и Яндекс Метрика ----------
+	// Выбор хранится в cookie cookie_consent (формат и версия — azzb/cookies.py). Метрику грузим,
+	// только если её номер задан на сервере (<meta name="azzb-metrika">) и аналитика разрешена.
+	const CONSENT_COOKIE = 'cookie_consent';
+	const CONSENT_VERSION = 'v1';
+	const METRIKA_COOKIES = ['_ym_uid', '_ym_d', '_ym_isad', '_ym_visorc', '_ym_hostIndex'];
+	let metrikaLoaded = false;
+
+	function loadMetrika() {
+		const meta = document.querySelector('meta[name="azzb-metrika"]');
+		if (!meta || metrikaLoaded) return;
+		metrikaLoaded = true;
+		const id = Number(meta.content);
+		window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+		window.ym.l = Date.now();
+		const script = document.createElement('script');
+		script.async = true;
+		script.src = 'https://mc.yandex.ru/metrika/tag.js';
+		document.head.append(script);
+		// Вебвизор выключен намеренно: запись действий на экране — лишнее для соцсети.
+		window.ym(id, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+	}
+
+	function dropMetrikaCookies() {
+		const host = window.location.hostname;
+		const domains = ['', host, '.' + host, '.' + host.split('.').slice(-2).join('.')];
+		METRIKA_COOKIES.forEach((name) => domains.forEach((domain) => {
+			document.cookie = name + '=; path=/; max-age=0' + (domain ? '; domain=' + domain : '');
+		}));
+	}
+
+	function cookieBanner() {
+		return document.querySelector('[data-cookie-banner]');
+	}
+
+	function saveCookieChoice(kind) {
+		const banner = cookieBanner();
+		let analytics = kind === 'all';
+		if (kind === 'custom' && banner) analytics = banner.querySelector('[data-cookie-category="analytics"]').checked;
+		const value = CONSENT_VERSION + ':' + (analytics ? 'analytics' : 'necessary');
+		document.cookie = CONSENT_COOKIE + '=' + value + '; path=/; max-age=31536000; SameSite=Lax'
+			+ (window.location.protocol === 'https:' ? '; Secure' : '');
+		if (banner) {
+			banner.querySelector('[data-cookie-category="analytics"]').checked = analytics;
+			banner.hidden = true;
+		}
+		if (analytics) {
+			loadMetrika();
+		} else {
+			dropMetrikaCookies();
+			// Уже загруженный счётчик из страницы не выгрузить — перестанет грузиться со следующей.
+		}
+		toast(analytics ? 'Аналитика разрешена' : 'Используем только необходимые cookie');
+	}
+
+	function openCookieSettings() {
+		const banner = cookieBanner();
+		if (!banner) return;
+		banner.hidden = false;
+		showCookieOptions(banner);
+		banner.querySelector('[data-cookie-category="analytics"]').focus();
+	}
+
+	function showCookieOptions(banner) {
+		banner.querySelector('[data-cookie-options]').hidden = false;
+		banner.querySelector('[data-cookie-customize]').hidden = true;
+		banner.querySelector('[data-cookie-accept="custom"]').hidden = false;
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		const meta = document.querySelector('meta[name="azzb-metrika"]');
+		if (meta && meta.hasAttribute('data-allowed')) loadMetrika();
+	});
+
 	// ---------- Делегирование событий ----------
 	document.addEventListener('click', (event) => {
 		const target = event.target.closest('button, a');
@@ -759,7 +1113,14 @@
 		if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
 		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
+		if (target.matches('[data-poll-toggle]')) { event.preventDefault(); setPoll(target.form, !pollActive(target.form)); return; }
+		if (target.matches('[data-poll-add]')) { event.preventDefault(); addPollOption(target.form); return; }
+		if (target.matches('[data-poll-remove]')) { event.preventDefault(); removePollOption(target); return; }
+		if (target.matches('[data-cookie-accept]')) { event.preventDefault(); saveCookieChoice(target.dataset.cookieAccept); return; }
+		if (target.matches('[data-cookie-customize]')) { event.preventDefault(); showCookieOptions(cookieBanner()); return; }
+		if (target.matches('[data-cookie-settings]')) { event.preventDefault(); openCookieSettings(); return; }
 		if (target.matches('[data-reply]')) { event.preventDefault(); openReply(target); return; }
+		if (target.matches('[data-quote]')) { event.preventDefault(); openQuote(target); return; }
 		if (target.matches('[data-edit]')) { event.preventDefault(); openEdit(target); return; }
 		if (target.matches('[data-composer-close]')) { event.preventDefault(); closeComposer(); return; }
 		if (target.matches('[data-composer-attach]')) { event.preventDefault(); target.form.querySelector('[data-composer-file]').click(); return; }
@@ -786,6 +1147,7 @@
 	});
 
 	document.addEventListener('keydown', (event) => {
+		if (mentionKeydown(event)) return;
 		if (event.key === 'Tab') { trapFocus(event); return; }
 		// Ctrl+Enter (⌘+Enter на Mac) — отправить из composer.
 		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target.closest('[data-composer-form]')) {
@@ -827,7 +1189,9 @@
 			updateCounter(event.target.form);
 			autosize(event.target);
 			saveDraftSoon(event.target.form);
+			suggestMentions(event.target);
 		}
+		if (event.target.matches('[data-poll-input]')) updateCounter(event.target.form);
 		if (event.target.matches('[data-crop-zoom]')) setCropZoom(Number(event.target.value));
 	});
 

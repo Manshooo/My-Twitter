@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
 from typing import cast
 
+from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.contrib.auth.models import AbstractUser
 from django.core import validators
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Exists, F, OuterRef, Q
+from django.db.models.functions import Upper
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy as _
@@ -68,7 +70,7 @@ class CustomUser(AbstractUser):
 	# Бессрочный бан — BAN_FOREVER. Ставится только через moderation.services.ban_user.
 	banned_until = models.DateTimeField("Забанен до", null=True, blank=True)
 	ban_reason = models.CharField("Причина бана", max_length=500, blank=True, default="")
-	# Когда человек принял правила и дал согласие на обработку ПДн (E6, 152-ФЗ). Пусто — аккаунт
+	# Когда человек принял правила и дал согласие на обработку ПДн (E6). Пусто — аккаунт
 	# заведён до появления галочек на регистрации.
 	terms_accepted_at = models.DateTimeField("Принял правила", null=True, blank=True)
 	pd_consent_at = models.DateTimeField("Согласие на обработку ПДн", null=True, blank=True)
@@ -79,6 +81,13 @@ class CustomUser(AbstractUser):
 
 	# Обратная связь от Profile.user: Django создаёт её сам, аннотация — только для редактора.
 	profile: 'Profile'
+
+	class Meta(AbstractUser.Meta):
+		indexes = [
+			# Поиск людей (D3): подстрока (icontains → UPPER(...) LIKE) и похожие написания (%).
+			GinIndex(OpClass(Upper('username'), name='gin_trgm_ops'), name='user_username_upper_trgm'),
+			GinIndex(fields=['username'], opclasses=['gin_trgm_ops'], name='user_username_trgm'),
+		]
 
 	@property
 	def is_banned(self):
@@ -146,6 +155,12 @@ class Profile(models.Model):
 	# Галочка «подтверждённый аккаунт» ставится вручную в админке; значок staff — отдельно, по user.is_staff.
 	is_verified = models.BooleanField("Подтверждённый аккаунт", default=False)
 	likes_public = models.BooleanField("Показывать лайки всем", default=False)
+	# Закрытый аккаунт (E5): посты видят только одобренные подписчики, подписка — через заявку.
+	is_private = models.BooleanField("Закрытый аккаунт", default=False)
+	# Закреплённый пост (B8): первым на вкладке «Посты». Только свой пост, меняется через post.services.toggle_pin.
+	pinned_post = models.ForeignKey(
+		'post.Post', verbose_name="Закреплённый пост", null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+	)
 	follows = models.ManyToManyField(
 		"self",
 		verbose_name="Подписчики",
@@ -163,6 +178,10 @@ class Profile(models.Model):
 	class Meta:
 		verbose_name = 'Профиль'
 		verbose_name_plural = 'Профили'
+		indexes = [
+			GinIndex(OpClass(Upper('username'), name='gin_trgm_ops'), name='profile_name_upper_trgm'),
+			GinIndex(fields=['username'], opclasses=['gin_trgm_ops'], name='profile_name_trgm'),
+		]
 
 	def __str__(self):
 		return self.username
@@ -185,6 +204,25 @@ class Profile(models.Model):
 	def initial(self):
 		name = (self.username or self.user.username or '?').strip()
 		return name[:1].upper() or '?'
+
+
+class FollowRequest(models.Model):
+	"""Заявка на подписку на закрытый аккаунт (E5). Одобрение превращает её в FollowThrough.
+	Создаётся и разбирается только через accounts.relations."""
+	requester = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='follow_requests_sent')
+	target = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='follow_requests')
+	created_at = models.DateTimeField('Когда', auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Заявка на подписку'
+		verbose_name_plural = 'Заявки на подписку'
+		constraints = [
+			models.UniqueConstraint(fields=['requester', 'target'], name='follow_request_once'),
+			models.CheckConstraint(condition=~Q(requester=F('target')), name='not_request_self'),
+		]
+
+	def __str__(self):
+		return f'{self.requester} → {self.target} (заявка)'
 
 
 class Block(models.Model):

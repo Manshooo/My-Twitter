@@ -34,6 +34,12 @@ def ago(value, mode=''):
 
 
 @register.filter
+def linkify(text):
+	from post.text import linkify as render
+	return render(text)
+
+
+@register.filter
 def plural_ru(number, forms):
 	"""{{ n|plural_ru:"подписка,подписки,подписок" }} → форма слова для числа n."""
 	one, few, many = forms.split(',')

@@ -32,12 +32,15 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
+	# Полнотекстовый поиск и триграммы (D3).
+	'django.contrib.postgres',
 
 	'api',
 	'azzb',
 	'post',
 	'accounts',
 	'moderation',
+	'notifications',
 
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',
@@ -247,9 +250,11 @@ SMARTCAPTCHA_SERVER_KEY = env('SMARTCAPTCHA_SERVER_KEY')
 # Куда писать людям: апелляции на бан, вопросы по персональным данным (правила и политика, C5).
 # Ящик должен реально читаться — Postfix на сервере только отправляет (docs/deploy/mail.md).
 SUPPORT_EMAIL = env('SUPPORT_EMAIL', 'support@azzb.ru')
+# Номер счётчика Яндекс Метрики. Пусто — Метрика выключена; включается только с согласия посетителя.
+YANDEX_METRIKA_ID = env('YANDEX_METRIKA_ID', '')
 
 # Правила и политика конфиденциальности (C5, E6). Оператор персональных данных — тот, кто
-# отвечает за сайт по 152-ФЗ: ФИО (для физлица) или наименование ИП/организации.
+# отвечает за сайт и данные пользователей: ФИО (для физлица) или наименование ИП/организации.
 LEGAL_OPERATOR = env('LEGAL_OPERATOR', '[ФИО или наименование оператора — задайте LEGAL_OPERATOR в .env]')
 
 # Почта (E0). На проде письма уходят через Postfix на этом же сервере (localhost:25, без пароля),

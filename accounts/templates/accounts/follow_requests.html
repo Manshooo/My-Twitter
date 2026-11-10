@@ -1,0 +1,36 @@
+{% extends "azzb/azzb_base.html" %}
+{% load azzb_ui %}
+{% block title %}Заявки на подписку{% endblock title %}
+{% block content %}
+	<section class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 20px">
+		<div style="display: flex; align-items: center; gap: 8px; margin-left: -10px">
+			<a class="icon-btn" href="{% url 'edit-profile' %}" aria-label="Назад к настройкам">
+				<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+			</a>
+			<h1 class="display" style="font-size: 22px">Заявки на подписку</h1>
+		</div>
+		{% if not user.profile.is_private %}
+			<p class="hint">Аккаунт открыт: подписаться может любой, заявки не нужны.</p>
+		{% endif %}
+		<div class="people">
+			{% for item in requests %}
+				{% with person=item.requester %}
+				<div class="who-row">
+					<a class="nu" href="{% url 'profile' person.user.username %}">{% avatar person 'sm' %}</a>
+					<a class="who nu" href="{% url 'profile' person.user.username %}" style="color: var(--text); flex: 1; min-width: 0">
+						<b class="clip1">{{ person.username }}</b>
+						<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }} · {{ item.created_at|ago }}</span>
+					</a>
+					<form method="post" action="{% url 'follow-request-answer' person.user.username %}" style="display: flex; gap: 6px">
+						{% csrf_token %}
+						<button class="btn btn-sm" type="submit" name="approve">Одобрить</button>
+						<button class="btn btn-outline btn-sm" type="submit" name="decline">Отклонить</button>
+					</form>
+				</div>
+				{% endwith %}
+			{% empty %}
+				<p class="muted">Новых заявок нет.</p>
+			{% endfor %}
+		</div>
+	</section>
+{% endblock content %}

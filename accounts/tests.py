@@ -400,7 +400,7 @@ class AccountDataTests(TestCase):
 		self.assertTrue(User.objects.filter(username='alice').exists())
 
 	def test_delete_account(self):
-		# Аккаунт сразу отключается и пропадает, а данные хранятся полгода (149-ФЗ).
+		# Аккаунт сразу отключается и пропадает, а данные хранятся полгода (azzb/retention.py).
 		from post.models import Post
 		response = self.client.post('/settings/account/delete/', {'confirm': 'pass-12345'})
 		self.assertRedirects(response, '/', fetch_redirect_response=False)

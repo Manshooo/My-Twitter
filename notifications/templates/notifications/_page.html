@@ -1,0 +1,9 @@
+{% for group in groups %}{% include "notifications/_group.html" %}{% endfor %}
+{% if next_url %}
+	<div class="load-more">
+		<a class="btn btn-outline load-more-btn" href="{{ next_url }}"
+			hx-get="{{ next_url }}" hx-trigger="click, revealed" hx-target="closest .load-more" hx-swap="outerHTML"
+			hx-indicator="closest .load-more" hx-disabled-elt="this"
+			data-error="Не удалось загрузить уведомления">Показать ещё</a>
+	</div>
+{% endif %}

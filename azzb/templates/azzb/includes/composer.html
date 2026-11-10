@@ -13,12 +13,17 @@
 			data-composer-form data-draft-key="azzb-draft-{{ user.pk }}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
 			<input type="hidden" name="reply_to" value="" data-composer-reply-to>
 			<input type="hidden" name="edit" value="" data-composer-edit>
+			<input type="hidden" name="quote_of" value="" data-composer-quote-of>
 			<p class="reply-to muted" data-composer-replying hidden>В ответ <b data-composer-replying-name></b></p>
+			<p class="reply-to muted" data-composer-quoting hidden>Цитата поста <b data-composer-quoting-name></b></p>
 			<div class="post-row">
 				{% avatar user.profile %}
 				<div style="flex: 1; min-width: 0">
 					<label for="composer-text" class="sr">Текст поста</label>
-					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-placeholder="Что нового, {{ user.username }}?" data-composer-text></textarea>
+					<textarea id="composer-text" name="text" rows="4" placeholder="Что нового, {{ user.username }}?" data-placeholder="Что нового, {{ user.username }}?" data-composer-text
+						role="combobox" aria-autocomplete="list" aria-controls="mention-list" aria-expanded="false"></textarea>
+					{# Подсказки при наборе @логина: заполняет azzb.js из /api/users/mention/. #}
+					<ul class="mention-list" id="mention-list" role="listbox" aria-label="Кого упомянуть" hidden data-mention-list></ul>
 				</div>
 			</div>
 			<ul class="attachments" aria-label="Прикреплённые картинки" data-attachments hidden></ul>
@@ -32,6 +37,34 @@
 					<input class="attachment-alt" type="text" maxlength="{{ alt_max_length }}" placeholder="Описание (alt)" data-attachment-alt>
 				</li>
 			</template>
+			{# Опрос (B7): поля уходят в форму как есть — poll_option (2–4) и poll_duration. Включается кнопкой в инструментах. #}
+			<fieldset class="poll-editor" data-poll-editor hidden disabled>
+				<legend class="sr">Опрос</legend>
+				<div class="poll-editor-options" data-poll-options>
+					{% for i in "1234" %}
+						<div class="poll-editor-row"{% if forloop.counter > 2 %} hidden{% endif %} data-poll-row>
+							<label class="sr" for="poll-option-{{ i }}">Вариант {{ i }}</label>
+							<input id="poll-option-{{ i }}" type="text" name="poll_option" maxlength="{{ poll_option_max_length }}" placeholder="Вариант {{ i }}{% if forloop.counter > 2 %} (необязательно){% endif %}" autocomplete="off" data-poll-input>
+							{% if forloop.counter > 2 %}
+								<button class="icon-btn" type="button" aria-label="Убрать вариант {{ i }}" data-poll-remove>
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>
+								</button>
+							{% endif %}
+						</div>
+					{% endfor %}
+				</div>
+				<div class="poll-editor-foot">
+					<button class="btn btn-ghost btn-sm" type="button" data-poll-add>
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"></use></svg>Добавить вариант
+					</button>
+					<label class="poll-duration">Длится
+						<select name="poll_duration">
+							{% for hours, label in poll_durations %}<option value="{{ hours }}"{% if hours == 24 %} selected{% endif %}>{{ label }}</option>{% endfor %}
+						</select>
+					</label>
+					<button class="btn btn-ghost btn-sm btn-danger" type="button" data-poll-toggle>Убрать опрос</button>
+				</div>
+			</fieldset>
 			<p class="hint" data-composer-edit-note hidden>Картинки в посте останутся как есть: изменить можно только текст.</p>
 			<div class="alert" role="alert" data-composer-error hidden>
 				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg><span data-composer-error-text>Пост не отправлен. Попробуйте ещё раз.</span>
@@ -41,6 +74,9 @@
 					<input class="sr" type="file" id="composer-file" accept="{{ image_accept }}" multiple tabindex="-1" data-composer-file>
 					<button class="icon-btn" type="button" aria-label="Прикрепить картинку" title="Картинка: до {{ max_images }} шт., до {{ max_upload_mb }} МБ" data-composer-attach>
 						<svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>
+					</button>
+					<button class="icon-btn" type="button" aria-label="Опрос" title="Опрос: от 2 до 4 вариантов" aria-pressed="false" data-poll-toggle>
+						<svg class="icon" aria-hidden="true"><use href="#i-poll"></use></svg>
 					</button>
 				</div>
 				<span class="hint composer-keys" aria-hidden="true">Ctrl+Enter — отправить</span>

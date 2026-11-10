@@ -1,0 +1,11 @@
+{% load azzb_ui %}{% if trends %}
+	<section class="card card-pad trends" aria-labelledby="trends-title">
+		<h2 id="trends-title" class="section-title">Тренды за сутки</h2>
+		{% for tag in trends %}
+			<a class="tag-row nu" href="{% url 'hashtag' tag.name %}">
+				<b>#{{ tag.name }}</b>
+				<span class="muted">{{ tag.uses }} {{ tag.uses|plural_ru:"пост,поста,постов" }}</span>
+			</a>
+		{% endfor %}
+	</section>
+{% endif %}

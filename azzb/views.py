@@ -4,6 +4,12 @@ from uuid import NAMESPACE_URL, uuid5
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
+
+from django.contrib.auth.decorators import login_required
+
+from . import search as finder
+from .discover import who_to_follow
+from .ratelimit import rate_limit
 from django.views.generic import TemplateView
 
 from post.models import Post
@@ -37,15 +43,45 @@ def follows_updates(request):
 
 def hot_news(request):
 	queryset = (
-		Post.objects.for_feed(request.user).top_level().without_muted(request.user)
-		.order_by("-likes_n", "-created_at", "-id")
+		# Без репостов (hot() их отбрасывает): иначе пост стоял бы здесь столько раз, сколько его репостили.
+		Post.objects.for_feed(request.user).top_level().without_muted(request.user).hot()
 	)
 	posts, next_page = number_page(queryset, request.GET.get("page"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})
 
 
+SUGGESTIONS_PAGE = 30
+
+
+@login_required
+def suggested_people(request):
+	"""Полный список «Кого почитать» (D6): на телефоне правой колонки нет, сюда ведут ссылки."""
+	return render(request, 'azzb/who_to_follow.html', {'people': who_to_follow(request.user, SUGGESTIONS_PAGE)})
+
+
+SEARCH_TABS = ('posts', 'people', 'tags')
+
+
+@rate_limit('search', '30/m', '600/h', message='Слишком много поисковых запросов. Подождите минуту.')
+def search(request):
+	"""Поиск с вкладками «Посты / Люди / Теги». Запрос с @ сразу открывает людей, с # — теги."""
+	query = finder.clean_query(request.GET.get('q'))
+	tab = request.GET.get('tab')
+	if tab not in SEARCH_TABS:
+		tab = 'people' if query.startswith('@') else 'tags' if query.startswith('#') else 'posts'
+	context = {'query': query, 'tab': tab, 'feed': 'search'}
+	if not query:
+		return render(request, 'azzb/search.html', context)
+	if tab == 'posts':
+		found, next_page = number_page(finder.posts(request.user, query), request.GET.get('page'))
+		return render_posts(request, 'azzb/search.html', context, found, next_page and {'page': next_page})
+	context['people'] = finder.people(request.user, query) if tab == 'people' else None
+	context['tags'] = finder.tags(query) if tab == 'tags' else None
+	return render(request, 'azzb/search.html', context)
+
+
 # Дата текущей редакции правил, политики и согласия (C5, E6). Меняете текст — меняйте и дату.
-LEGAL_UPDATED = date(2026, 11, 6)
+LEGAL_UPDATED = date(2026, 11, 10)
 
 
 def legal_page(template):

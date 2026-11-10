@@ -16,7 +16,7 @@ from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 from . import relations
 from .forms import UpdateUserForm
-from .models import Block, FollowThrough, Mute, Profile, Theme
+from .models import Block, FollowRequest, FollowThrough, Mute, Profile, Theme
 
 THEME_COOKIE_AGE = 365 * 24 * 60 * 60
 
@@ -82,12 +82,17 @@ PROFILE_ACTIONS = {
 	'unblock': relations.unblock,
 	'mute': relations.mute,
 	'unmute': relations.unmute,
+	'cancel_request': relations.cancel_request,
+	# Убрать подписчика может только хозяин профиля: viewer — я, profile — подписчик.
+	'remove_follower': relations.remove_follower,
 }
 PROFILE_TOASTS = {
 	'block': '@{username} заблокирован(а)',
 	'unblock': '@{username} разблокирован(а)',
 	'mute': 'Посты @{username} больше не появятся в ваших лентах',
 	'unmute': 'Посты @{username} снова в ваших лентах',
+	'cancel_request': 'Заявка @{username} отозвана',
+	'remove_follower': '@{username} больше не подписан(а) на вас',
 }
 
 # Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
@@ -112,8 +117,11 @@ class UserProfileDetailView(DetailView):
 		profile = self.object
 		viewer = self.request.user.profile
 		is_own = viewer.pk == profile.pk
+		is_subscribed = FollowThrough.objects.filter(follower=viewer, followee=profile).exists()
+		# Закрытый аккаунт (E5): посты, лайки и списки подписок — только подписчикам.
+		can_see = is_own or not profile.is_private or is_subscribed
 		# Лайки видит владелец всегда, остальные — только если он включил это в настройках.
-		likes_visible = is_own or profile.likes_public
+		likes_visible = can_see and (is_own or profile.likes_public)
 
 		tab = self.request.GET.get("tab", "posts")
 		if tab not in PROFILE_TABS:
@@ -121,8 +129,16 @@ class UserProfileDetailView(DetailView):
 
 		posts = Post.objects.for_feed(self.request.user)
 		people = None
-		if tab == "posts":
+		pinned = None
+		if not can_see:
+			items = posts.none()
+		elif tab == "posts":
 			items = posts.filter(author=profile).top_level()
+			if profile.pinned_post_id:
+				# Закреплённый — отдельно над лентой, только на первой странице; в ленте его нет.
+				items = items.exclude(pk=profile.pinned_post_id)
+				if not self.request.GET.get("cursor"):
+					pinned = posts.filter(pk=profile.pinned_post_id, author=profile).first()
 		elif tab == "replies":
 			items = posts.filter(author=profile, is_reply=True)
 		elif tab == "media":
@@ -145,10 +161,14 @@ class UserProfileDetailView(DetailView):
 			"posts": page,
 			"next_url": page_url(self.request, cursor=cursor) if cursor else None,
 			"people": people,
+			"pinned": pinned,
 			# Считаем тех же, кого показывают списки, — без удалённых и отключённых аккаунтов.
 			"following_count": profile.follows.public().count(),
 			"followers_count": profile.followed_by.public().count(),
-			"is_subscribed": FollowThrough.objects.filter(follower=viewer, followee=profile).exists(),
+			"is_subscribed": is_subscribed,
+			"can_see": can_see,
+			"request_sent": not is_own and FollowRequest.objects.filter(requester=viewer, target=profile).exists(),
+			"pending_requests": FollowRequest.objects.filter(target=profile).count() if is_own and profile.is_private else 0,
 			# E3: блокировки и заглушение — для меню «⋯» и заглушки вместо постов.
 			"i_blocked": not is_own and Block.objects.filter(blocker=viewer, blocked=profile).exists(),
 			"blocked_me": not is_own and Block.objects.filter(blocker=profile, blocked=viewer).exists(),
@@ -165,14 +185,41 @@ class UserProfileDetailView(DetailView):
 		if profile.pk != current_user_profile.pk:
 			action = next((name for name in PROFILE_ACTIONS if name in request.POST), None)
 			if action:
-				PROFILE_ACTIONS[action](current_user_profile, profile)
-				if action in PROFILE_TOASTS:
-					messages.success(request, PROFILE_TOASTS[action].format(username=profile.user.username))
+				result = PROFILE_ACTIONS[action](current_user_profile, profile)
+				toast = PROFILE_TOASTS.get(action)
+				if result == relations.REQUESTED:
+					toast = 'Заявка отправлена. @{username} увидит её и решит.'
+				if toast:
+					messages.success(request, toast.format(username=profile.user.username))
 
 		next_url = request.POST.get('next')
 		if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
 			return redirect(next_url)
 		return redirect('profile', slug=profile.user.username)
+
+
+@require_POST
+def answer_follow_request(request, username):
+	"""Одобрить или отклонить заявку на подписку (E5)."""
+	me = request.user.profile
+	requester = Profile.objects.filter(user__username=username).first()
+	if requester is not None:
+		if 'approve' in request.POST and relations.approve_request(me, requester):
+			messages.success(request, f'@{username} теперь читает вас')
+		elif 'decline' in request.POST:
+			relations.decline_request(me, requester)
+	return redirect('follow-requests')
+
+
+def follow_requests(request):
+	"""Настройки → «Заявки на подписку» (E5)."""
+	me = request.user.profile
+	return render(request, 'accounts/follow_requests.html', {
+		'requests': (
+			FollowRequest.objects.filter(target=me, requester__in=Profile.objects.public())
+			.select_related('requester__user').order_by('-created_at')
+		),
+	})
 
 
 def blocked_accounts(request):

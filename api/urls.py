@@ -3,7 +3,7 @@ from django.urls import path
 
 from post.views import delete, edit, like
 
-from .views import create_post, profile_details, profiles_list
+from .views import create_post, existing_users, mention_suggestions, profile_details, profiles_list
 
 urlpatterns = [
 	path('new-post/', login_required(create_post), name='create_post_api'),
@@ -13,4 +13,6 @@ urlpatterns = [
 	path('like-post/', login_required(like), name='like_post_api'),
 	path('delete-post/', login_required(delete), name='delete_post_api'),
 	path('edit-post/', login_required(edit), name='edit_post_api'),
+	path('users/mention/', mention_suggestions, name='api-mention-suggestions'),
+	path('users/exists/', existing_users, name='api-users-exists'),
 ]

@@ -1,7 +1,7 @@
-"""Настройки аккаунта (E6): выгрузка своих данных и удаление аккаунта (152-ФЗ).
+"""Настройки аккаунта (E6): выгрузка своих данных и удаление аккаунта.
 
-Удаление мягкое: удалённое хранится полгода для запросов госорганов (149-ФЗ, см.
-azzb/retention.py). Стереть раньше по просьбе человека может модератор через админку."""
+Удаление мягкое: удалённое хранится полгода на случай законных запросов госорганов
+(azzb/retention.py). Стереть раньше по просьбе человека может модератор через админку."""
 import json
 import tempfile
 import zipfile
@@ -24,10 +24,11 @@ from azzb.activity import Action, record
 from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
 from moderation.models import Ban, Report
-from post.models import Like, Post
+from notifications.models import Notification
+from post.models import Bookmark, Like, Mention, PollVote, Post
 from post.services import delete_posts, purge_posts
 
-from .models import DEFAULT_AVATAR, Block, FollowThrough, Mute
+from .models import DEFAULT_AVATAR, Block, FollowRequest, FollowThrough, Mute
 
 
 class DeleteAccountForm(forms.Form):
@@ -57,6 +58,13 @@ def _media_name(field, folder):
 	return str(PurePosixPath(folder) / PurePosixPath(field.name).name)
 
 
+def _poll(post):
+	poll = getattr(post, 'poll', None)
+	if poll is None:
+		return None
+	return {'ends_at': poll.ends_at, 'options': [option.text for option in poll.options.all()]}
+
+
 def collect_user_data(user):
 	"""Всё, что AzzB хранит о пользователе, — в виде словаря для data.json, плюс файлы для архива."""
 	profile = user.profile
@@ -71,7 +79,7 @@ def collect_user_data(user):
 
 	posts = []
 	own_posts = Post.objects.filter(author=profile, purged_at__isnull=True)
-	for post in own_posts.prefetch_related('images', 'revisions').order_by('created_at'):
+	for post in own_posts.select_related('poll').prefetch_related('images', 'revisions', 'poll__options').order_by('created_at'):
 		posts.append({
 			'id': post.pk,
 			'created_at': post.created_at,
@@ -79,6 +87,9 @@ def collect_user_data(user):
 			'deleted_at': post.deleted_at,
 			'text': post.text,
 			'reply_to': post.reply_to_id,
+			'repost_of': post.repost_of_id,
+			'quote_of': post.quote_of_id,
+			'poll': _poll(post),
 			'hidden_by_moderator': bool(post.hidden_at),
 			'images': [{'file': attach(image.file, f'posts/{post.pk}'), 'alt': image.alt} for image in post.images.all()],
 			'previous_versions': [
@@ -108,6 +119,7 @@ def collect_user_data(user):
 			'display_name': profile.username,
 			'bio': profile.bio,
 			'likes_public': profile.likes_public,
+			'is_private': profile.is_private,
 			'is_verified': profile.is_verified,
 			'avatar': attach(profile.avatar, 'profile'),
 			'banner': attach(profile.banner, 'profile'),
@@ -117,8 +129,24 @@ def collect_user_data(user):
 			{'post': like.post_id, 'at': like.created_at}
 			for like in Like.objects.filter(profile=profile).order_by('created_at')
 		],
+		'poll_votes': [
+			{'post': vote.poll.post_id, 'option': vote.option.text, 'at': vote.created_at}
+			for vote in PollVote.objects.filter(profile=profile).select_related('poll', 'option')
+		],
+		'bookmarks': [
+			{'post': bookmark.post_id, 'at': bookmark.created_at}
+			for bookmark in Bookmark.objects.filter(profile=profile).order_by('created_at')
+		],
 		'following': people(FollowThrough.objects.filter(follower=profile).select_related('followee__user'), 'followee'),
 		'followers': people(FollowThrough.objects.filter(followee=profile).select_related('follower__user'), 'follower'),
+		'follow_requests_sent': [
+			{'username': row.target.user.username, 'since': row.created_at}
+			for row in FollowRequest.objects.filter(requester=profile).select_related('target__user')
+		],
+		'follow_requests_received': [
+			{'username': row.requester.user.username, 'since': row.created_at}
+			for row in FollowRequest.objects.filter(target=profile).select_related('requester__user')
+		],
 		'blocked': people(Block.objects.filter(blocker=profile).select_related('blocked__user'), 'blocked'),
 		'muted': people(Mute.objects.filter(muter=profile).select_related('muted__user'), 'muted'),
 		'reports_made': [
@@ -167,7 +195,7 @@ def erase_account(user):
 	"""Стереть данные удалённого аккаунта: содержимое постов, лайки, подписки, блокировки,
 	почту, имя, «О себе», картинки профиля. Строка пользователя остаётся обезличенной
 	(логин deleted-<id>), чтобы ветки обсуждений с его ответами не рвались, а логин освободился.
-	Журнал действий не трогаем — он хранится год по закону (azzb/retention.py)."""
+	Журнал действий не трогаем — он хранится год (azzb/retention.py)."""
 	profile = user.profile
 	media = [field for field in (profile.avatar, profile.banner) if field and field.name and field.name != DEFAULT_AVATAR]
 	with transaction.atomic():
@@ -175,9 +203,14 @@ def erase_account(user):
 		delete_posts(posts)
 		purge_posts(posts)
 		Like.objects.filter(profile=profile).delete()
+		Bookmark.objects.filter(profile=profile).delete()
+		Mention.objects.filter(profile=profile).delete()
+		PollVote.objects.filter(profile=profile).delete()
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()
+		FollowRequest.objects.filter(Q(requester=profile) | Q(target=profile)).delete()
+		Notification.objects.filter(Q(recipient=profile) | Q(actor=profile)).delete()
 		EmailAddress.objects.filter(user=user).delete()
 		for field in media:
 			storage, name = field.storage, field.name
@@ -195,7 +228,7 @@ def erase_account(user):
 		profile.bio = ''
 		profile.avatar = DEFAULT_AVATAR
 		profile.banner = ''
-		profile.is_verified = profile.likes_public = False
+		profile.is_verified = profile.likes_public = profile.is_private = False
 		profile.save()
 
 

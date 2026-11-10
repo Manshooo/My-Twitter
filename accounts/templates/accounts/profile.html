@@ -45,6 +45,9 @@
 							{% endif %}
 						</div>
 					</div>
+					{% if is_own and pending_requests %}
+						<a class="btn btn-outline" href="{% url 'follow-requests' %}">Заявки <span class="mod-badge">{{ pending_requests }}</span></a>
+					{% endif %}
 					{% if is_own %}
 						<a class="btn btn-outline" href="{% url 'edit-profile' %}">
 							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать профиль
@@ -59,6 +62,10 @@
 							{% csrf_token %}
 							{% if is_subscribed %}
 								<button class="btn btn-outline" type="submit" name="unsubscribe" aria-pressed="true" title="Отписаться">Вы подписаны</button>
+							{% elif request_sent %}
+								<button class="btn btn-outline" type="submit" name="cancel_request" aria-pressed="true" title="Отозвать заявку">Заявка отправлена</button>
+							{% elif profile.is_private %}
+								<button class="btn" type="submit" name="subscribe" aria-pressed="false">Отправить заявку</button>
 							{% else %}
 								<button class="btn" type="submit" name="subscribe" aria-pressed="false">Подписаться</button>
 							{% endif %}
@@ -70,6 +77,7 @@
 			<div style="display: flex; flex-direction: column; gap: 2px">
 				<div class="profile-name">
 					<h1>{{ profile.username }}</h1>{% badges profile %}
+					{% if profile.is_private %}<svg class="icon icon-sm" role="img" aria-label="Закрытый аккаунт"><title>Закрытый аккаунт</title><use href="#i-lock"></use></svg>{% endif %}
 				</div>
 				<span class="muted" style="font-size: 15px">@{{ profile.user.username }}</span>
 				{% if profile.user.first_name or profile.user.last_name %}
@@ -87,8 +95,13 @@
 			</div>
 
 			<div class="profile-counts">
-				<a href="{{ profile_url }}?tab=following"><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</a>
-				<a href="{{ profile_url }}?tab=followers"><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</a>
+				{% if can_see %}
+					<a href="{{ profile_url }}?tab=following"><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</a>
+					<a href="{{ profile_url }}?tab=followers"><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</a>
+				{% else %}
+					<span><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</span>
+					<span><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</span>
+				{% endif %}
 			</div>
 		</div>
 	</section>
@@ -106,22 +119,32 @@
 		<section class="card card-pad people" aria-labelledby="people-title">
 			<h2 id="people-title" class="section-title">{% if tab == 'following' %}Подписки{% else %}Подписчики{% endif %}</h2>
 			{% for person in people %}
-				<a class="who-row nu" href="{% url 'profile' person.user.username %}" style="color: var(--text)">
-					{% avatar person 'sm' %}
-					<span class="who">
-						<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
-						<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
-					</span>
-				</a>
+				<div class="who-row">
+					<a class="who-row nu" href="{% url 'profile' person.user.username %}" style="color: var(--text); flex: 1; min-width: 0">
+						{% avatar person 'sm' %}
+						<span class="who">
+							<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
+							<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
+						</span>
+					</a>
+					{% if is_own and tab == 'followers' %}
+						<form method="post" action="{% url 'profile' person.user.username %}" data-confirm="Убрать @{{ person.user.username }} из подписчиков? Он(а) об этом не узнает.">
+							{% csrf_token %}
+							<input type="hidden" name="next" value="{{ request.get_full_path }}">
+							<button class="btn btn-outline btn-sm" type="submit" name="remove_follower">Убрать</button>
+						</form>
+					{% endif %}
+				</div>
 			{% empty %}
 				<p class="muted">{% if tab == 'following' %}Пока ни на кого не подписан(а).{% else %}Подписчиков пока нет.{% endif %}</p>
 			{% endfor %}
 		</section>
 	{% else %}
 		<div id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
+			{% if pinned %}{% with post=pinned %}{% load show_posts %}{% show_posts "pinned" %}{% endwith %}{% endif %}
 			{% if posts %}
 				{% include "azzb/includes/post_page.html" %}
-			{% else %}
+			{% elif not pinned %}
 				<div class="card empty" data-feed-empty>
 					{% if profile.user.is_banned %}
 						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
@@ -136,6 +159,10 @@
 							<h2>@{{ profile.user.username }} ограничил(а) доступ</h2>
 							<p>Вы не можете видеть посты этого аккаунта и подписаться на него.</p>
 						{% endif %}
+					{% elif not can_see %}
+						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
+						<h2>Это закрытый аккаунт</h2>
+						<p>Посты @{{ profile.user.username }} видят только подписчики. {% if request_sent %}Заявка уже отправлена.{% else %}Отправьте заявку — @{{ profile.user.username }} решит, одобрить ли её.{% endif %}</p>
 					{% elif tab == 'likes' and not likes_visible %}
 						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
 						<h2>Лайки скрыты</h2>

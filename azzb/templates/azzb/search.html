@@ -1,0 +1,53 @@
+{% extends "azzb/azzb_base.html" %}
+{% load azzb_ui %}
+{% block title %}{% if query %}{{ query }} — поиск{% else %}Поиск{% endif %}{% endblock title %}
+{% block content %}
+	<h1 class="sr">Поиск</h1>
+	{% include "azzb/includes/search_box.html" with box_id="search-main" autofocus=True %}
+	{% if query %}
+		<nav class="seg" aria-label="Что искать">
+			<a class="seg-item" href="{% querystring tab='posts' page=None %}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
+			<a class="seg-item" href="{% querystring tab='people' page=None %}"{% if tab == 'people' %} aria-current="page"{% endif %}>Люди</a>
+			<a class="seg-item" href="{% querystring tab='tags' page=None %}"{% if tab == 'tags' %} aria-current="page"{% endif %}>Теги</a>
+		</nav>
+		<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+			{% if tab == 'posts' %}
+				{% if posts %}{% include "azzb/includes/post_page.html" %}{% else %}{% include "azzb/includes/search_empty.html" %}{% endif %}
+			{% elif tab == 'people' %}
+				{% if people %}
+					<div class="card card-pad people">
+						{% for person in people %}
+							<a class="who-row nu" href="{% url 'profile' person.user.username %}">
+								{% avatar person 'sm' %}
+								<span class="who">
+									<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}{% if person.is_private %}<svg class="icon icon-sm" role="img" aria-label="Закрытый аккаунт"><title>Закрытый аккаунт</title><use href="#i-lock"></use></svg>{% endif %}</span>
+									<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
+									{% if person.bio %}<span class="clip1" style="font-size: 14px; color: var(--text-2)">{{ person.bio }}</span>{% endif %}
+								</span>
+							</a>
+						{% endfor %}
+					</div>
+				{% else %}{% include "azzb/includes/search_empty.html" %}{% endif %}
+			{% else %}
+				{% if tags %}
+					<div class="card card-pad people">
+						{% for tag in tags %}
+							<a class="tag-row nu" href="{% url 'hashtag' tag.name %}">
+								<b>#{{ tag.name }}</b>
+								<span class="muted">{{ tag.uses }} {{ tag.uses|plural_ru:"пост,поста,постов" }}</span>
+							</a>
+						{% endfor %}
+					</div>
+				{% else %}{% include "azzb/includes/search_empty.html" %}{% endif %}
+			{% endif %}
+		</div>
+	{% else %}
+		<div class="card empty">
+			<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
+			<h2>Что ищем?</h2>
+			<p>Слова из постов, <b>@логин</b> или имя человека, <b>#тег</b>. Точную фразу возьмите в кавычки, лишнее слово уберите минусом: <b>-реклама</b>.</p>
+		</div>
+		{# На телефоне правой колонки нет — тренды показываем здесь. #}
+		<div class="search-trends">{% include "azzb/includes/trends.html" %}</div>
+	{% endif %}
+{% endblock content %}

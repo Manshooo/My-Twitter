@@ -1,0 +1,5 @@
+<form class="search-box" role="search" method="get" action="{% url 'search' %}">
+	<svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"></use></svg>
+	<label class="sr" for="{{ box_id|default:'search-q' }}">Поиск</label>
+	<input id="{{ box_id|default:'search-q' }}" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="Поиск: посты, @люди, #теги" autocomplete="off"{% if autofocus %} autofocus{% endif %}>
+</form>
