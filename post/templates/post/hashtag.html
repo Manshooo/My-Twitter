@@ -1,0 +1,17 @@
+{% extends "azzb/azzb_base.html" %}
+{% block title %}#{{ name }}{% endblock title %}
+{% block meta_description %}Посты с тегом #{{ name }} на AzzB{% endblock meta_description %}
+{% block content %}
+	<h1 class="display" style="font-size: 22px; padding: 4px 6px; overflow-wrap: anywhere">#{{ name }}</h1>
+	<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+		{% if posts %}
+			{% include "azzb/includes/post_page.html" %}
+		{% else %}
+			<div class="card empty">
+				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
+				<h2>Постов с этим тегом пока нет</h2>
+				<p>Напишите первый — добавьте #{{ name }} в текст поста.</p>
+			</div>
+		{% endif %}
+	</div>
+{% endblock content %}

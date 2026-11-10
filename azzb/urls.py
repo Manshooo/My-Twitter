@@ -8,7 +8,7 @@ from .views import index, follows_updates, hot_news, legal_page
 from customUser.account import account_settings, delete_account, export_data
 from customUser.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
 from moderation.views import report_post, report_profile
-from post.views import bookmark_post, bookmarks, compose, delete_post, like_post, post_detail, repost_post
+from post.views import bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, post_detail, repost_post
 
 urlpatterns = [
 	path('', index, name='index'),
@@ -18,6 +18,7 @@ urlpatterns = [
 	path('p/<uuid:pk>/repost/', repost_post, name='post-repost'),
 	path('p/<uuid:pk>/bookmark/', bookmark_post, name='post-bookmark'),
 	path('bookmarks/', bookmarks, name='bookmarks'),
+	path('tags/<str:name>/', hashtag, name='hashtag'),
 	path('p/<uuid:pk>/delete/', delete_post, name='post-delete'),
 	path('p/<uuid:pk>/report/', report_post, name='post-report'),
 	path('compose/', compose, name='compose'),

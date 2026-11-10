@@ -26,7 +26,7 @@ from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
 from moderation.models import Ban, Report
 from notifications.models import Notification
-from post.models import Bookmark, Like, Post
+from post.models import Bookmark, Like, Mention, Post
 from post.services import delete_posts, purge_posts
 
 from .models import DEFAULT_AVATAR, Block, FollowThrough, Mute
@@ -184,6 +184,7 @@ def erase_account(user):
 		purge_posts(posts)
 		Like.objects.filter(profile=profile).delete()
 		Bookmark.objects.filter(profile=profile).delete()
+		Mention.objects.filter(profile=profile).delete()
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()

@@ -34,7 +34,7 @@
 					{% endif %}
 				</p>
 			{% endif %}
-			{% if post.text %}<p class="post-text">{{ post.text }}</p>{% endif %}
+			{% if post.text %}<p class="post-text">{{ post.text|linkify }}</p>{% endif %}
 			{% if images %}
 				{% with count=images|length %}
 				<div class="media media-{% if count > 4 %}4{% else %}{{ count }}{% endif %}"{% if count == 1 %} style="aspect-ratio: {{ images.0.ratio }}"{% endif %} data-gallery>

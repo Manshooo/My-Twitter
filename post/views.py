@@ -15,7 +15,7 @@ from azzb.activity import Action, record
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
 from azzb.ratelimit import rate_limit
 
-from .models import Bookmark, Post
+from .models import Bookmark, Hashtag, Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from .services import (
 	delete_post as soft_delete_post, edit_post, find_post_target, find_reply_target, original, publish_post,
@@ -82,6 +82,19 @@ def bookmarks(request):
 	if is_load_more(request):
 		return render(request, PAGE_TEMPLATE, {'posts': posts, 'next_url': next_url})
 	return render(request, 'post/bookmarks.html', {'posts': posts, 'next_url': next_url})
+
+
+def hashtag(request, name):
+	"""Посты с тегом, от новых к старым, вместе с ответами. Открыта и гостям: на тег ссылаются."""
+	tag = Hashtag.objects.filter(name=name.lower()).first()
+	queryset = Post.objects.none()
+	if tag is not None:
+		queryset = Post.objects.for_feed(request.user).without_muted(request.user).filter(hashtags=tag)
+	posts, cursor = cursor_page(queryset, request.GET.get('cursor'))
+	next_url = page_url(request, cursor=cursor) if cursor else None
+	if is_load_more(request):
+		return render(request, PAGE_TEMPLATE, {'posts': posts, 'next_url': next_url})
+	return render(request, 'post/hashtag.html', {'name': name.lower(), 'posts': posts, 'next_url': next_url})
 
 
 @require_POST

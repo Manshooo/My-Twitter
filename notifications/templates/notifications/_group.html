@@ -1,5 +1,5 @@
-{% load azzb_ui show_posts %}{% if group.verb == 'reply' or group.verb == 'quote' %}
-	{# Ответ и цитата — обычная карточка поста: на неё сразу можно ответить или лайкнуть. #}
+{% load azzb_ui show_posts %}{% if group.verb == 'reply' or group.verb == 'quote' or group.verb == 'mention' %}
+	{# Ответ, цитата и упоминание — обычная карточка поста: на неё сразу можно ответить или лайкнуть. #}
 	<div class="notif-reply{% if group.unread %} notif-unread{% endif %}">{% with post=group.post %}{% show_posts %}{% endwith %}</div>
 {% else %}
 <article class="card notif{% if group.unread %} notif-unread{% endif %}">

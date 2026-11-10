@@ -239,6 +239,38 @@ class Like(models.Model):
 		return f'{self.profile} → {self.post_id}'
 
 
+class Hashtag(models.Model):
+	"""Тег (D2). Имя хранится в нижнем регистре: #Москва и #москва — один тег."""
+	name = models.CharField("Тег", max_length=64, unique=True)
+	posts = models.ManyToManyField(Post, through='PostHashtag', related_name='hashtags')
+
+	class Meta:
+		verbose_name = 'Хэштег'
+		verbose_name_plural = 'Хэштеги'
+
+	def __str__(self):
+		return f'#{self.name}'
+
+
+class PostHashtag(models.Model):
+	post = models.ForeignKey(Post, on_delete=models.CASCADE)
+	hashtag = models.ForeignKey(Hashtag, on_delete=models.CASCADE)
+
+	class Meta:
+		constraints = [models.UniqueConstraint(fields=['hashtag', 'post'], name='post_hashtag_once')]
+
+
+class Mention(models.Model):
+	"""@упоминание (D2): кого из существующих людей упомянули в посте."""
+	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='mentions')
+	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='mentioned_in')
+
+	class Meta:
+		verbose_name = 'Упоминание'
+		verbose_name_plural = 'Упоминания'
+		constraints = [models.UniqueConstraint(fields=['post', 'profile'], name='mention_once')]
+
+
 class Bookmark(models.Model):
 	"""Закладка (D5): видна только владельцу, автор поста о ней не узнаёт."""
 	profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='bookmarks')

@@ -7,11 +7,14 @@ from django.db import transaction
 from notifications.models import Notification
 from notifications.services import notify, retract
 
+from customUser.models import Profile
+
 from .media import process_post_image
+from .text import hashtags, mentions
 from django.utils import timezone
 
 from .models import (
-	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Image, Like, Post, PostRevision, shift_ancestor_counts, shift_repost_counts,
+	ALT_MAX_LENGTH, MAX_IMAGES, Bookmark, Hashtag, Image, Like, Mention, Post, PostHashtag, PostRevision, shift_ancestor_counts, shift_repost_counts,
 )
 from .serializer import POST_MAX_LENGTH
 
@@ -51,6 +54,35 @@ def original(post):
 	return post.repost_of if post.is_repost and post.repost_of_id else post
 
 
+def sync_entities(post):
+	"""Теги и упоминания поста по его тексту — при публикации и после правки. Уведомление получает
+	только новый упомянутый; кто уже получил «ответ» или «цитату» на этот пост, второе не получает."""
+	names = hashtags(post.text)
+	for name in names:
+		Hashtag.objects.get_or_create(name=name)
+	tags = Hashtag.objects.filter(name__in=names)
+	PostHashtag.objects.filter(post=post).exclude(hashtag__in=tags).delete()
+	PostHashtag.objects.bulk_create([PostHashtag(post=post, hashtag=tag) for tag in tags], ignore_conflicts=True)
+
+	people = set(
+		Profile.objects.filter(user__username__in=mentions(post.text), user__is_active=True)
+		.exclude(pk=post.author.pk).values_list('pk', flat=True)
+	)
+	gone = Mention.objects.filter(post=post).exclude(profile_id__in=people)
+	Notification.objects.filter(
+		verb=Notification.Verb.MENTION, post=post, recipient_id__in=gone.values('profile_id'),
+	).delete()
+	gone.delete()
+	known = set(Mention.objects.filter(post=post).values_list('profile_id', flat=True))
+	already = {author.user_id for author in (
+		post.reply_to.author if post.reply_to_id else None, post.quote_of.author if post.quote_of_id else None,
+	) if author}
+	for profile in Profile.objects.filter(pk__in=people - known):
+		Mention.objects.create(post=post, profile=profile)
+		if profile.user_id not in already:
+			notify(profile, post.author, Notification.Verb.MENTION, post)
+
+
 def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=None):
 	"""Новый пост, ответ или цитата. reply_to и quote_of — посты, которые автор видит
 	(проверяет вызывающий, см. find_post_target)."""
@@ -67,6 +99,7 @@ def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=N
 			if quote_of is not None:
 				shift_repost_counts([post.pk], +1)
 				notify(quote_of.author, author, Notification.Verb.QUOTE, post)
+			sync_entities(post)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
@@ -100,6 +133,7 @@ def edit_post(post, text):
 		current.text = text
 		current.edited_at = timezone.now()
 		current.save(update_fields=['text', 'edited_at', 'updated'])
+		sync_entities(current)
 	post.text, post.edited_at = current.text, current.edited_at
 	return True
 
@@ -132,6 +166,8 @@ def purge_posts(posts):
 		PostRevision.objects.filter(post_id__in=ids).delete()
 		Like.objects.filter(post_id__in=ids).delete()
 		Bookmark.objects.filter(post_id__in=ids).delete()
+		PostHashtag.objects.filter(post_id__in=ids).delete()
+		Mention.objects.filter(post_id__in=ids).delete()
 		Post.objects.filter(pk__in=ids).update(text='', purged_at=timezone.now())
 	return len(ids)
 
