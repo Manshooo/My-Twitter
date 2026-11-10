@@ -65,6 +65,14 @@
 						<span class="hint">{{ form.likes_public.help_text }}</span>
 					</span>
 				</label>
+				<label class="check" for="{{ form.is_private.id_for_label }}">
+					{{ form.is_private }}
+					<span style="display: flex; flex-direction: column; gap: 2px">
+						<b style="font-size: 15px">{{ form.is_private.label }}</b>
+						<span class="hint">{{ form.is_private.help_text }}</span>
+					</span>
+				</label>
+				{% if user.profile.is_private %}<a href="{% url 'follow-requests' %}" style="font-size: 14px; font-weight: 700">Заявки на подписку</a>{% endif %}
 			</fieldset>
 
 			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">

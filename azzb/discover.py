@@ -45,11 +45,11 @@ def who_to_follow(user, limit=3):
 def compute_trends(now=None, limit=TRENDS_LIMIT):
 	"""Теги за последние сутки: сначала по числу разных авторов (один человек тег не раскрутит),
 	затем по числу постов. Учитываются только посты, видные всем: не удалённые, не скрытые,
-	от активных незабаненных аккаунтов."""
+	от активных незабаненных открытых аккаунтов: тренды видят все, в том числе гости."""
 	now = now or timezone.now()
 	recent = Q(
 		posts__created_at__gte=now - TRENDS_WINDOW, posts__deleted_at__isnull=True, posts__hidden_at__isnull=True,
-		posts__author__user__is_active=True,
+		posts__author__user__is_active=True, posts__author__is_private=False,
 	) & ~Q(posts__author__user__banned_until__gt=now)
 	return list(
 		Hashtag.objects.annotate(

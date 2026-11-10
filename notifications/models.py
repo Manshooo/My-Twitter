@@ -16,6 +16,8 @@ class Notification(models.Model):
 		REPOST = 'repost', 'Репост'
 		QUOTE = 'quote', 'Цитата'
 		MENTION = 'mention', 'Упоминание'
+		FOLLOW_REQUEST = 'follow_req', 'Заявка на подписку'
+		FOLLOW_ACCEPTED = 'follow_ok', 'Заявка одобрена'
 
 	recipient = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='notifications', verbose_name='Кому')
 	actor = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='+', verbose_name='Кто')

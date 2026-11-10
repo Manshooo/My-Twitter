@@ -121,6 +121,8 @@ class Profile(models.Model):
 	# Галочка «подтверждённый аккаунт» ставится вручную в админке; значок staff — отдельно, по user.is_staff.
 	is_verified = models.BooleanField("Подтверждённый аккаунт", default=False)
 	likes_public = models.BooleanField("Показывать лайки всем", default=False)
+	# Закрытый аккаунт (E5): посты видят только одобренные подписчики, подписка — через заявку.
+	is_private = models.BooleanField("Закрытый аккаунт", default=False)
 	follows = models.ManyToManyField(
 		"self",
 		verbose_name="Подписчики",
@@ -158,6 +160,25 @@ class Profile(models.Model):
 		if not self.username:
 			self.username = self.user.username
 		super(Profile, self).save(*args, **kwargs)
+
+
+class FollowRequest(models.Model):
+	"""Заявка на подписку на закрытый аккаунт (E5). Одобрение превращает её в FollowThrough.
+	Создаётся и разбирается только через customUser.relations."""
+	requester = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='follow_requests_sent')
+	target = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='follow_requests')
+	created_at = models.DateTimeField('Когда', auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Заявка на подписку'
+		verbose_name_plural = 'Заявки на подписку'
+		constraints = [
+			models.UniqueConstraint(fields=['requester', 'target'], name='follow_request_once'),
+			models.CheckConstraint(condition=~Q(requester=F('target')), name='not_request_self'),
+		]
+
+	def __str__(self):
+		return f'{self.requester} → {self.target} (заявка)'
 
 
 class Block(models.Model):

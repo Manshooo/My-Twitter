@@ -20,7 +20,7 @@
 							<a class="who-row nu" href="{% url 'profile' person.user.username %}">
 								{% avatar person 'sm' %}
 								<span class="who">
-									<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}</span>
+									<span style="display: flex; align-items: center; gap: 4px; min-width: 0"><b class="clip1">{{ person.username }}</b>{% badges person %}{% if person.is_private %}<svg class="icon icon-sm" role="img" aria-label="Закрытый аккаунт"><title>Закрытый аккаунт</title><use href="#i-lock"></use></svg>{% endif %}</span>
 									<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }}</span>
 									{% if person.bio %}<span class="clip1" style="font-size: 14px; color: var(--text-2)">{{ person.bio }}</span>{% endif %}
 								</span>

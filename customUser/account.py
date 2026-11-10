@@ -29,7 +29,7 @@ from notifications.models import Notification
 from post.models import Bookmark, Like, Mention, Post
 from post.services import delete_posts, purge_posts
 
-from .models import DEFAULT_AVATAR, Block, FollowThrough, Mute
+from .models import DEFAULT_AVATAR, Block, FollowRequest, FollowThrough, Mute
 
 
 class DeleteAccountForm(forms.Form):
@@ -112,6 +112,7 @@ def collect_user_data(user):
 			'display_name': profile.username,
 			'bio': profile.bio,
 			'likes_public': profile.likes_public,
+			'is_private': profile.is_private,
 			'is_verified': profile.is_verified,
 			'avatar': attach(profile.avatar, 'profile'),
 			'banner': attach(profile.banner, 'profile'),
@@ -127,6 +128,14 @@ def collect_user_data(user):
 		],
 		'following': people(FollowThrough.objects.filter(follower=profile).select_related('followee__user'), 'followee'),
 		'followers': people(FollowThrough.objects.filter(followee=profile).select_related('follower__user'), 'follower'),
+		'follow_requests_sent': [
+			{'username': row.target.user.username, 'since': row.created_at}
+			for row in FollowRequest.objects.filter(requester=profile).select_related('target__user')
+		],
+		'follow_requests_received': [
+			{'username': row.requester.user.username, 'since': row.created_at}
+			for row in FollowRequest.objects.filter(target=profile).select_related('requester__user')
+		],
 		'blocked': people(Block.objects.filter(blocker=profile).select_related('blocked__user'), 'blocked'),
 		'muted': people(Mute.objects.filter(muter=profile).select_related('muted__user'), 'muted'),
 		'reports_made': [
@@ -188,6 +197,7 @@ def erase_account(user):
 		FollowThrough.objects.filter(Q(follower=profile) | Q(followee=profile)).delete()
 		Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).delete()
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()
+		FollowRequest.objects.filter(Q(requester=profile) | Q(target=profile)).delete()
 		Notification.objects.filter(Q(recipient=profile) | Q(actor=profile)).delete()
 		EmailAddress.objects.filter(user=user).delete()
 		for field in media:
@@ -206,7 +216,7 @@ def erase_account(user):
 		profile.bio = ''
 		profile.avatar = DEFAULT_AVATAR
 		profile.banner = ''
-		profile.is_verified = profile.likes_public = False
+		profile.is_verified = profile.likes_public = profile.is_private = False
 		profile.save()
 
 

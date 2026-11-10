@@ -44,6 +44,7 @@ def visible_original(request, pk):
 
 # Лимиты (E2): общие для страниц и API, см. azzb/ratelimit.py.
 POST_RATES = ('8/m', '60/h')
+ERROR_STATUS = {'not_found': 404, 'forbidden': 403}
 LIKE_RATES = ('60/m', '600/h')
 
 
@@ -105,6 +106,8 @@ def repost_post(request, pk):
 	post = visible_original(request, pk)
 	if post.hidden_at is not None:
 		return htmx_errors('Пост скрыт модератором — его нельзя репостить.', status=403)
+	if post.author.is_private and post.author_id != request.user.id:
+		return htmx_errors('Пост из закрытого аккаунта нельзя репостить.', status=403)
 	reposted, total = toggle_repost(post, request.user.profile)
 	record(request, Action.POST_CREATE if reposted else Action.POST_DELETE, post=post)
 	if not is_htmx(request):
@@ -172,7 +175,7 @@ def compose(request):
 			)
 			record(request, Action.POST_CREATE, post=post)
 	except ValidationError as error:
-		return htmx_errors(error.messages, status=404 if getattr(error, 'code', None) == 'not_found' else 400)
+		return htmx_errors(error.messages, status=ERROR_STATUS.get(getattr(error, 'code', None), 400))
 	return render_cards(request, [post])
 
 

@@ -7,7 +7,7 @@ from datetime import timedelta
 from django.db.models import BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
 from uuid import uuid4
-from customUser.models import Block, Mute, Profile
+from customUser.models import Block, FollowThrough, Mute, Profile
 
 
 class PostQuerySet(models.QuerySet):
@@ -17,8 +17,8 @@ class PostQuerySet(models.QuerySet):
 		Все ленты, профиль, лайки, уведомления (а позже поиск) берут посты только отсюда.
 		Скрываем удалённые, посты отключённых и забаненных аккаунтов (E4), скрытые модераторами
 		(кроме собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка
-		в любую сторону (E3). Репост виден, только если виден и сам исходный пост (D4).
-		Сюда же лягут закрытые аккаунты (E5).
+		в любую сторону (E3). Посты закрытых аккаунтов видят только автор и его подписчики (E5).
+		Репост виден, только если виден и сам исходный пост (D4).
 		"""
 		posts = self._visible(user)
 		originals = Post.objects.all()._visible(user).values('pk')
@@ -30,8 +30,10 @@ class PostQuerySet(models.QuerySet):
 			.exclude(author__user__banned_until__gt=timezone.now())
 		)
 		if user is None or not user.is_authenticated:
-			return posts.filter(hidden_at__isnull=True)
+			return posts.filter(hidden_at__isnull=True, author__is_private=False)
 		posts = posts.filter(Q(hidden_at__isnull=True) | Q(author_id=user.pk))
+		followed = FollowThrough.objects.filter(follower__user_id=user.pk).values('followee__user_id')
+		posts = posts.filter(Q(author__is_private=False) | Q(author_id=user.pk) | Q(author_id__in=followed))
 		# author_id — это id пользователя (to_field='user'), поэтому сравниваем с user_id профилей.
 		return posts.exclude(
 			author_id__in=Block.objects.filter(blocker__user_id=user.pk).values('blocked__user_id'),

@@ -228,11 +228,14 @@ def find_post_target(user, raw_id, kind='reply'):
 		post_id = uuid.UUID(str(raw_id))
 	except ValueError:
 		raise ValidationError(invalid, code='invalid')
-	post = Post.objects.visible_to(user).filter(pk=post_id).select_related('repost_of__author').first()
+	post = Post.objects.visible_to(user).filter(pk=post_id).select_related('author', 'repost_of__author').first()
 	post = post and original(post)
 	# Ответить на свой скрытый пост автор может (он его видит), процитировать — нет: цитату увидят все.
 	if post is None or (kind == 'quote' and post.hidden_at is not None):
 		raise ValidationError(missing, code='not_found')
+	# Пост закрытого аккаунта цитирует только сам автор: цитата вынесла бы его за круг подписчиков.
+	if kind == 'quote' and post.author.is_private and post.author.user_id != user.pk:
+		raise ValidationError('Пост из закрытого аккаунта нельзя цитировать.', code='forbidden')
 	return post
 
 

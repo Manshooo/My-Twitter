@@ -14,7 +14,7 @@ from customUser.models import USERNAME_MAX_LENGTH, Block, FollowThrough, Profile
 from post.services import find_post_target, find_reply_target, publish_post
 from azzb.activity import Action, record
 from azzb.ratelimit import rate_limit
-from post.views import POST_RATES, render_cards
+from post.views import ERROR_STATUS, POST_RATES, render_cards
 
 def _getlist(data, key):
 	"""Список значений и из multipart-формы (QueryDict), и из JSON."""
@@ -42,7 +42,7 @@ def create_post(request):
 			quote_of=find_post_target(request.user, data.get('quote_of'), 'quote'),
 		)
 	except ValidationError as error:
-		code = status.HTTP_404_NOT_FOUND if getattr(error, 'code', None) == 'not_found' else status.HTTP_400_BAD_REQUEST
+		code = ERROR_STATUS.get(getattr(error, 'code', None), status.HTTP_400_BAD_REQUEST)
 		return Response({'errors': error.messages}, status=code)
 	record(request, Action.POST_CREATE, post=post)
 	return render_cards(request, [post])

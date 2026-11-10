@@ -68,6 +68,11 @@
 							<a class="menu-item" role="menuitem" href="{% url 'edit-profile' %}">
 								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки профиля
 							</a>
+							{% if user.profile.is_private %}
+								<a class="menu-item" role="menuitem" href="{% url 'follow-requests' %}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-lock"></use></svg>Заявки на подписку
+								</a>
+							{% endif %}
 							{% if can_moderate %}
 								<a class="menu-item" role="menuitem" href="{% url 'moderation-queue' %}">
 									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg><span style="flex: 1">Модерация</span>{% if open_reports %}<span class="mod-badge">{{ open_reports }}</span>{% endif %}

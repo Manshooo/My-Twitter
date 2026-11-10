@@ -6,7 +6,9 @@ from django.conf import settings
 
 from .views import index, follows_updates, hot_news, legal_page, search, suggested_people
 from customUser.account import account_settings, delete_account, export_data
-from customUser.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
+from customUser.views import (
+	ChangeProfileView, UserProfileDetailView, answer_follow_request, blocked_accounts, follow_requests, set_theme,
+)
 from moderation.views import report_post, report_profile
 from post.views import bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, post_detail, repost_post
 
@@ -34,6 +36,8 @@ urlpatterns = [
 	path("edit/", login_required(ChangeProfileView.as_view()), name="edit-profile"),
 	path("settings/theme/", set_theme, name="set-theme"),
 	path("settings/blocked/", login_required(blocked_accounts), name="blocked-accounts"),
+	path("settings/requests/", login_required(follow_requests), name="follow-requests"),
+	path("settings/requests/<str:username>/", login_required(answer_follow_request), name="follow-request-answer"),
 	path("settings/account/", account_settings, name="account-settings"),
 	path("settings/account/export/", export_data, name="account-export"),
 	path("settings/account/delete/", delete_account, name="account-delete"),

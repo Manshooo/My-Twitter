@@ -12,6 +12,7 @@ from azzb.ratelimit import client_ip
 from post.media import ACCEPT, parse_crop, process_cropped_image
 
 from . import captcha
+from .relations import set_private
 from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser
 
 class LoginForm(allauth_forms.LoginForm):
@@ -110,6 +111,12 @@ class UpdateUserForm(forms.ModelForm):
 		help_text="Иначе вкладку «Лайки» в профиле видите только вы.",
 		required=False,
 	)
+	is_private = forms.BooleanField(
+		label="Закрытый аккаунт",
+		help_text="Посты видят только подписчики, а подписаться можно только с вашего одобрения. "
+		"Если откроете аккаунт, все ждущие заявки одобрятся.",
+		required=False,
+	)
 
 	# Картинки обрабатываются в post/media.py: обрезка по области из браузера (или по центру),
 	# уменьшение, WebP без EXIF. Поэтому здесь FileField, а не ImageField.
@@ -128,6 +135,7 @@ class UpdateUserForm(forms.ModelForm):
 				self.fields['bio'].initial = instance.profile.bio
 				self.fields['username'].initial = instance.profile.username
 				self.fields['likes_public'].initial = instance.profile.likes_public
+				self.fields['is_private'].initial = instance.profile.is_private
 		# Обычный <input type=file> без «Очистить» от ClearableFileInput: для этого свои флажки.
 		for name in ('avatar', 'banner'):
 			self.fields[name].widget = forms.FileInput(attrs={'accept': ACCEPT, 'class': 'sr', 'data-crop-input': name})
@@ -177,4 +185,6 @@ class UpdateUserForm(forms.ModelForm):
 				self._replace_image(profile, 'avatar', DEFAULT_AVATAR)
 				self._replace_image(profile, 'banner', '')
 				profile.save()
+				if profile.is_private != self.cleaned_data['is_private']:
+					set_private(profile, self.cleaned_data['is_private'])
 		return user
