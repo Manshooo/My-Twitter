@@ -141,9 +141,10 @@
 		</section>
 	{% else %}
 		<div id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
+			{% if pinned %}{% with post=pinned %}{% load show_posts %}{% show_posts "pinned" %}{% endwith %}{% endif %}
 			{% if posts %}
 				{% include "azzb/includes/post_page.html" %}
-			{% else %}
+			{% elif not pinned %}
 				<div class="card empty" data-feed-empty>
 					{% if profile.user.is_banned %}
 						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>

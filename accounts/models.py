@@ -157,6 +157,10 @@ class Profile(models.Model):
 	likes_public = models.BooleanField("Показывать лайки всем", default=False)
 	# Закрытый аккаунт (E5): посты видят только одобренные подписчики, подписка — через заявку.
 	is_private = models.BooleanField("Закрытый аккаунт", default=False)
+	# Закреплённый пост (B8): первым на вкладке «Посты». Только свой пост, меняется через post.services.toggle_pin.
+	pinned_post = models.ForeignKey(
+		'post.Post', verbose_name="Закреплённый пост", null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+	)
 	follows = models.ManyToManyField(
 		"self",
 		verbose_name="Подписчики",

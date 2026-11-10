@@ -340,6 +340,7 @@
 		page.innerHTML = html;
 		const nodes = Array.from(page.content.children);
 		if (position === 'before') anchor.before(page.content);
+		else if (position === 'after') anchor.after(page.content);
 		else if (position === 'prepend') anchor.prepend(page.content);
 		else anchor.append(page.content);
 		nodes.forEach((node) => htmx.process(node));
@@ -484,7 +485,10 @@
 			if (feed) {
 				const empty = feed.querySelector('[data-feed-empty]');
 				if (empty) empty.remove();
-				insertCards(feed, 'prepend', html);
+				// Закреплённый пост в профиле остаётся первым — новый встаёт под ним.
+				const pinned = feed.querySelector(':scope > .post-pinned');
+				if (pinned) insertCards(pinned, 'after', html);
+				else insertCards(feed, 'prepend', html);
 			}
 		}
 	}

@@ -183,6 +183,15 @@ def toggle_like(post, profile):
 	return not deleted, Like.objects.filter(post=post).count()
 
 
+def toggle_pin(post, profile):
+	"""Закрепить свой пост в профиле или открепить. Закреплённый может быть один:
+	новый заменяет прежний. Возвращает True, если пост теперь закреплён."""
+	pinned = profile.pinned_post_id != post.pk
+	profile.pinned_post = post if pinned else None
+	profile.save(update_fields=['pinned_post'])
+	return pinned
+
+
 def toggle_bookmark(post, profile):
 	"""Добавить в закладки или убрать. Возвращает True, если закладка есть."""
 	deleted, _ = Bookmark.objects.filter(post=post, profile=profile).delete()

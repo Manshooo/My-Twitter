@@ -10,7 +10,8 @@ from accounts.views import (
 )
 from moderation.views import report_post, report_profile
 from post.views import (
-	bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, post_conversation, post_detail, repost_post,
+	bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, pin_post, post_conversation, post_detail,
+	repost_post,
 )
 
 from .views import devtools_workspace, follows_updates, hot_news, index, legal_page, search, suggested_people
@@ -25,6 +26,7 @@ urlpatterns = [
 	path('p/<uuid:pk>/like/', like_post, name='post-like'),
 	path('p/<uuid:pk>/repost/', repost_post, name='post-repost'),
 	path('p/<uuid:pk>/bookmark/', bookmark_post, name='post-bookmark'),
+	path('p/<uuid:pk>/pin/', pin_post, name='post-pin'),
 	path('bookmarks/', bookmarks, name='bookmarks'),
 	path('tags/<str:name>/', hashtag, name='hashtag'),
 	path('p/<uuid:pk>/delete/', delete_post, name='post-delete'),

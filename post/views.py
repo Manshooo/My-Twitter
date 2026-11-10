@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import OuterRef, Subquery
@@ -19,7 +20,7 @@ from .models import Bookmark, Hashtag, Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from .services import (
 	delete_post as soft_delete_post, edit_post, find_post_target, find_reply_target, original, publish_post,
-	toggle_bookmark, toggle_like, toggle_repost,
+	toggle_bookmark, toggle_like, toggle_pin, toggle_repost,
 )
 
 
@@ -71,6 +72,24 @@ def bookmark_post(request, pk):
 		return redirect('post', pk=post.pk)
 	response = render(request, 'post/_bookmark.html', {'post': post, 'bookmarked': bookmarked})
 	return trigger(response, {'azzb:toast': 'Добавлено в закладки' if bookmarked else 'Убрано из закладок'})
+
+
+@require_POST
+@htmx_login_required
+def pin_post(request, pk):
+	"""Закрепить свой пост в профиле или открепить (B8). Страница обновляется: меняется порядок
+	на вкладке «Посты» и пункт меню у всех карточек."""
+	post = visible_post(request, pk)
+	if post.author_id != request.user.id or post.is_repost:
+		return htmx_errors('Закрепить можно только свой пост.', status=403)
+	pinned = toggle_pin(post, request.user.profile)
+	if not is_htmx(request):
+		return redirect('profile', slug=request.user.username)
+	# Тост — через messages: он переживёт перезагрузку страницы (HX-Refresh).
+	messages.success(request, 'Пост закреплён в профиле' if pinned else 'Пост откреплён')
+	response = HttpResponse()
+	response['HX-Refresh'] = 'true'
+	return response
 
 
 @login_required

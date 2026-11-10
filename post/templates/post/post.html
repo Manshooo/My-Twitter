@@ -1,5 +1,10 @@
 {% load azzb_ui %}{% if gone %}{% include "post/_gone.html" %}{% else %}{% with author=post.author images=post.images.all %}
 <article class="card post{% if variant %} post-{{ variant }}{% endif %}" data-post-id="{{ post.id }}"{% if repost_row %} data-repost-id="{{ repost_row.id }}"{% endif %}{% if post.reply_to_id %} data-reply-of="{{ post.reply_to_id }}"{% endif %}{% if variant == "main" %} data-main-post{% endif %}>
+	{% if variant == "pinned" %}
+		<p class="repost-by muted">
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-pin"></use></svg>Закреплённый пост
+		</p>
+	{% endif %}
 	{% if reposted_by %}
 		<p class="repost-by muted">
 			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-repost"></use></svg>
@@ -100,6 +105,9 @@
 			</button>
 			<div class="menu" id="post-menu-{{ key }}" role="menu" hidden>
 				{% if user.pk == author.user_id %}
+				<button class="menu-item" type="button" role="menuitem" hx-post="{% url 'post-pin' post.id %}" hx-swap="none" data-error="Не удалось закрепить пост">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-pin"></use></svg>{% if author.pinned_post_id == post.id %}Открепить в профиле{% else %}Закрепить в профиле{% endif %}
+				</button>
 				<button class="menu-item" type="button" role="menuitem" data-edit{% if images %} data-has-images{% endif %}>
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать
 				</button>

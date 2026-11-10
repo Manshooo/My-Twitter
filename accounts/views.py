@@ -129,10 +129,16 @@ class UserProfileDetailView(DetailView):
 
 		posts = Post.objects.for_feed(self.request.user)
 		people = None
+		pinned = None
 		if not can_see:
 			items = posts.none()
 		elif tab == "posts":
 			items = posts.filter(author=profile).top_level()
+			if profile.pinned_post_id:
+				# Закреплённый — отдельно над лентой, только на первой странице; в ленте его нет.
+				items = items.exclude(pk=profile.pinned_post_id)
+				if not self.request.GET.get("cursor"):
+					pinned = posts.filter(pk=profile.pinned_post_id, author=profile).first()
 		elif tab == "replies":
 			items = posts.filter(author=profile, is_reply=True)
 		elif tab == "media":
@@ -155,6 +161,7 @@ class UserProfileDetailView(DetailView):
 			"posts": page,
 			"next_url": page_url(self.request, cursor=cursor) if cursor else None,
 			"people": people,
+			"pinned": pinned,
 			# Считаем тех же, кого показывают списки, — без удалённых и отключённых аккаунтов.
 			"following_count": profile.follows.public().count(),
 			"followers_count": profile.followed_by.public().count(),
