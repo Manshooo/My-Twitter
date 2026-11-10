@@ -81,6 +81,8 @@ def collect_user_data(user):
 			'deleted_at': post.deleted_at,
 			'text': post.text,
 			'reply_to': post.reply_to_id,
+			'repost_of': post.repost_of_id,
+			'quote_of': post.quote_of_id,
 			'hidden_by_moderator': bool(post.hidden_at),
 			'images': [{'file': attach(image.file, f'posts/{post.pk}'), 'alt': image.alt} for image in post.images.all()],
 			'previous_versions': [

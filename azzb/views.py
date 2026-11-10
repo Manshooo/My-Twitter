@@ -34,7 +34,8 @@ def follows_updates(request):
 
 def hot_news(request):
 	queryset = (
-		Post.objects.for_feed(request.user).top_level().without_muted(request.user)
+		# Без репостов: иначе популярный пост стоял бы в «Горячем» столько раз, сколько его репостили.
+		Post.objects.for_feed(request.user).top_level().without_muted(request.user).filter(is_repost=False)
 		.order_by("-likes_n", "-created_at", "-id")
 	)
 	posts, next_page = number_page(queryset, request.GET.get("page"))

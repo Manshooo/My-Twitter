@@ -8,13 +8,14 @@ from .views import index, follows_updates, hot_news, legal_page
 from customUser.account import account_settings, delete_account, export_data
 from customUser.views import ChangeProfileView, UserProfileDetailView, blocked_accounts, set_theme
 from moderation.views import report_post, report_profile
-from post.views import compose, delete_post, like_post, post_detail
+from post.views import compose, delete_post, like_post, post_detail, repost_post
 
 urlpatterns = [
 	path('', index, name='index'),
 	path("hot/", hot_news, name="hot-news"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
 	path('p/<uuid:pk>/like/', like_post, name='post-like'),
+	path('p/<uuid:pk>/repost/', repost_post, name='post-repost'),
 	path('p/<uuid:pk>/delete/', delete_post, name='post-delete'),
 	path('p/<uuid:pk>/report/', report_post, name='post-report'),
 	path('compose/', compose, name='compose'),

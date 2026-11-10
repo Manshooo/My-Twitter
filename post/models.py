@@ -1,6 +1,7 @@
 from django.db import connection, models
 from django.utils import timezone
-from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
+from django.db.models import BooleanField, Count, Exists, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from uuid import uuid4
 from customUser.models import Block, Mute, Profile
 
@@ -9,11 +10,17 @@ class PostQuerySet(models.QuerySet):
 	def visible_to(self, user):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
-		Все ленты, профиль, лайки (а позже поиск и уведомления) берут посты только отсюда.
+		Все ленты, профиль, лайки, уведомления (а позже поиск) берут посты только отсюда.
 		Скрываем удалённые, посты отключённых и забаненных аккаунтов (E4), скрытые модераторами
 		(кроме собственных — автор видит их с пометкой) и тех, с кем у пользователя блокировка
-		в любую сторону (E3). Сюда же лягут закрытые аккаунты (E5).
+		в любую сторону (E3). Репост виден, только если виден и сам исходный пост (D4).
+		Сюда же лягут закрытые аккаунты (E5).
 		"""
+		posts = self._visible(user)
+		originals = Post.objects.all()._visible(user).values('pk')
+		return posts.filter(Q(is_repost=False) | Q(repost_of__in=originals))
+
+	def _visible(self, user):
 		posts = (
 			self.filter(deleted_at__isnull=True, author__user__is_active=True)
 			.exclude(author__user__banned_until__gt=timezone.now())
@@ -32,23 +39,43 @@ class PostQuerySet(models.QuerySet):
 		"""Для лент: без постов заглушённых (E3). Профиль и ветка обсуждения их по-прежнему показывают."""
 		if user is None or not user.is_authenticated:
 			return self
-		return self.exclude(author_id__in=Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id'))
+		muted = Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id')
+		return self.exclude(author_id__in=muted).exclude(repost_of__author_id__in=muted)
 
 	def top_level(self):
 		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
 		return self.filter(is_reply=False)
 
 	def _cards(self, user):
-		"""Всё, что нужно карточке: автор, картинки, число лайков и «мой ли лайк» — запросами
-		на страницу, а не на каждый пост. Число ответов хранится в самом посте (replies_count)."""
+		"""Всё, что нужно карточке: автор, картинки, число лайков, «мой ли лайк», «мой ли репост»
+		и цитируемый пост — запросами на страницу, а не на каждый пост. Счётчики ответов
+		и репостов хранятся в самом посте.
+
+		Карточка репоста показывает исходный пост, поэтому лайки и прочее считаются по shown_id."""
 		if user is not None and user.is_authenticated:
-			liked = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id=user.profile.pk))
+			liked = Exists(Like.objects.filter(post_id=OuterRef('shown_id'), profile_id=user.profile.pk))
+			reposted = Exists(Post.objects.filter(
+				repost_of_id=OuterRef('shown_id'), author_id=user.pk, deleted_at__isnull=True,
+			))
 		else:
-			liked = Value(False, output_field=BooleanField())
+			liked = reposted = Value(False, output_field=BooleanField())
+		likes = (
+			Like.objects.filter(post_id=OuterRef('shown_id')).order_by()
+			.values('post_id').annotate(n=Count('*')).values('n')
+		)
 		return (
-			self.select_related('author__user', 'reply_to__author__user')
-			.prefetch_related('images')
-			.annotate(likes_n=Count('likes', distinct=True), is_liked=liked)
+			self.select_related(
+				'author__user', 'reply_to__author__user', 'quote_of__author__user',
+				'repost_of__author__user', 'repost_of__reply_to__author__user', 'repost_of__quote_of__author__user',
+			)
+			.prefetch_related('images', 'quote_of__images', 'repost_of__images', 'repost_of__quote_of__images')
+			.annotate(shown_id=Coalesce('repost_of_id', 'id'), shown_quote_id=Coalesce('repost_of__quote_of_id', 'quote_of_id'))
+			.annotate(
+				likes_n=Coalesce(Subquery(likes, output_field=IntegerField()), 0),
+				is_liked=liked,
+				is_reposted=reposted,
+				quote_available=Exists(Post.objects.visible_to(user).filter(pk=OuterRef('shown_quote_id'))),
+			)
 		)
 
 	def for_feed(self, user):
@@ -82,6 +109,18 @@ class Post(models.Model):
 		'self', verbose_name="Ответ на", null=True, blank=True, on_delete=models.SET_NULL, related_name='replies',
 	)
 	is_reply = models.BooleanField("Это ответ", default=False)
+	# Репост (D4) — пустой пост со ссылкой на исходный; в ленте выводится карточкой исходного.
+	# is_repost, как is_reply, переживает стирание исходного из базы (repost_of = NULL).
+	repost_of = models.ForeignKey(
+		'self', verbose_name="Репост", null=True, blank=True, on_delete=models.SET_NULL, related_name='reposts',
+	)
+	is_repost = models.BooleanField("Это репост", default=False)
+	# Цитата — обычный пост со своим текстом и карточкой цитируемого внутри.
+	quote_of = models.ForeignKey(
+		'self', verbose_name="Цитата", null=True, blank=True, on_delete=models.SET_NULL, related_name='quotes',
+	)
+	# Репосты и цитаты этого поста, кроме удалённых. Меняется только через shift_repost_counts.
+	reposts_count = models.PositiveIntegerField("Репостов и цитат", default=0)
 	# Когда автор последний раз менял текст. updated не годится: он меняется при любом save().
 	edited_at = models.DateTimeField("Изменён", null=True, blank=True)
 	# Скрыт модератором (E4): пропадает у всех, кроме автора, — тот видит пометку с причиной.
@@ -111,6 +150,12 @@ class Post(models.Model):
 			# Ветка: ответы на пост по времени.
 			models.Index(fields=['reply_to', 'created_at'], name='post_replies_by_time'),
 		]
+		constraints = [
+			models.UniqueConstraint(
+				fields=['author', 'repost_of'], condition=Q(repost_of__isnull=False, deleted_at__isnull=True),
+				name='repost_once',
+			),
+		]
 
 def shift_ancestor_counts(post_ids, delta):
 	"""Прибавить delta к replies_count всех постов выше по ветке — для каждого из post_ids.
@@ -133,6 +178,24 @@ def shift_ancestor_counts(post_ids, delta):
 	'''
 	with connection.cursor() as cursor:
 		cursor.execute(sql, [*post_ids, delta])
+
+
+def shift_repost_counts(post_ids, delta):
+	"""Прибавить delta к reposts_count постов, которые репостят или цитируют посты из post_ids."""
+	post_ids = list(post_ids)
+	if not post_ids:
+		return
+	marks = ', '.join(['%s'] * len(post_ids))
+	sql = f'''
+		UPDATE post_post SET reposts_count = GREATEST(reposts_count + %s * c.n, 0)
+		FROM (
+			SELECT COALESCE(repost_of_id, quote_of_id) AS id, COUNT(*) AS n FROM post_post
+			WHERE id IN ({marks}) AND COALESCE(repost_of_id, quote_of_id) IS NOT NULL GROUP BY 1
+		) c
+		WHERE post_post.id = c.id
+	'''
+	with connection.cursor() as cursor:
+		cursor.execute(sql, [delta, *post_ids])
 
 
 class PostRevision(models.Model):

@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 
 from customUser.serializers import ProfileSerializer
 from customUser.models import Profile
-from post.services import find_reply_target, publish_post
+from post.services import find_post_target, find_reply_target, publish_post
 from azzb.activity import Action, record
 from azzb.ratelimit import rate_limit
 from post.views import POST_RATES, render_cards
@@ -25,7 +25,8 @@ def _getlist(data, key):
 @api_view(['POST'])
 def create_post(request):
 	"""Новый пост или ответ: текст и до 4 картинок
-	(multipart: text, images[], alt[] в том же порядке, reply_to — id поста, если это ответ)."""
+	(multipart: text, images[], alt[] в том же порядке, reply_to — id поста, если это ответ,
+	quote_of — если цитата)."""
 	data = request.data
 	text = data.get('text')
 	try:
@@ -35,6 +36,7 @@ def create_post(request):
 			request.FILES.getlist('images'),
 			_getlist(data, 'alt'),
 			reply_to=find_reply_target(request.user, data.get('reply_to')),
+			quote_of=find_post_target(request.user, data.get('quote_of'), 'quote'),
 		)
 	except ValidationError as error:
 		code = status.HTTP_404_NOT_FOUND if getattr(error, 'code', None) == 'not_found' else status.HTTP_400_BAD_REQUEST

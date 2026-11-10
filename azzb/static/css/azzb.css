@@ -299,6 +299,22 @@ img { max-width: 100%; }
 .action.liked { color: var(--like); }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
+.action.reposted { color: var(--accent); font-weight: 800; }
+.repost-wrap { position: relative; }
+.repost-by { display: flex; align-items: center; gap: 6px; margin: -4px 0 8px 46px; font-size: 13px; font-weight: 600; }
+.repost-by a { color: inherit; font-weight: 800; }
+
+/* Цитата внутри карточки (D4) */
+.quote-card {
+	display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding: 10px 12px;
+	border: 1px solid var(--border-strong); border-radius: 14px; color: var(--text); overflow: hidden;
+}
+a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
+.quote-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; }
+.quote-head .avatar-xs { width: 22px; height: 22px; font-size: 10px; }
+.quote-text { font-size: 14px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.quote-media { width: 100%; max-height: 240px; object-fit: cover; border-radius: 10px; }
+.quote-gone { font-size: 14px; }
 .reply-to { font-size: 14px; margin-top: -4px; }
 .composer-form .reply-to { margin: -4px 0 0; }
 
@@ -385,6 +401,7 @@ img { max-width: 100%; }
 .notif-reply.notif-unread { box-shadow: none; }
 .notif-icon { flex: none; width: 40px; display: grid; justify-items: center; padding-top: 4px; color: var(--accent); }
 .notif-like { color: var(--danger); }
+.notif-repost { color: var(--accent); }
 .notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .notif-avatars { display: flex; gap: 6px; }
 .notif-text { font-size: 15px; line-height: 1.45; }

@@ -95,11 +95,12 @@
 	}
 
 	// Composer один на страницу, а пишут в нём новый пост, ответ на любой пост или правку своего.
-	// Режим: {kind: 'new'} | {kind: 'reply', id, name} | {kind: 'edit', id, hasImages}.
+	// Режим: {kind: 'new'} | {kind: 'reply', id, name} | {kind: 'quote', id, name} | {kind: 'edit', id, hasImages}.
 	// Черновик у каждого режима свой: начатый пост не уедет ответом и наоборот.
 	const COMPOSER_TEXT = {
 		new: { title: 'Новый пост', submit: 'Опубликовать', busy: 'Публикуем…', done: 'Пост опубликован' },
 		reply: { title: 'Ответ', submit: 'Ответить', busy: 'Отправляем…', done: 'Ответ опубликован' },
+		quote: { title: 'Цитата', submit: 'Опубликовать', busy: 'Публикуем…', done: 'Цитата опубликована' },
 		edit: { title: 'Редактирование', submit: 'Сохранить', busy: 'Сохраняем…', done: 'Изменения сохранены' },
 	};
 	const drafts = new Map();
@@ -176,12 +177,15 @@
 		form.querySelector('[data-composer-edit]').value = mode.kind === 'edit' ? mode.id : '';
 		form.querySelector('[data-composer-replying]').hidden = mode.kind !== 'reply';
 		form.querySelector('[data-composer-replying-name]').textContent = mode.name || '';
+		form.querySelector('[data-composer-quote-of]').value = mode.kind === 'quote' ? mode.id : '';
+		form.querySelector('[data-composer-quoting]').hidden = mode.kind !== 'quote';
+		form.querySelector('[data-composer-quoting-name]').textContent = mode.name || '';
 		// У правки картинки не меняются — прячем всё, что про вложения.
 		form.querySelector('.composer-tools').hidden = mode.kind === 'edit';
 		form.querySelector('[data-composer-edit-note]').hidden = !(mode.kind === 'edit' && mode.hasImages);
 		modal.querySelector('[data-composer-title]').textContent = labels.title;
 		const textarea = form.querySelector('textarea');
-		textarea.placeholder = mode.kind === 'reply' ? 'Ваш ответ' : textarea.dataset.placeholder;
+		textarea.placeholder = mode.kind === 'reply' ? 'Ваш ответ' : mode.kind === 'quote' ? 'Ваш комментарий' : textarea.dataset.placeholder;
 		form.querySelector('[type="submit"]').textContent = labels.submit;
 		lastFocus = document.activeElement;
 		modal.hidden = false;
@@ -229,6 +233,22 @@
 		const card = btn.closest('[data-post-id]');
 		const id = btn.dataset.replyTo || (card && card.dataset.postId);
 		if (id) openComposer({ kind: 'reply', id: id, name: btn.dataset.replyName || '' });
+	}
+
+	function openQuote(btn) {
+		openComposer({ kind: 'quote', id: btn.dataset.quote, name: btn.dataset.quoteName || '' });
+	}
+
+	// Число репостов у всех карточек поста на странице: пост и его репосты — разные карточки.
+	function setRepostCount(postId, count) {
+		document.querySelectorAll('[data-post-id="' + postId + '"] [data-repost-count]').forEach((el) => {
+			el.textContent = count > 0 ? String(count) : '';
+		});
+	}
+
+	function bumpRepostCount(postId, delta) {
+		const el = document.querySelector('[data-post-id="' + postId + '"] [data-repost-count]');
+		if (el) setRepostCount(postId, (Number(el.textContent) || 0) + delta);
 	}
 
 	function openEdit(btn) {
@@ -402,6 +422,7 @@
 			}
 			bumpReplyCount(mode.id, 1);
 		} else {
+			if (mode.kind === 'quote') bumpRepostCount(mode.id, 1);
 			const feed = document.querySelector('[data-feed-prepend]');
 			if (feed) {
 				const empty = feed.querySelector('[data-feed-empty]');
@@ -654,6 +675,7 @@
 	// Лайк, удаление и «Показать ещё» — атрибуты hx-* в шаблонах. Сервер дополняет их
 	// событиями в заголовке HX-Trigger: azzb:toast и azzb:post-deleted.
 	document.addEventListener('azzb:toast', (event) => toast(event.detail.value));
+	document.addEventListener('azzb:reposts', (event) => setRepostCount(event.detail.id, event.detail.count));
 
 	document.addEventListener('azzb:post-deleted', (event) => {
 		const { id, replyOf } = event.detail;
@@ -707,6 +729,7 @@
 		if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
 		if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
 		if (target.matches('[data-reply]')) { event.preventDefault(); openReply(target); return; }
+		if (target.matches('[data-quote]')) { event.preventDefault(); openQuote(target); return; }
 		if (target.matches('[data-edit]')) { event.preventDefault(); openEdit(target); return; }
 		if (target.matches('[data-composer-close]')) { event.preventDefault(); closeComposer(); return; }
 		if (target.matches('[data-composer-attach]')) { event.preventDefault(); target.form.querySelector('[data-composer-file]').click(); return; }

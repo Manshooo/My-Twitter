@@ -13,7 +13,9 @@
 			data-composer-form data-draft-key="azzb-draft-{{ user.pk }}" data-max-length="{{ post_max_length }}" data-max-images="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
 			<input type="hidden" name="reply_to" value="" data-composer-reply-to>
 			<input type="hidden" name="edit" value="" data-composer-edit>
+			<input type="hidden" name="quote_of" value="" data-composer-quote-of>
 			<p class="reply-to muted" data-composer-replying hidden>В ответ <b data-composer-replying-name></b></p>
+			<p class="reply-to muted" data-composer-quoting hidden>Цитата поста <b data-composer-quoting-name></b></p>
 			<div class="post-row">
 				{% avatar user.profile %}
 				<div style="flex: 1; min-width: 0">

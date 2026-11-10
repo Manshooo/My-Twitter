@@ -13,11 +13,13 @@ class Notification(models.Model):
 		LIKE = 'like', 'Лайк'
 		REPLY = 'reply', 'Ответ'
 		FOLLOW = 'follow', 'Подписка'
+		REPOST = 'repost', 'Репост'
+		QUOTE = 'quote', 'Цитата'
 
 	recipient = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='notifications', verbose_name='Кому')
 	actor = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='+', verbose_name='Кто')
 	verb = models.CharField('Что', max_length=10, choices=Verb.choices)
-	# Лайк — лайкнутый пост, ответ — сам ответ, подписка — пусто.
+	# Лайк и репост — исходный пост, ответ и цитата — сам новый пост, подписка — пусто.
 	post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name='+', verbose_name='Пост')
 	created_at = models.DateTimeField('Когда', auto_now_add=True)
 	read_at = models.DateTimeField('Прочитано', null=True, blank=True)

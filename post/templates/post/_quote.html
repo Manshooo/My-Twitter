@@ -1,0 +1,13 @@
+{% load azzb_ui %}{# Цитируемый пост внутри карточки: коротко, без действий; вся карточка — ссылка на него. #}
+{% if quote_available %}{% with author=quote.author first=quote.images.all.0 %}
+	<a class="quote-card nu" href="{% url 'post' quote.id %}">
+		<span class="quote-head">
+			{% avatar author 'xs' %}<b class="clip1">{{ author.username }}</b>{% badges author %}
+			<span class="muted clip1">@{{ author.user.username }} · {{ quote.created_at|ago }}</span>
+		</span>
+		{% if quote.text %}<span class="quote-text">{{ quote.text|truncatechars:280 }}</span>{% endif %}
+		{% if first and first.file %}<img class="quote-media" src="{{ first.file.url }}" alt="{{ first.alt }}" loading="lazy" decoding="async">{% endif %}
+	</a>
+{% endwith %}{% else %}
+	<p class="quote-card quote-gone muted">Цитируемый пост недоступен</p>
+{% endif %}

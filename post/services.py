@@ -10,7 +10,9 @@ from notifications.services import notify, retract
 from .media import process_post_image
 from django.utils import timezone
 
-from .models import ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision, shift_ancestor_counts
+from .models import (
+	ALT_MAX_LENGTH, MAX_IMAGES, Image, Like, Post, PostRevision, shift_ancestor_counts, shift_repost_counts,
+)
 from .serializer import POST_MAX_LENGTH
 
 
@@ -44,16 +46,27 @@ def clean_post_input(text, uploads, alts):
 	return text, processed
 
 
-def publish_post(author, text='', uploads=(), alts=(), reply_to=None):
-	"""Новый пост или ответ (reply_to — пост, который автор ответа видит; проверяет вызывающий)."""
+def original(post):
+	"""Репост сам по себе не лайкают, не цитируют и не комментируют — всё это достаётся исходному."""
+	return post.repost_of if post.is_repost and post.repost_of_id else post
+
+
+def publish_post(author, text='', uploads=(), alts=(), reply_to=None, quote_of=None):
+	"""Новый пост, ответ или цитата. reply_to и quote_of — посты, которые автор видит
+	(проверяет вызывающий, см. find_post_target)."""
 	text, images = clean_post_input(text, uploads, alts)
 	saved = []
 	try:
 		with transaction.atomic():
-			post = Post.objects.create(author=author, text=text, reply_to=reply_to, is_reply=reply_to is not None)
+			post = Post.objects.create(
+				author=author, text=text, reply_to=reply_to, is_reply=reply_to is not None, quote_of=quote_of,
+			)
 			if reply_to is not None:
 				shift_ancestor_counts([post.pk], +1)
 				notify(reply_to.author, author, Notification.Verb.REPLY, post)
+			if quote_of is not None:
+				shift_repost_counts([post.pk], +1)
+				notify(quote_of.author, author, Notification.Verb.QUOTE, post)
 			for position, (image, alt) in enumerate(images):
 				row = Image(post=post, alt=alt, position=position, width=image.width, height=image.height)
 				row.file.save(image.content.name, image.content, save=False)
@@ -100,6 +113,7 @@ def delete_posts(posts):
 			return 0
 		Post.objects.filter(pk__in=ids).update(deleted_at=timezone.now())
 		shift_ancestor_counts(ids, -1)
+		shift_repost_counts(ids, -1)
 	return len(ids)
 
 
@@ -133,16 +147,49 @@ def toggle_like(post, profile):
 	return not deleted, Like.objects.filter(post=post).count()
 
 
-def find_reply_target(user, raw_id):
-	"""Пост, на который отвечают, по id из формы. None — это не ответ.
-	ValidationError с code="invalid" (мусор вместо id) или "not_found" (поста нет или он не виден)."""
+def toggle_repost(post, profile):
+	"""Сделать или отменить репост (post — исходный). Возвращает (репост есть?, репостов и цитат теперь).
+	Отмена — мягкое удаление строки репоста: факт передачи хранится, как у постов (149-ФЗ)."""
+	with transaction.atomic():
+		# Блокируем исходный: два быстрых нажатия не создадут двух репостов и не собьют счётчик.
+		Post.objects.select_for_update().filter(pk=post.pk).first()
+		existing = Post.objects.filter(author=profile, repost_of=post, deleted_at__isnull=True)
+		if existing.exists():
+			delete_posts(existing)
+			retract(post.author, profile, Notification.Verb.REPOST, post)
+			reposted = False
+		else:
+			repost = Post.objects.create(author=profile, repost_of=post, is_repost=True)
+			shift_repost_counts([repost.pk], +1)
+			notify(post.author, profile, Notification.Verb.REPOST, post)
+			reposted = True
+	return reposted, Post.objects.values_list('reposts_count', flat=True).get(pk=post.pk)
+
+
+TARGET_TEXT = {
+	'reply': ('Пост, на который вы отвечаете, не найден.', 'Пост, на который вы отвечаете, удалён или недоступен.'),
+	'quote': ('Цитируемый пост не найден.', 'Цитируемый пост удалён или недоступен.'),
+}
+
+
+def find_post_target(user, raw_id, kind='reply'):
+	"""Пост, на который отвечают или который цитируют, по id из формы. None — id не передан.
+	Репост заменяется исходным постом. ValidationError с code="invalid" (мусор вместо id)
+	или "not_found" (поста нет или он не виден)."""
 	if not raw_id:
 		return None
+	invalid, missing = TARGET_TEXT[kind]
 	try:
 		post_id = uuid.UUID(str(raw_id))
 	except ValueError:
-		raise ValidationError('Пост, на который вы отвечаете, не найден.', code='invalid')
-	post = Post.objects.visible_to(user).filter(pk=post_id).first()
-	if post is None:
-		raise ValidationError('Пост, на который вы отвечаете, удалён или недоступен.', code='not_found')
+		raise ValidationError(invalid, code='invalid')
+	post = Post.objects.visible_to(user).filter(pk=post_id).select_related('repost_of__author').first()
+	post = post and original(post)
+	# Ответить на свой скрытый пост автор может (он его видит), процитировать — нет: цитату увидят все.
+	if post is None or (kind == 'quote' and post.hidden_at is not None):
+		raise ValidationError(missing, code='not_found')
 	return post
+
+
+def find_reply_target(user, raw_id):
+	return find_post_target(user, raw_id, 'reply')
