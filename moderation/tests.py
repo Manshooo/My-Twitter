@@ -1,16 +1,17 @@
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.utils import timezone
 
+from accounts.models import CustomUser
 from post.models import Post
 
 from . import services
 from .models import Ban, Reason, Report
 
-User = get_user_model()
+# Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
+User = CustomUser
 
 
 def make_user(login):

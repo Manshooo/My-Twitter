@@ -13,7 +13,7 @@
 			<h2 class="section-title">Заблокированные</h2>
 			<p class="hint">Вы не видите посты друг друга, они не могут подписаться на вас.</p>
 			{% for person in blocked %}
-				{% include "registration/includes/relation_row.html" with action="unblock" label="Разблокировать" %}
+				{% include "accounts/includes/relation_row.html" with action="unblock" label="Разблокировать" %}
 			{% empty %}
 				<p class="muted">Никого.</p>
 			{% endfor %}
@@ -22,7 +22,7 @@
 			<h2 class="section-title">Заглушённые</h2>
 			<p class="hint">Их посты не попадают в ваши ленты. Они об этом не знают.</p>
 			{% for person in muted %}
-				{% include "registration/includes/relation_row.html" with action="unmute" label="Вернуть" %}
+				{% include "accounts/includes/relation_row.html" with action="unmute" label="Вернуть" %}
 			{% empty %}
 				<p class="muted">Никого.</p>
 			{% endfor %}

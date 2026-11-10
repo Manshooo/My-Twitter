@@ -1,0 +1,36 @@
+# Настройки инструментов разработки. Сами зависимости — в requirements.txt и requirements-dev.txt.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["static", "media", "docs/brand"]
+
+[tool.ruff.format]
+# Проект исторически пишется табами; кавычки не трогаем, чтобы форматирование не переписало каждую строку.
+indent-style = "tab"
+quote-style = "preserve"
+
+[tool.ruff.lint]
+# E4/E7/E9/F — набор ruff по умолчанию; I — порядок импортов; DJ — правила для Django;
+# B — частые ошибки (изменяемые значения по умолчанию и т. п.); UP — устаревший синтаксис.
+select = ["E4", "E7", "E9", "F", "I", "DJ", "B", "UP"]
+ignore = [
+	# DJ001: null=True у CharField. Уже есть в моделях и миграциях, менять — отдельная миграция.
+	"DJ001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Миграции генерирует Django.
+"**/migrations/*" = ["E501", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["accounts", "api", "azzb", "moderation", "post"]
+
+[tool.pyright]
+# Zed (basedpyright), VS Code (Pylance) и CLI читают эту секцию. Типы Django — из django-stubs.
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+exclude = ["**/migrations", ".venv", "static", "media", "**/__pycache__"]
+reportMissingModuleSource = false

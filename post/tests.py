@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from PIL import Image as PILImage
 
 from .media import MAX_SIDE, parse_crop, process_cropped_image, process_post_image
@@ -274,6 +275,78 @@ class RepliesTests(TestCase):
 		self.assertEqual(self.client.post(f'/p/{self.root.pk}/like/', headers={'HX-Request': 'true'}).status_code, 404)
 		self.assertEqual(self.reply(self.bob, self.root, 'поздно').status_code, 404)
 
+	def chat(self, start, authors):
+		"""Переписка под start: каждый следующий пост — ответ на предыдущий."""
+		posts, parent = [], start
+		for i, user in enumerate(authors):
+			parent = Post.objects.create(author=user.profile, text=f'реплика {i}', reply_to=parent, is_reply=True)
+			posts.append(parent)
+		Post.objects.filter(pk__in=[start.pk] + [p.pk for p in posts]).update(replies_count=0)
+		for i, post in enumerate([start] + posts):
+			Post.objects.filter(pk=post.pk).update(replies_count=len(posts) - i)
+		return posts
+
+	@staticmethod
+	def main_part(response):
+		page = response.content.decode()
+		return page[page.index('<main'):]
+
+	def test_single_reply_unfolds_whole_conversation(self):
+		self.chat(self.root, [self.bob, self.alice] * 4)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		positions = [page.index(f'реплика {i}<') for i in range(8)]
+		self.assertEqual(positions, sorted(positions))
+		self.assertIn('post-chain', page)
+		self.assertNotIn('Показать продолжение', page)
+
+	def test_long_conversation_continues_by_button(self):
+		from .views import CONVERSATION_PAGE
+		posts = self.chat(self.root, [self.bob, self.alice] * CONVERSATION_PAGE)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		# Первый ответ — в списке, под ним CONVERSATION_PAGE сообщений разговора.
+		self.assertIn(f'реплика {CONVERSATION_PAGE}<', page)
+		self.assertNotIn(f'реплика {CONVERSATION_PAGE + 1}<', page)
+		last = posts[CONVERSATION_PAGE]
+		self.assertIn(f'/p/{last.pk}/conversation/?more=1', page)
+		more = self.client.get(f'/p/{last.pk}/conversation/?more=1', headers={'HX-Request': 'true'}).content.decode()
+		self.assertIn(f'реплика {CONVERSATION_PAGE + 1}<', more)
+		self.assertNotIn(f'реплика {CONVERSATION_PAGE}<', more)
+		# Без htmx — просто страница поста.
+		self.assertRedirects(self.client.get(f'/p/{last.pk}/conversation/'), f'/p/{last.pk}/')
+
+	def test_conversation_follows_the_dialogue_at_forks(self):
+		first, second = self.chat(self.root, [self.bob, self.alice])
+		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345')
+		# На «реплику 1» (Алиса) отвечают Кэрол (раньше) и Боб — продолжением разговора будет Боб.
+		Post.objects.create(author=carol.profile, text='вставка Кэрол', reply_to=second, is_reply=True)
+		Post.objects.create(author=self.bob.profile, text='Боб отвечает Алисе', reply_to=second, is_reply=True)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		self.assertIn('Боб отвечает Алисе', page)
+		self.assertNotIn('вставка Кэрол', page)
+		self.assertIn('Ещё 1 ответ на этот пост', page)
+		# Если подходящего ответа нет — линия обрывается ссылкой на все ответы.
+		Post.objects.filter(text='Боб отвечает Алисе').update(author=carol.profile)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		self.assertNotIn('Боб отвечает Алисе', page)
+		self.assertIn('Ещё 2 ответа на этот пост', page)
+
+	def test_several_replies_get_a_button_instead_of_unfolding(self):
+		first, _ = self.chat(self.root, [self.bob, self.alice])
+		Post.objects.create(author=self.alice.profile, text='Другой ответ', reply_to=self.root, is_reply=True)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		self.assertNotIn('реплика 1<', page)
+		self.assertIn(f'/p/{first.pk}/conversation/', page)
+		self.assertIn('Показать ветку · 1 ответ', page)
+		part = self.client.get(f'/p/{first.pk}/conversation/', headers={'HX-Request': 'true'})
+		self.assertContains(part, 'реплика 1<', html=False)
+
+	def test_conversation_shows_unavailable_posts_as_placeholders(self):
+		self.chat(self.root, [self.bob, self.alice, self.bob])
+		Post.objects.filter(text='реплика 1').update(hidden_at=timezone.now(), hidden_reason='спам')
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		self.assertIn('Пост скрыт модератором', page)
+		self.assertIn('реплика 2<', page)
+
 	def test_feed_query_count_does_not_grow_with_replies(self):
 		for i in range(5):
 			post = Post.objects.create(author=self.alice.profile, text=f'пост {i}')
@@ -502,10 +575,11 @@ class PageChromeTests(TestCase):
 		# {# … #} в Django только однострочный: многострочный попадает на страницу как текст.
 		import re
 		from pathlib import Path
+
 		from django.conf import settings
 		root = Path(settings.BASE_DIR)
 		bad = [
-			str(path.relative_to(root)) for app in ('azzb', 'post', 'customUser', 'api')
+			str(path.relative_to(root)) for app in ('azzb', 'post', 'accounts', 'moderation', 'api')
 			for path in (root / app).rglob('*.html')
 			if re.search(r'\{#(?:(?!#\}).)*\n', path.read_text(encoding='utf-8'), flags=re.S)
 		]

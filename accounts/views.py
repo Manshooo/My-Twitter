@@ -1,25 +1,22 @@
+from django.contrib import messages
+from django.db.models import Exists, OuterRef
 from django.db.models.base import Model as Model
-from django.shortcuts import redirect, render, HttpResponse
+from django.shortcuts import HttpResponse, redirect, render
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.generic.detail import DetailView
 from django.views.decorators.http import require_POST
+from django.views.generic.detail import DetailView
 from django.views.generic.edit import UpdateView
 
-from django.db.models import Exists, OuterRef
-
+from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
+from azzb.ratelimit import rate_limit
 from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
-from .forms import UpdateUserForm
-from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
-from azzb.ratelimit import rate_limit
-from django.utils.decorators import method_decorator
-from django.contrib import messages
-
 from . import relations
+from .forms import UpdateUserForm
 from .models import Block, FollowThrough, Mute, Profile, Theme
-from .serializers import *
 
 THEME_COOKIE_AGE = 365 * 24 * 60 * 60
 
@@ -51,7 +48,7 @@ def set_theme(request):
 class ChangeProfileView(UpdateView):
 	model = Profile
 	form_class = UpdateUserForm
-	template_name = 'registration/edit.html'
+	template_name = 'accounts/profile_edit.html'
 	
 	def get_object(self, queryset=None) -> Model:
 		return self.request.user.profile
@@ -96,15 +93,16 @@ PROFILE_TOASTS = {
 # Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
 @method_decorator(rate_limit('follow', '30/m', '300/h'), name='post')
 class UserProfileDetailView(DetailView):
-	template_name = "registration/profile.html"
+	template_name = "accounts/profile.html"
 	model = Profile
 	context_object_name = "profile"
 	pk_url_kwarg = "username"
 	slug_field = "user__username"
 
 	def get_queryset(self):
-		# Удалённый аккаунт пропадает сразу, хотя данные ещё хранятся (azzb/retention.py).
-		return Profile.objects.select_related("user").filter(user__deleted_at__isnull=True)
+		# Удалённый аккаунт пропадает сразу, хотя данные ещё хранятся (azzb/retention.py);
+		# аккаунта с неподтверждённой почтой для других как будто ещё нет (Profile.objects.public).
+		return Profile.objects.public().select_related("user")
 
 	def get_template_names(self):
 		return [PAGE_TEMPLATE] if is_load_more(self.request) else [self.template_name]
@@ -136,7 +134,7 @@ class UserProfileDetailView(DetailView):
 			items = posts.none()
 			if tab in ("following", "followers"):
 				related = profile.follows if tab == "following" else profile.followed_by
-				people = related.select_related("user").order_by("username")
+				people = related.public().select_related("user").order_by("username")
 
 		page, cursor = cursor_page(items, self.request.GET.get("cursor"))
 
@@ -147,8 +145,9 @@ class UserProfileDetailView(DetailView):
 			"posts": page,
 			"next_url": page_url(self.request, cursor=cursor) if cursor else None,
 			"people": people,
-			"following_count": profile.follows.count(),
-			"followers_count": profile.followed_by.count(),
+			# Считаем тех же, кого показывают списки, — без удалённых и отключённых аккаунтов.
+			"following_count": profile.follows.public().count(),
+			"followers_count": profile.followed_by.public().count(),
 			"is_subscribed": FollowThrough.objects.filter(follower=viewer, followee=profile).exists(),
 			# E3: блокировки и заглушение — для меню «⋯» и заглушки вместо постов.
 			"i_blocked": not is_own and Block.objects.filter(blocker=viewer, blocked=profile).exists(),
@@ -179,7 +178,7 @@ class UserProfileDetailView(DetailView):
 def blocked_accounts(request):
 	"""Настройки → «Блокировки и заглушённые» (E3): кого я заблокировал и заглушил, с кнопкой «вернуть»."""
 	me = request.user.profile
-	return render(request, 'registration/blocked.html', {
+	return render(request, 'accounts/blocked.html', {
 		'blocked': Profile.objects.filter(blocked_by_set__blocker=me).select_related('user').order_by('-blocked_by_set__created_at'),
 		'muted': Profile.objects.filter(muted_by_set__muter=me).select_related('user').order_by('-muted_by_set__created_at'),
 	})

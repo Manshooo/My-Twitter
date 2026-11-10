@@ -1,9 +1,11 @@
 """Жалобы и баны (E4)."""
+from uuid import UUID
+
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from customUser.models import Profile
+from accounts.models import Profile
 from post.models import Post
 
 
@@ -26,6 +28,10 @@ class Report(models.Model):
 		OPEN = 'open', 'Новая'
 		RESOLVED = 'resolved', 'Приняты меры'
 		DISMISSED = 'dismissed', 'Отклонена'
+
+	# Поля, которые Django создаёт сам; аннотации — только для редактора.
+	post_id: UUID | None
+	profile_id: int
 
 	reporter = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='reports_made', verbose_name='Кто пожаловался')
 	post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name='reports', verbose_name='Пост')

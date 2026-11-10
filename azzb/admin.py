@@ -1,8 +1,9 @@
 from django.contrib import admin
 
-from customUser.models import Block, CustomUser, FollowThrough, Mute, Profile
+from accounts.models import Block, CustomUser, FollowThrough, Mute, Profile
 
 from .models import ActivityRecord
+
 
 class FollowThroughInlineAdmin(admin.TabularInline):
 	model = FollowThrough

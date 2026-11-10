@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db.models import Count
 from django.utils.functional import SimpleLazyObject
 
-from customUser.models import Block, Mute, Profile, Theme
+from accounts.models import Block, Mute, Profile, Theme
 from moderation.models import Report
 from moderation.services import can_moderate
 from post.media import ACCEPT, MAX_UPLOAD_MB
@@ -22,7 +22,7 @@ def current_theme(request):
 
 
 def _who_to_follow(request):
-	profiles = Profile.objects.select_related('user').filter(user__is_active=True)
+	profiles = Profile.objects.public().select_related('user')
 	if request.user.is_authenticated:
 		me = request.user.profile
 		profiles = (

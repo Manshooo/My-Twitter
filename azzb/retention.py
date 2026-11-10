@@ -17,8 +17,8 @@ RETENTION_METADATA = timedelta(days=365)
 
 def purge_expired(now=None):
 	"""Стереть всё, у чего вышел срок хранения. Возвращает {что: сколько}."""
-	from customUser.account import erase_account
-	from customUser.models import CustomUser
+	from accounts.account import erase_account
+	from accounts.models import CustomUser
 	from post.models import Post
 	from post.services import purge_posts
 

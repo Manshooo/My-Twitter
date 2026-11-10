@@ -1,15 +1,15 @@
-from django.core import validators
-from django.db import models
+from datetime import UTC, datetime
+from typing import cast
+
 from django.contrib.auth.models import AbstractUser
+from django.core import validators
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models import Exists, F, OuterRef, Q
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy as _
-from django.db.models import F, Q
-from django.utils import timezone
-from datetime import datetime, timezone as dt_timezone
-from django.core.exceptions import ValidationError
 
-
-from uuid import uuid4
 
 def user_profile_avatar_path(instance, filename):
 	# файл загрузится в MEDIA_ROOT/users/user_<id>/<filename>
@@ -24,11 +24,11 @@ AVATAR_SIZE = (400, 400)
 BANNER_SIZE = (1500, 500)
 DEFAULT_AVATAR = 'default/default_user_avatar.jpg'
 
-# Профиль создаётся сигналом в customUser/signals.py.
+# Профиль создаётся сигналом в accounts/signals.py.
 
 USERNAME_MAX_LENGTH = 30
 # «Навсегда» для banned_until: дата, до которой бан точно не кончится.
-BAN_FOREVER = datetime(9999, 1, 1, tzinfo=dt_timezone.utc)
+BAN_FOREVER = datetime(9999, 1, 1, tzinfo=UTC)
 
 @deconstructible
 class UsernameValidator(validators.RegexValidator):
@@ -77,6 +77,9 @@ class CustomUser(AbstractUser):
 	deleted_at = models.DateTimeField("Удалил аккаунт", null=True, blank=True)
 	erased_at = models.DateTimeField("Данные стёрты", null=True, blank=True)
 
+	# Обратная связь от Profile.user: Django создаёт её сам, аннотация — только для редактора.
+	profile: 'Profile'
+
 	@property
 	def is_banned(self):
 		return self.banned_until is not None and self.banned_until > timezone.now()
@@ -85,20 +88,51 @@ class CustomUser(AbstractUser):
 	def ban_is_permanent(self):
 		return self.banned_until is not None and self.banned_until >= BAN_FOREVER
 
+
 class FollowThrough(models.Model):
+	follower_id: int
+	followee_id: int
+
 	follower = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='following_set')
 	followee = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='followee_set')
 	created_at = models.DateTimeField("Когда подписался", auto_now_add=True)
+
+	class Meta:
+		verbose_name = 'Подписка'
+		verbose_name_plural = 'Подписки'
+		constraints = [
+			models.UniqueConstraint(fields=['follower', 'followee'], name='follow_once'),
+			models.CheckConstraint(condition=~Q(follower=F('followee')), name='not_follow_self')
+		]
+
+	def __str__(self):
+		return f'{self.follower} → {self.followee}'
 
 	def clean(self):
 		if self.follower_id == self.followee_id:
 			raise ValidationError('Can not follow self.')
 
-	class Meta:
-		constraints = [
-			models.UniqueConstraint(fields=['follower', 'followee'], name='follow_once'),
-			models.CheckConstraint(condition=~Q(follower=F('followee')), name='not_follow_self')
-		]
+
+class ProfileQuerySet(models.QuerySet['Profile']):
+	def public(self):
+		"""Единственное место, которое решает, кого из людей показывать другим (как
+		Post.objects.visible_to для постов): аккаунт не удалён и не отключён, регистрация завершена.
+
+		Регистрация через сайт заводит профиль сразу, а войти можно только после подтверждения почты
+		(ACCOUNT_EMAIL_VERIFICATION = 'mandatory'). Брошенные регистрации — боты, опечатки в адресе —
+		прячем: у них есть адрес, но ни один не подтверждён. Аккаунты без адресов вовсе (createsuperuser,
+		админка) — заведены вручную и видны. При смене почты старый подтверждённый адрес живёт,
+		пока не подтвердят новый, так что профиль не пропадает.
+		Забаненных не прячем: профиль открывается, а посты скрывает Post.objects.visible_to.
+		"""
+		from allauth.account.models import EmailAddress  # приложения allauth грузятся после accounts
+
+		addresses = EmailAddress.objects.filter(user_id=OuterRef('user_id'))
+		return self.filter(
+			Exists(addresses.filter(verified=True)) | ~Exists(addresses),
+			user__is_active=True, user__deleted_at__isnull=True,
+		)
+
 
 class Profile(models.Model):
 
@@ -121,9 +155,22 @@ class Profile(models.Model):
 		through=FollowThrough,
 		through_fields=('follower', 'followee'),
 	)
-	
+
+	# cast — только для подсказок типов: as_manager() теряет методы ProfileQuerySet (public и т. п.).
+	objects = cast(ProfileQuerySet, ProfileQuerySet.as_manager())
+	user_id: int
+
+	class Meta:
+		verbose_name = 'Профиль'
+		verbose_name_plural = 'Профили'
+
 	def __str__(self):
 		return self.username
+
+	def save(self, *args, **kwargs):
+		if not self.username:
+			self.username = self.user.username
+		super().save(*args, **kwargs)
 
 	@property
 	def has_custom_avatar(self):
@@ -138,11 +185,6 @@ class Profile(models.Model):
 	def initial(self):
 		name = (self.username or self.user.username or '?').strip()
 		return name[:1].upper() or '?'
-
-	def save(self,  *args, **kwargs):
-		if not self.username:
-			self.username = self.user.username
-		super(Profile, self).save(*args, **kwargs)
 
 
 class Block(models.Model):

@@ -7,8 +7,8 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from accounts.models import Profile
 from azzb.ratelimit import rate_limit
-from customUser.models import Profile
 from post.models import Post
 
 from . import services

@@ -1,11 +1,18 @@
+from typing import TYPE_CHECKING, cast
+from uuid import UUID, uuid4
+
 from django.db import connection, models
-from django.utils import timezone
 from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
-from uuid import uuid4
-from customUser.models import Block, Mute, Profile
+from django.utils import timezone
+
+from accounts.models import Block, Mute, Profile
+
+if TYPE_CHECKING:
+	# Есть только в django-stubs (requirements-dev.txt), поэтому импорт — лишь для проверки типов.
+	from django_stubs_ext.db.models.manager import RelatedManager
 
 
-class PostQuerySet(models.QuerySet):
+class PostQuerySet(models.QuerySet['Post']):
 	def visible_to(self, user):
 		"""Единственное место, которое решает, какие посты может видеть пользователь.
 
@@ -60,10 +67,11 @@ class PostQuerySet(models.QuerySet):
 		(available=False), чтобы ветка не рвалась, а счётчик ответов сходился с тем, что в ней.
 		Удалённый пост без ответов не нужен и заглушкой: он и в счётчиках не учитывается."""
 		available = Exists(Post.objects.visible_to(user).filter(pk=OuterRef('pk')))
-		return (
-			self.exclude(deleted_at__isnull=False, replies_count=0)
-			._cards(user).annotate(available=available)
-		)
+		return self.thread_members()._cards(user).annotate(available=available)
+
+	def thread_members(self):
+		"""Кто вообще есть в ветке, без аннотаций для карточек: всё, кроме удалённых постов без ответов."""
+		return self.exclude(deleted_at__isnull=False, replies_count=0)
 
 
 class Post(models.Model):
@@ -95,7 +103,15 @@ class Post(models.Model):
 	deleted_at = models.DateTimeField("Удалён автором", null=True, blank=True)
 	purged_at = models.DateTimeField("Содержимое стёрто", null=True, blank=True)
 
-	objects = PostQuerySet.as_manager()
+	# cast — только для подсказок типов: as_manager() теряет методы PostQuerySet (visible_to и т. п.).
+	objects = cast(PostQuerySet, PostQuerySet.as_manager())
+	# Поля и обратные связи, которые Django создаёт сам; аннотации — только для редактора.
+	author_id: int
+	reply_to_id: UUID | None
+	images: 'RelatedManager[Image]'
+	revisions: 'RelatedManager[PostRevision]'
+	replies: 'RelatedManager[Post]'
+
 	def get_likes(self):
 		return self.likes.all()
 	@property
@@ -103,7 +119,9 @@ class Post(models.Model):
 		return self.likes.all().count()
 	def __str__(self) -> str:
 		return str(self.author.username)
-	class Meta():
+	class Meta:
+		verbose_name = 'Пост'
+		verbose_name_plural = 'Посты'
 		ordering = ["-created_at"]
 		indexes = [
 			# Ленты: только посты верхнего уровня, от новых к старым.
@@ -139,6 +157,7 @@ class PostRevision(models.Model):
 	"""Прежняя версия текста поста. Пишется при каждом редактировании; видна в админке —
 	модераторам важно, что было в посте до правки (например, после жалобы)."""
 	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='revisions', verbose_name='Пост')
+	post_id: UUID
 	text = models.TextField("Текст")
 	# С какого момента этот текст был в посте и когда его заменили.
 	valid_from = models.DateTimeField("Действовал с")
@@ -161,6 +180,8 @@ class Like(models.Model):
 	"""
 	post = models.ForeignKey(Post, on_delete=models.CASCADE)
 	profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+	post_id: UUID
+	profile_id: int
 	created_at = models.DateTimeField("Когда поставлен", auto_now_add=True)
 
 	class Meta:
@@ -189,6 +210,7 @@ class Image(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
 	file = models.ImageField("Изображение", upload_to=post_image_path, default=None, null=True)
 	post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images', verbose_name="Пост")
+	post_id: UUID
 	alt = models.CharField("Описание для незрячих", max_length=ALT_MAX_LENGTH, blank=True, default="")
 	position = models.PositiveSmallIntegerField("Порядок", default=0)
 	width = models.PositiveIntegerField("Ширина", null=True, blank=True)

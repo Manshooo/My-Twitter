@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.urls import path
 
-from .views import *
-
 from post.views import delete, edit, like
+
+from .views import create_post, profile_details, profiles_list
 
 urlpatterns = [
 	path('new-post/', login_required(create_post), name='create_post_api'),

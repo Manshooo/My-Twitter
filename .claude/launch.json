@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "django",
-      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
       "runtimeArgs": ["manage.py", "runserver", "8000", "--noreload"],
       "port": 8000
+    },
+    {
+      "name": "django-8001",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["manage.py", "runserver", "8001", "--noreload"],
+      "port": 8001
     }
   ]
 }

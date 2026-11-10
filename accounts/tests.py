@@ -1,7 +1,7 @@
 from datetime import timedelta
 from pathlib import Path
 
-from django.contrib.auth import get_user_model
+from allauth.account.models import EmailAddress
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase, override_settings
 from django.utils.timezone import now
@@ -10,9 +10,10 @@ from PIL import Image as PILImage
 from post.tests import MEDIA_ROOT, make_upload
 
 from .middleware import SetLastVisitMiddleware
-from .models import Profile
+from .models import CustomUser, FollowThrough, Profile
 
-User = get_user_model()
+# Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
+User = CustomUser
 
 
 class ProfileSignalTests(TestCase):
@@ -21,6 +22,43 @@ class ProfileSignalTests(TestCase):
 		self.assertEqual(Profile.objects.filter(user=user).count(), 1)
 		self.assertEqual(user.profile.username, 'alice')
 		self.assertFalse(user.profile.follows.exists())
+
+
+class PublicProfilesTests(TestCase):
+	"""Profile.objects.public: брошенные регистрации (почта есть, но не подтверждена) не видны другим."""
+
+	def setUp(self):
+		self.viewer = User.objects.create_user('viewer', 'viewer@example.com', 'pass-12345')
+		self.client.force_login(self.viewer)
+		self.pending = User.objects.create_user('pending', 'pending@example.com', 'pass-12345')
+		EmailAddress.objects.create(user=self.pending, email='pending@example.com', verified=False, primary=True)
+		self.confirmed = User.objects.create_user('confirmed', 'confirmed@example.com', 'pass-12345')
+		EmailAddress.objects.create(user=self.confirmed, email='confirmed@example.com', verified=True, primary=True)
+		# Заведён вручную (createsuperuser, админка): адресов в allauth нет вовсе.
+		self.manual = User.objects.create_user('manual', 'manual@example.com', 'pass-12345')
+
+	def test_public_hides_only_unconfirmed_signups(self):
+		logins = set(Profile.objects.public().values_list('user__username', flat=True))
+		self.assertEqual(logins, {'viewer', 'confirmed', 'manual'})
+
+	def test_changing_email_keeps_profile_visible(self):
+		EmailAddress.objects.create(user=self.confirmed, email='new@example.com', verified=False, primary=False)
+		self.assertTrue(Profile.objects.public().filter(pk=self.confirmed.profile.pk).exists())
+
+	def test_unconfirmed_profile_page_lists_and_counts(self):
+		self.assertEqual(self.client.get('/users/pending/').status_code, 404)
+		self.assertEqual(self.client.get('/users/confirmed/').status_code, 200)
+		FollowThrough.objects.create(follower=self.pending.profile, followee=self.confirmed.profile)
+		FollowThrough.objects.create(follower=self.viewer.profile, followee=self.confirmed.profile)
+		response = self.client.get('/users/confirmed/?tab=followers')
+		self.assertEqual(response.context['followers_count'], 1)
+		self.assertEqual([p.user.username for p in response.context['people']], ['viewer'])
+
+	def test_who_to_follow_skips_unconfirmed(self):
+		response = self.client.get('/')
+		suggested = {p.user.username for p in response.context['who_to_follow']}
+		self.assertNotIn('pending', suggested)
+		self.assertIn('confirmed', suggested)
 
 
 class SetLastVisitMiddlewareTests(TestCase):
@@ -234,8 +272,9 @@ class BlockMuteTests(TestCase):
 		return self.client.post(f'/users/{username}/', {action: '', **extra})
 
 	def test_block_hides_posts_both_ways_and_removes_follows(self):
-		from .models import FollowThrough
 		from post.models import Post
+
+		from .models import FollowThrough
 		FollowThrough.objects.create(follower=self.alice.profile, followee=self.bob.profile)
 		FollowThrough.objects.create(follower=self.bob.profile, followee=self.alice.profile)
 		self.act('block')
@@ -337,7 +376,9 @@ class AccountDataTests(TestCase):
 		self.client.force_login(self.alice)
 
 	def test_export_zip(self):
-		import io, json, zipfile
+		import io
+		import json
+		import zipfile
 		self.client.post('/compose/', {'text': 'с картинкой', 'images': make_upload()}, headers={'HX-Request': 'true'})
 		self.assertEqual(self.client.get('/settings/account/').status_code, 200)
 		response = self.client.post('/settings/account/export/')

@@ -1,0 +1,17 @@
+{% load show_posts azzb_ui %}{% comment %} Ответы на странице поста. Под ответом, у которого есть свои ответы, — блок .chain:
+   разговор под ним одной линией (post/_conversation.html). Раскрыт сразу, если view его посчитал
+   (единственный ответ), иначе — по кнопке «Показать ветку». Без JS кнопка ведёт на страницу ответа. {% endcomment %}
+{% for post in posts %}{% show_posts %}
+	{% if conversation and conversation.start.pk == post.pk %}
+		<div class="chain">{% include "post/_conversation.html" %}</div>
+	{% elif post.replies_count %}
+		<div class="chain">
+			<a class="chain-link chain-toggle" href="{% url 'post' post.id %}"
+				hx-get="{% url 'post-conversation' post.id %}" hx-target="closest .chain" hx-swap="innerHTML"
+				hx-disabled-elt="this" data-error="Не удалось загрузить ветку">
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-reply"></use></svg>Показать ветку · {{ post.replies_count }} {{ post.replies_count|plural_ru:"ответ,ответа,ответов" }}
+			</a>
+		</div>
+	{% endif %}
+{% endfor %}
+{% include "azzb/includes/load_more.html" %}
