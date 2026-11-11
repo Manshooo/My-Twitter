@@ -1,6 +1,57 @@
 /* AzzB — дизайн-система. Все цвета только через токены ниже.
    Тема: без атрибута — как в системе; data-theme="light" / "dark" на <html> — выбор пользователя. */
 
+/* Шрифты — свои (OFL, лицензии рядом в static/fonts): Google Fonts получал бы IP посетителей.
+   Переменные шрифты, по одному файлу на набор символов; браузер скачивает только нужные наборы. */
+@font-face {
+	font-family: 'Manrope';
+	font-style: normal;
+	font-weight: 400 800;
+	font-display: swap;
+	src: url('../fonts/manrope-cyrillic.woff2') format('woff2');
+	unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+	font-family: 'Manrope';
+	font-style: normal;
+	font-weight: 400 800;
+	font-display: swap;
+	src: url('../fonts/manrope-latin-ext.woff2') format('woff2');
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Manrope';
+	font-style: normal;
+	font-weight: 400 800;
+	font-display: swap;
+	src: url('../fonts/manrope-latin.woff2') format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'Unbounded';
+	font-style: normal;
+	font-weight: 500 700;
+	font-display: swap;
+	src: url('../fonts/unbounded-cyrillic.woff2') format('woff2');
+	unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+	font-family: 'Unbounded';
+	font-style: normal;
+	font-weight: 500 700;
+	font-display: swap;
+	src: url('../fonts/unbounded-latin-ext.woff2') format('woff2');
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Unbounded';
+	font-style: normal;
+	font-weight: 500 700;
+	font-display: swap;
+	src: url('../fonts/unbounded-latin.woff2') format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
 	--bg: #eef5f5; --surface: #ffffff; --surface-2: #f4f9f9; --surface-3: #e4f0f0;
 	--border: #d6e8e8; --border-strong: #9fcfcf;
@@ -71,6 +122,8 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 a.nu:hover { text-decoration: none; }
+/* Ссылка посреди текста отличается не только цветом: контраст с текстом вокруг ниже 3:1. */
+.doc p a, .doc li a, .cookie-text a, .hint a { text-decoration: underline; text-underline-offset: 2px; }
 button, input, textarea, select { font: inherit; color: inherit; }
 ::placeholder { color: var(--text-2); opacity: 1; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -134,9 +187,10 @@ img { max-width: 100%; }
 	position: sticky; bottom: 0; z-index: 20; justify-content: space-around; align-items: stretch; height: 64px;
 	background: var(--surface); border-top: 1px solid var(--border);
 }
+/* «Уведомления» жирным должно влезать в пятую часть экрана: 12px — на обычных телефонах, мельче — на самых узких. */
 .tab-item {
 	flex: 1; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-	color: var(--text-2); font-size: 11px; font-weight: 600;
+	color: var(--text-2); font-size: clamp(10.5px, 3vw, 12px); letter-spacing: -0.02em; font-weight: 600;
 }
 .tab-item:hover { text-decoration: none; }
 .tab-item[aria-current="page"] { color: var(--text); font-weight: 800; }
@@ -463,6 +517,10 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .notif-like { color: var(--danger); }
 .notif-repost { color: var(--accent); }
 .notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.notif-poll { display: flex; flex-direction: column; gap: 8px; }
+.notif-poll-head { display: flex; align-items: flex-start; gap: 6px; padding: 0 6px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.notif-poll-head > .icon { flex: none; margin-top: 2px; }
+.notif-poll-head time { white-space: nowrap; }
 .notif-avatars { display: flex; gap: 6px; }
 .notif-text { font-size: 15px; line-height: 1.45; }
 .notif-name { font-weight: 800; color: var(--text); }
@@ -476,6 +534,7 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .who-row form { margin: 0; }
 .footer-links { padding: 0 6px; font-size: 13px; line-height: 1.7; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 0 12px; }
 .footer-links a { color: var(--text-2); }
+.footer-links a, .footer-links .link-btn { display: inline-flex; align-items: center; min-height: 24px; }
 
 /* ---------- Правила и политика (C5) ---------- */
 .doc { padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 1.6; }

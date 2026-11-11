@@ -1,13 +1,14 @@
 """Создание, снятие и выборка уведомлений (D1)."""
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from accounts.models import Block, Mute, Profile
 from azzb.realtime import push
-from post.models import Post
+from post.models import Poll, PollVote, Post
 
 from .models import Notification
 
@@ -46,7 +47,29 @@ def visible_for(user):
 	)
 
 
+def notify_ended_polls():
+	"""«Опрос завершён» автору и проголосовавшим. Без cron: вызывается при подсчёте непрочитанного,
+	то есть при первом же открытии страницы кем-нибудь после окончания опроса."""
+	now = timezone.now()
+	for poll_id in Poll.objects.filter(closed_at__isnull=True, ends_at__lte=now).values_list('pk', flat=True)[:20]:
+		with transaction.atomic():
+			# Параллельный запрос мог закрыть этот опрос раньше — тогда рассылает он.
+			if not Poll.objects.filter(pk=poll_id, closed_at__isnull=True).update(closed_at=now):
+				continue
+			post = Post.objects.select_related('author').get(poll__pk=poll_id)
+			if post.deleted_at is not None:
+				continue
+			voters = PollVote.objects.filter(poll_id=poll_id).values_list('profile_id', flat=True)
+			recipients = {post.author.pk, *voters}
+			Notification.objects.bulk_create(
+				[Notification(recipient_id=pk, actor=post.author, verb=Verb.POLL_ENDED, post=post) for pk in recipients],
+				ignore_conflicts=True,
+			)
+			push(Profile.objects.filter(pk__in=recipients).values_list('user_id', flat=True), 'notifications')
+
+
 def unread_count(user):
+	notify_ended_polls()
 	return visible_for(user).filter(read_at__isnull=True).count()
 
 

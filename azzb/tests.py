@@ -23,6 +23,11 @@ class FeedPagesTests(TestCase):
 		self.alice = make_user('alice')
 		Post.objects.create(author=self.alice.profile, text='Привет\nвторая строка')
 
+	def test_fonts_are_served_by_site(self):
+		response = self.client.get('/')
+		self.assertNotContains(response, 'fonts.googleapis.com')
+		self.assertContains(response, 'fonts/manrope-cyrillic')
+
 	def test_guest_sees_feeds_and_signup_card(self):
 		for url in ('/', '/hot/'):
 			response = self.client.get(url)

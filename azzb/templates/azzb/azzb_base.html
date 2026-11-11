@@ -163,7 +163,7 @@
 
 		{% if user.is_authenticated %}
 			{# Счётчики: по сигналу из сокета (azzb:refresh-badges, F1), а без сокета — опрос раз в 30 с, пока вкладка на экране. #}
-			<div hidden data-silent data-badges hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible' && !window.azzbLive], azzb:refresh-badges" hx-swap="none"></div>
+			<div hidden data-silent data-badges hx-get="{% url 'notifications-unread' %}" hx-trigger="azzb:poll-30 from:document, azzb:refresh-badges" hx-swap="none"></div>
 			{% if request.resolver_match.url_name != 'edit-profile' and request.resolver_match.url_name|slice:":3" != 'dm-' %}
 				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
 					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>

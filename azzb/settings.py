@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
 	'django.middleware.security.SecurityMiddleware',
+	'azzb.csp.ContentSecurityPolicyMiddleware',
 	# Статику отдаёт само приложение (A10): она лежит в образе вместе с кодом и не расходится с ним при выкладке.
 	'whitenoise.middleware.WhiteNoiseMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
