@@ -90,3 +90,23 @@ class SessionsTests(TestCase):
 		phone_session = UserSession.objects.get(user=self.ann, user_agent=IPHONE)
 		bob.post(reverse('account-sessions-end'), {'session': phone_session.pk})
 		self.assertTrue(UserSession.objects.filter(pk=phone_session.pk).exists())
+
+
+class OldCodeCompatibilityTests(TestCase):
+	"""Шаги 6–7 docs/deploy/docker.md: база уже обновлена, а uWSGI ещё на старом коде."""
+
+	def test_profile_insert_without_new_columns(self):
+		from django.db import connection
+
+		from .models import Profile
+
+		user = make('old')
+		Profile.objects.filter(user=user).delete()
+		with connection.cursor() as cursor:
+			cursor.execute(
+				'INSERT INTO "customUser_profile" (user_id, username, avatar, banner, bio, is_verified, likes_public, is_private)'
+				" VALUES (%s, 'old', 'default/default_user_avatar.jpg', '', '', false, false, false)",
+				[user.pk],
+			)
+		profile = Profile.objects.get(user=user)
+		self.assertEqual((profile.dm_policy, profile.search_indexing), ('everyone', True))
