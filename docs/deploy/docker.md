@@ -69,8 +69,8 @@ id azzb_user
 # uid и gid из `id azzb_user`: контейнер работает от этого пользователя и читает .env.
 AZZB_UID=
 AZZB_GID=
-# Кому письмо об ошибке 500.
-ADMINS=Ваше имя <ваш@адрес>
+# Кому письмо об ошибке 500. Кавычки — вокруг всего значения: его читают и Docker Compose, и Django.
+ADMINS='Ваше имя <ваш@адрес>'
 S3_MEDIA_BUCKET=azzb-media
 S3_ENDPOINT=https://s3.ru-6.storage.selcloud.ru
 S3_REGION=ru-6
@@ -204,13 +204,24 @@ echo "age1…" > /srv/azzb/backup-key.pub
 
 ## 5. Картинки в бакет
 
+Имя бакета — ваше, как в панели (если пришлось взять `azzb-media-1`, то оно). rclone сам создаёт
+бакет, которого нет, поэтому опечатка в имени не даёт ошибки, а молча заводит новый бакет.
+
 ```bash
 rclone copy /var/www/azzb/media media:azzb-media --progress \
     --header-upload "Cache-Control: public, max-age=31536000, immutable"
-curl -sI https://ВАШ-UUID.selstorage.ru/default/default_user_avatar.jpg | head -1
+rclone ls media:azzb-media | head -3
 ```
 
-Вторая команда должна ответить `200`. Если ответ `403`, бакет не публичный (тип бакета в панели).
+Число объектов в панели у бакета должно совпасть с числом скопированных файлов. Затем откройте один из
+файлов по публичному домену (путь — из вывода `rclone ls`):
+
+```bash
+curl -sI https://ВАШ-UUID.selstorage.ru/ПУТЬ/К/ФАЙЛУ.webp | head -1
+```
+
+Ответ — `200`. Если `403`, бакет не публичный (тип бакета в панели). Файла
+`default/default_user_avatar.jpg` может и не быть: сайт его не показывает, вместо аватара по умолчанию — буква.
 
 ## 6. Первый запуск контейнера (рядом с uWSGI)
 
@@ -253,7 +264,7 @@ sudo nginx -t && sudo systemctl reload nginx
 С этого момента сайт обслуживает контейнер. Проверьте:
 
 1. `curl -sI https://azzb.ru | head -1` — `HTTP/2 200`.
-2. `curl -sI https://azzb.ru/media/default/default_user_avatar.jpg | grep -i x-cache` — `MISS`, при
+2. `curl -sI https://azzb.ru/media/ПУТЬ/К/ФАЙЛУ.webp | grep -i x-cache` (файл из шага 5) — `MISS`, при
    повторе `HIT`.
 3. Вход, пост с картинкой (картинка появилась в бакете: `rclone ls media:azzb-media/posts | tail -1`),
    смена аватара, удаление поста.
