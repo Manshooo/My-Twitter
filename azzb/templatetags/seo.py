@@ -35,12 +35,15 @@ def capture(parser, token):
 @register.simple_tag(takes_context=True)
 def absolute(context, url):
 	"""Полный адрес для og:image и canonical. Адрес из S3 уже полный — он вернётся как есть."""
-	return context['request'].build_absolute_uri(url)
+	# Страницу 500 Django рисует без контекста и без request: упавший тег прятал исходную ошибку.
+	request = context.get('request')
+	return request.build_absolute_uri(url) if request else url
 
 
 @register.simple_tag(takes_context=True)
 def canonical(context):
-	return context['request'].build_absolute_uri(context['request'].path)
+	request = context.get('request')
+	return request.build_absolute_uri(request.path) if request else ''
 
 
 @register.simple_tag(takes_context=True)
