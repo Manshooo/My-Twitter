@@ -255,9 +255,11 @@ sudo cp /etc/nginx/sites-available/azzb ~/azzb.nginx.uwsgi
 - `max-age` в трёх строках `Strict-Transport-Security` — ваш текущий шаг HSTS;
 - публичный домен бакета (`<uuid>.selstorage.ru`) в двух строках `/media/`.
 
-Блок `default_server`, если он у вас в этом файле, оставьте. Затем:
+Блок `default_server`, если он у вас в этом файле, оставьте. Затем — папка для кэша картинок
+(пакет nginx в Debian её не создаёт, а nginx создаёт только последний уровень пути) и проверка:
 
 ```bash
+sudo mkdir -p /var/cache/nginx
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
