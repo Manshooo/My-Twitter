@@ -43,7 +43,7 @@
 {% if member %}
 	{# Новые сообщения: по сигналу из сокета (azzb:dm-update), после отправки и без сокета — опросом. #}
 	<div hidden data-silent data-dm-updates hx-get="{% url 'dm-updates' member.conversation_id %}"
-		hx-trigger="azzb:dm-update from:document, every 5s [document.visibilityState === 'visible' && !window.azzbLive]"
+		hx-trigger="azzb:dm-update from:document, azzb:poll-5 from:document"
 		hx-target="#dm-messages" hx-swap="beforeend" hx-sync="this:queue last"></div>
 {% endif %}
 

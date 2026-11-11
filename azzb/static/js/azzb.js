@@ -31,9 +31,18 @@
 	// ---------- Реальное время (F1) ----------
 	// Сокет приносит только сигналы ({event: 'badges'}, {event: 'dm', ...}), данные забирает htmx.
 	// Каждый сигнал становится событием документа azzb:ws:<event>. Пока сокета нет, работает опрос
-	// (условие !window.azzbLive в hx-trigger), а после (пере)подключения всё обновляется один раз:
+	// (события azzb:poll-5 и azzb:poll-30 ниже), а после (пере)подключения всё обновляется один раз:
 	// сигналы, пришедшие без нас, потеряны.
 	window.azzbLive = false;
+
+	// Условие опроса — здесь, а не фильтром [...] в hx-trigger: фильтры htmx исполняются через eval, его запрещает CSP.
+	let pollSeconds = 0;
+	setInterval(() => {
+		pollSeconds += 5;
+		if (document.visibilityState !== 'visible' || window.azzbLive) return;
+		document.dispatchEvent(new CustomEvent('azzb:poll-5'));
+		if (pollSeconds % 30 === 0) document.dispatchEvent(new CustomEvent('azzb:poll-30'));
+	}, 5000);
 	const wsPath = document.body.dataset.wsPath;
 	let socket = null;
 	let wsAttempt = 0;

@@ -158,3 +158,17 @@ sudo systemctl restart azzb
 
 В CI (`.github/workflows/tests.yml`) `pip-audit` проверяет `requirements.txt` при каждом пуше:
 если для закреплённой версии опубликуют уязвимость, CI станет красным.
+
+## 7. Content-Security-Policy
+
+Заголовок ставит сам Django (`azzb/csp.py`), в nginx ничего добавлять не нужно. Скрипты разрешены
+только с сайта, из Метрики и SmartCaptcha; инлайн-скриптов и `eval` нет. Поэтому условия опроса
+не пишутся фильтрами `[...]` в `hx-trigger`: вместо них `azzb.js` шлёт события `azzb:poll-5` и `azzb:poll-30`.
+Стили допускают `unsafe-inline` из-за атрибутов `style`.
+
+При `DEBUG` заголовок только сообщает о нарушениях (`Content-Security-Policy-Report-Only`), потому что debug toolbar
+вставляет инлайн-скрипт.
+
+Если после подключения нового стороннего сервиса что-то не грузится, в консоли браузера будет
+`Refused to load ... because it violates the following Content Security Policy directive`. Добавьте
+хост в нужную директиву `azzb/csp.py`. Метрику с CSP проверьте после того, как впишете `YANDEX_METRIKA_ID`.

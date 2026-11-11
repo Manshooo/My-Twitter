@@ -8,7 +8,7 @@
 			<h1 class="dm-title display" id="dm-title">Сообщения</h1>
 			{# Обновляется по сигналу из сокета (azzb:dm-list), без сокета — опросом. #}
 			<div id="dm-list" data-silent hx-get="{% url 'dm-inbox' %}{% if member %}?active={{ member.conversation_id }}{% endif %}"
-				hx-trigger="azzb:dm-list from:document, every 30s [document.visibilityState === 'visible' && !window.azzbLive]">
+				hx-trigger="azzb:dm-list from:document, azzb:poll-30 from:document">
 				{% include "dm/_list.html" with active=member.conversation_id %}
 			</div>
 		</section>
