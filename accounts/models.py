@@ -164,6 +164,7 @@ class Profile(models.Model):
 	likes_public = models.BooleanField("Показывать лайки всем", default=False)
 	# Закрытый аккаунт (E5): посты видят только одобренные подписчики, подписка — через заявку.
 	is_private = models.BooleanField("Закрытый аккаунт", default=False)
+	search_indexing = models.BooleanField("Показывать в поисковиках", default=True)
 	dm_policy = models.CharField("Кто может писать мне", max_length=10, choices=DmPolicy.choices, default=DmPolicy.EVERYONE)
 	# Закреплённый пост (B8): первым на вкладке «Посты». Только свой пост, меняется через post.services.toggle_pin.
 	pinned_post = models.ForeignKey(
@@ -202,6 +203,11 @@ class Profile(models.Model):
 	@property
 	def has_custom_avatar(self):
 		return bool(self.avatar) and self.avatar.name != self._meta.get_field('avatar').default
+
+	@property
+	def indexable(self):
+		"""Можно ли поисковикам индексировать профиль и посты (azzb/seo.py)."""
+		return self.search_indexing and not self.is_private and not self.user.is_banned
 
 	@property
 	def avatar_tone(self):

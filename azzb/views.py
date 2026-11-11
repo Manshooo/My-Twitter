@@ -5,6 +5,8 @@ from django.conf import settings
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
+from django.views.decorators.cache import cache_control
 
 from django.contrib.auth.decorators import login_required
 
@@ -25,6 +27,12 @@ def render_posts(request, template, context, posts, next_params):
 		"next_url": page_url(request, **next_params) if next_params else None,
 	})
 	return render(request, PAGE_TEMPLATE if is_load_more(request) else template, context)
+
+
+@cache_control(max_age=86400, public=True)
+def robots_txt(request):
+	sitemap_url = request.build_absolute_uri(reverse('sitemap'))
+	return render(request, 'azzb/robots.txt', {'sitemap_url': sitemap_url}, content_type='text/plain; charset=utf-8')
 
 
 def index(request):

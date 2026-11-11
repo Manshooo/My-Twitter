@@ -1,10 +1,14 @@
 {% extends "azzb/azzb_base.html" %}
-{% load azzb_ui %}
+{% load azzb_ui seo %}
 {% block title %}{% if feed == 'hot' %}Горячее{% elif feed == 'following' %}Подписки{% else %}Главная{% endif %}{% endblock title %}
+{% block og_title %}{% if feed == 'latest' %}AzzB — социальная сеть коротких постов{% else %}{{ block.super }}{% endif %}{% endblock og_title %}
 {% block metatags %}
 	{% if feed == 'latest' %}
 		<meta name="yandex-verification" content="461141e64faf3f9b">
 		<meta name="mailru-domain" content="6mUzAjqGDGUqpJ3y">
+		{% jsonld_website %}
+	{% elif feed == 'following' %}
+		<meta name="robots" content="noindex">
 	{% endif %}
 {% endblock metatags %}
 {% block content %}

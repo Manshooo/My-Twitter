@@ -1,27 +1,27 @@
 {% extends "azzb/azzb_base.html" %}
-{% load show_posts azzb_ui %}
+{% load show_posts azzb_ui seo %}
 {% block title %}{% if not post.available %}Пост недоступен{% else %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endif %}{% endblock title %}
 {% block meta_description %}{% if post.available %}{{ post.text|truncatechars:160 }}{% endif %}{% endblock meta_description %}
+{% block og_type %}{% if post.available %}article{% else %}website{% endif %}{% endblock og_type %}
+{% block og_title %}{% if post.available %}{{ post.author.username }} (@{{ post.author.user.username }}){% else %}Пост недоступен{% endif %}{% endblock og_title %}
 {% block metatags %}
-	{% if not post.available %}
-		{# Недоступный пост — заглушка ради ответов под ним: ни текста, ни автора в превью, не индексировать. #}
+	{% if not post.available or not post.author.indexable %}
+		{# Недоступный пост — заглушка ради ответов под ним; автор мог запретить поисковики в настройках. #}
 		<meta name="robots" content="noindex">
 	{% else %}
-	{# Превью ссылки в мессенджерах и соцсетях. #}
-	<meta property="og:type" content="article">
-	<meta property="og:title" content="{{ post.author.username }} (@{{ post.author.user.username }})">
-	<meta property="og:description" content="{{ post.text|truncatechars:200 }}">
-	<meta property="og:url" content="{{ request.build_absolute_uri }}">
-	{% with first=post.images.all|first %}
-		<meta name="twitter:card" content="{% if first and first.file %}summary_large_image{% else %}summary{% endif %}">
-	{% endwith %}
-	<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+		{% jsonld_post post %}
 	{% endif %}
+	{% if post.available %}<meta property="article:published_time" content="{{ post.created_at|date:'c' }}">{% endif %}
 {% endblock metatags %}
 {% block og_image %}
 	{% with first=post.images.all|first %}{% if post.available and first and first.file %}
-		<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ first.file.url }}">
+		<meta property="og:image" content="{% absolute first.file.url %}">
+		{% if first.width and first.height %}
+			<meta property="og:image:width" content="{{ first.width }}">
+			<meta property="og:image:height" content="{{ first.height }}">
+		{% endif %}
 		{% if first.alt %}<meta property="og:image:alt" content="{{ first.alt }}">{% endif %}
+		<meta name="twitter:card" content="summary_large_image">
 	{% else %}{{ block.super }}{% endif %}{% endwith %}
 {% endblock og_image %}
 {% block content %}

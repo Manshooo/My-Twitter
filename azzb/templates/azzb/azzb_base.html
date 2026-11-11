@@ -1,9 +1,19 @@
-{% load azzb_ui %}<!DOCTYPE html>
+{% load azzb_ui seo %}<!DOCTYPE html>
+{% capture as page_title %}{% block title %}AzzB{% endblock title %}{% endcapture %}
+{% capture as page_description %}{% block meta_description %}AzzB.ru — социальная сеть коротких постов. Проект в активной разработке, но вы уже можете присоединиться!{% endblock meta_description %}{% endcapture %}
 <html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 	<head>
-		<title>{% block title %}AzzB{% endblock title %} · AzzB</title>
-		<meta name="description" content="{% block meta_description %}AzzB.ru — социальная сеть коротких постов. Проект в активной разработке, но вы уже можете присоединиться!{% endblock meta_description %}">
+		<meta charset="utf-8">
+		<title>{{ page_title }} · AzzB</title>
+		{% if page_description %}<meta name="description" content="{{ page_description }}">{% endif %}
 		{% include "azzb/includes/head.html" %}
+		{# Превью ссылки в мессенджерах и соцсетях; страницы уточняют блоками ниже. #}
+		<meta property="og:type" content="{% block og_type %}website{% endblock og_type %}">
+		<meta property="og:title" content="{% block og_title %}{{ page_title }}{% endblock og_title %}">
+		{% if page_description %}<meta property="og:description" content="{{ page_description }}">{% endif %}
+		{% canonical as canonical_url %}
+		<meta property="og:url" content="{{ canonical_url }}">
+		<link rel="canonical" href="{{ canonical_url }}">
 		{% block metatags %}{% endblock metatags %}
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>

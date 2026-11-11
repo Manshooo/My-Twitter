@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.decorators import login_required
+from django.contrib.sitemaps import views as sitemap_views
 from django.urls import include, path
 
 from accounts.account import account_settings, delete_account, export_data
@@ -14,13 +15,17 @@ from post.views import (
 	repost_post, vote_poll,
 )
 
+from .sitemaps import SITEMAPS
 from .views import (
-	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, search, suggested_people,
+	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, robots_txt, search, suggested_people,
 )
 
 urlpatterns = [
 	path('', index, name='index'),
 	path('healthz', healthz, name='healthz'),
+	path('robots.txt', robots_txt, name='robots'),
+	path('sitemap.xml', sitemap_views.index, {'sitemaps': SITEMAPS, 'sitemap_url_name': 'sitemap-section'}, name='sitemap'),
+	path('sitemap-<section>.xml', sitemap_views.sitemap, {'sitemaps': SITEMAPS}, name='sitemap-section'),
 	path("hot/", hot_news, name="hot-news"),
 	path("search/", search, name="search"),
 	path("people/suggested/", suggested_people, name="who-to-follow"),
@@ -39,7 +44,8 @@ urlpatterns = [
 	path('admin/', admin.site.urls),
 	# Вход, регистрация с подтверждением почты, сброс и смена пароля и почты — django-allauth (E1).
 	path('auth/', include('allauth.urls')),
-	path('users/<str:slug>/', login_required(UserProfileDetailView.as_view()), name='profile'),
+	# Гостю — карточка без постов (accounts/profile_guest.html): для превью ссылок и поисковиков.
+	path('users/<str:slug>/', UserProfileDetailView.as_view(), name='profile'),
 	path('users/<str:username>/report/', report_profile, name='profile-report'),
 	path('moderation/', include('moderation.urls')),
 	path('notifications/', include('notifications.urls')),

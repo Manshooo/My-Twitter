@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.views import redirect_to_login
 from django.db.models import Exists, OuterRef
 from django.db.models.base import Model as Model
 from django.shortcuts import HttpResponse, redirect, render
@@ -18,7 +19,7 @@ from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
 from . import relations
 from .forms import UpdateUserForm
-from .models import Block, FollowRequest, FollowThrough, Mute, Profile, Theme
+from .models import AVATAR_SIZE, Block, FollowRequest, FollowThrough, Mute, Profile, Theme
 
 THEME_COOKIE_AGE = 365 * 24 * 60 * 60
 
@@ -96,6 +97,7 @@ PROFILE_TOASTS = {
 	'cancel_request': 'Заявка @{username} отозвана',
 	'remove_follower': '@{username} больше не подписан(а) на вас',
 }
+GUEST_TEMPLATE = "accounts/profile_guest.html"
 
 # Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
 @method_decorator(rate_limit('follow', '30/m', '300/h'), name='post')
@@ -113,6 +115,14 @@ class UserProfileDetailView(DetailView):
 
 	def get_template_names(self):
 		return [PAGE_TEMPLATE] if is_load_more(self.request) else [self.template_name]
+
+	def get(self, request, *args, **kwargs):
+		if request.user.is_authenticated:
+			return super().get(request, *args, **kwargs)
+		# Гостю — только карточка (её же видят мессенджеры и поисковики), посты — после входа.
+		if is_load_more(request):
+			return redirect_to_login(request.get_full_path())
+		return render(request, GUEST_TEMPLATE, {'profile': self.get_object(), 'avatar_size': AVATAR_SIZE})
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
@@ -183,6 +193,8 @@ class UserProfileDetailView(DetailView):
 		return context
 
 	def post(self, request, *args, **kwargs):
+		if not request.user.is_authenticated:
+			return redirect_to_login(request.get_full_path())
 		profile = self.get_object()
 		current_user_profile = request.user.profile
 
