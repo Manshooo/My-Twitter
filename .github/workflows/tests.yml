@@ -8,7 +8,8 @@ on:
 
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # В main не отменяем: новый push оборвал бы выкладку посреди миграций.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   django:
@@ -17,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.11 — Debian 12 (сейчас на сервере), 3.13 — Debian 13 (docs/deploy/debian13.md),
-        # 3.14 — самая новая версия, которую поддерживает Django 5.2.
+        # 3.13 — в образе (Dockerfile), 3.11 — старая схема на uWSGI, пока на неё можно откатиться
+        # (docs/deploy/docker.md), 3.14 — самая новая версия, которую поддерживает Django 5.2.
         python-version: ["3.11", "3.13", "3.14"]
     services:
       postgres:
@@ -76,3 +77,59 @@ jobs:
 
       - name: Run tests
         run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications
+
+  # Образ собирается на каждом PR (проверка Dockerfile), а публикуется только из main.
+  image:
+    name: docker image
+    needs: django
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/manshooo/my-twitter:latest
+            ghcr.io/manshooo/my-twitter:${{ github.sha }}
+
+  # Self-hosted раннер на сервере под azzb_user (docs/deploy/docker.md, раздел 2). Чужие PR сюда не
+  # попадают: джоба только для push в main, а workflow из форков требуют одобрения (настройка репозитория).
+  deploy:
+    name: deploy to server
+    needs: image
+    # AZZB_DEPLOY=on (Settings → Secrets and variables → Actions → Variables) — когда раннер настроен;
+    # без переменной джоба пропускается, а не висит в очереди без раннера.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZZB_DEPLOY == 'on'
+    runs-on: [self-hosted, azzb]
+    concurrency:
+      group: deploy-azzb
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync deploy files
+        run: |
+          install -m 644 docker-compose.prod.yml /srv/azzb/docker-compose.prod.yml
+          install -m 755 deploy/deploy.sh deploy/backup.sh deploy/manage.sh /srv/azzb/
+      - name: ghcr login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Deploy
+        run: /srv/azzb/deploy.sh "${{ github.sha }}"
+      - name: ghcr logout
+        if: always()
+        run: docker logout ghcr.io

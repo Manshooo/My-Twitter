@@ -1,0 +1,26 @@
+# Прод AzzB (A10): каталог /srv/azzb на сервере, туда этот файл кладёт CI (deploy-джоба).
+# Снаружи контейнера остаются nginx, PostgreSQL и Postfix хоста — docs/deploy/docker.md.
+name: azzb
+
+services:
+  web:
+    image: ghcr.io/manshooo/my-twitter:${AZZB_TAG:-latest}
+    restart: unless-stopped
+    # Сеть хоста: база (localhost:5432) и Postfix (localhost:25) доступны как раньше, без правок
+    # pg_hba.conf и mynetworks. Наружу не торчит: gunicorn слушает только 127.0.0.1:8001.
+    network_mode: host
+    # uid/gid владельца .env (AZZB_UID/AZZB_GID в том же .env): файл с паролями остаётся chmod 600.
+    user: "${AZZB_UID:?AZZB_UID не задан в .env}:${AZZB_GID:?AZZB_GID не задан в .env}"
+    volumes:
+      # Настройки читает python-dotenv, как и раньше; env_file не годится — compose подставляет в нём `$`.
+      - ./.env:/app/.env:ro
+    logging:
+      driver: journald
+      options:
+        tag: azzb-web
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request as u; sys.exit(u.urlopen(u.Request('http://127.0.0.1:8001/healthz', headers={'Host': 'azzb.ru'}), timeout=3).status != 200)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

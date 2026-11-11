@@ -1,4 +1,5 @@
 import os
+from email.utils import parseaddr
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -24,6 +25,9 @@ def env_bool(name, default=False):
 DEBUG = env_bool('DJANGO_DEBUG')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# gunicorn за nginx (A10) видит только http: схему сообщает nginx (proxy_set_header X-Forwarded-Proto $scheme),
+# иначе Django считает запрос небезопасным и отклоняет POST с https-страниц как CSRF.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
 	'django.contrib.admin',
@@ -52,6 +56,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
 	'django.middleware.security.SecurityMiddleware',
+	# Статику отдаёт само приложение (A10): она лежит в образе вместе с кодом и не расходится с ним при выкладке.
+	'whitenoise.middleware.WhiteNoiseMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
 	'corsheaders.middleware.CorsMiddleware',
 	'django.middleware.common.CommonMiddleware',
@@ -228,6 +234,43 @@ STATIC_ROOT = BASE_DIR / 'static'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+STORAGES = {
+	'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+	'staticfiles': {
+		# Имена с хешем содержимого: браузер кэширует файлы навсегда и не держит старые после выкладки.
+		# Нужен манифест от collectstatic, поэтому включается только в образе (Dockerfile).
+		'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+		if env_bool('DJANGO_STATIC_MANIFEST') else 'django.contrib.staticfiles.storage.StaticFilesStorage',
+	},
+}
+
+# Картинки пользователей — в S3-хранилище (A10, docs/deploy/docker.md). Без S3_MEDIA_BUCKET — на диске.
+S3_MEDIA_BUCKET = env('S3_MEDIA_BUCKET')
+if S3_MEDIA_BUCKET:
+	from botocore.config import Config
+
+	STORAGES['default'] = {
+		'BACKEND': 'storages.backends.s3.S3Storage',
+		'OPTIONS': {
+			'bucket_name': S3_MEDIA_BUCKET,
+			'endpoint_url': env('S3_ENDPOINT', 'https://s3.ru-6.storage.selcloud.ru'),
+			'access_key': env('S3_ACCESS_KEY'),
+			'secret_key': env('S3_SECRET_KEY'),
+			'client_config': Config(
+				region_name=env('S3_REGION', 'ru-6'),
+				s3={'addressing_style': env('S3_ADDRESSING_STYLE', 'virtual')},
+				# boto3 с 1.36 по умолчанию шлёт контрольные суммы, которые понимает не каждое S3-совместимое хранилище.
+				request_checksum_calculation='when_required',
+				response_checksum_validation='when_required',
+			),
+			# Ссылки ведут на сайт, а не в бакет: nginx проксирует /media/ в бакет и кэширует.
+			'custom_domain': env('MEDIA_DOMAIN', 'azzb.ru/media'),
+			'querystring_auth': False,
+			# Имена файлов — uuid, и содержимое по адресу не меняется.
+			'object_parameters': {'CacheControl': 'public, max-age=31536000, immutable'},
+		},
+	}
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Кэш в PostgreSQL: общий для всех воркеров, на нём держатся лимиты allauth (E2).
 # Таблицу создаёт миграция azzb/migrations/0001_cache_table.py. Когда появится Redis (этап 4),
@@ -275,8 +318,12 @@ EMAIL_TIMEOUT = int(env('EMAIL_TIMEOUT', '10'))
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'AzzB <noreply@azzb.ru>')
 SERVER_EMAIL = env('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 
-# Ошибки (в том числе сбои отправки писем) пишем в stderr — их собирает journald (`journalctl -u azzb`).
-# Без этого при DEBUG=False Django отправлял бы их только письмом админам, которых нет.
+# Кому письмо о каждой ошибке 500 (A10): `ADMINS=Имя <почта>, другая@почта`. Пусто — писем нет.
+ADMINS = [parseaddr(address) for address in env('ADMINS').split(',') if address.strip()]
+EMAIL_SUBJECT_PREFIX = '[AzzB] '
+
+# Ошибки (в том числе сбои отправки писем) пишем в stderr — их собирает journald (`journalctl -t azzb-web`).
+# Письма админам Django шлёт сам (логгер django.request), этот словарь их не отключает.
 LOGGING = {
 	'version': 1,
 	'disable_existing_loggers': False,
