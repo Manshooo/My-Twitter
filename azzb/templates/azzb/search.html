@@ -1,6 +1,7 @@
 {% extends "azzb/azzb_base.html" %}
 {% load azzb_ui %}
 {% block title %}{% if query %}{{ query }} — поиск{% else %}Поиск{% endif %}{% endblock title %}
+{% block metatags %}<meta name="robots" content="noindex">{% endblock metatags %}
 {% block content %}
 	<h1 class="sr">Поиск</h1>
 	{% include "azzb/includes/search_box.html" with box_id="search-main" autofocus=True %}

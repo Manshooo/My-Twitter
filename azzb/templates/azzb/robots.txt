@@ -1,0 +1,21 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /bookmarks/
+Disallow: /compose/
+Disallow: /edit/
+Disallow: /follows-updates/
+Disallow: /messages/
+Disallow: /moderation/
+Disallow: /notifications/
+Disallow: /people/
+Disallow: /search/
+Disallow: /settings/
+Disallow: /*/report/
+Disallow: /p/*/conversation/
+Disallow: /*?*cursor=
+Disallow: /*?*page=
+Disallow: /*?*tab=
+
+Sitemap: {{ sitemap_url }}

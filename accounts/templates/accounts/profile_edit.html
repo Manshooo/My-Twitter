@@ -72,6 +72,13 @@
 						<span class="hint">{{ form.is_private.help_text }}</span>
 					</span>
 				</label>
+				<label class="check" for="{{ form.search_indexing.id_for_label }}">
+					{{ form.search_indexing }}
+					<span style="display: flex; flex-direction: column; gap: 2px">
+						<b style="font-size: 15px">{{ form.search_indexing.label }}</b>
+						<span class="hint">{{ form.search_indexing.help_text }}</span>
+					</span>
+				</label>
 				{% if user.profile.is_private %}<a href="{% url 'follow-requests' %}" style="font-size: 14px; font-weight: 700">Заявки на подписку</a>{% endif %}
 			</fieldset>
 

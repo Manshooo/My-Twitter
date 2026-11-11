@@ -118,6 +118,12 @@ class UpdateUserForm(forms.ModelForm):
 		"Если откроете аккаунт, все ждущие заявки одобрятся.",
 		required=False,
 	)
+	search_indexing = forms.BooleanField(
+		label="Показывать мою страницу в поисковиках",
+		help_text="Профиль и посты можно будет найти через поисковые системы. Закрытый аккаунт в них не попадает. "
+		"Если выключите, поисковики уберут страницы не сразу, а при следующем обходе.",
+		required=False,
+	)
 
 	dm_policy = forms.ChoiceField(
 		label="Кто может мне писать",
@@ -146,6 +152,7 @@ class UpdateUserForm(forms.ModelForm):
 				self.fields['username'].initial = instance.profile.username
 				self.fields['likes_public'].initial = instance.profile.likes_public
 				self.fields['is_private'].initial = instance.profile.is_private
+				self.fields['search_indexing'].initial = instance.profile.search_indexing
 				self.fields['dm_policy'].initial = instance.profile.dm_policy
 		# Обычный <input type=file> без «Очистить» от ClearableFileInput: для этого свои флажки.
 		for name in ('avatar', 'banner'):
@@ -193,6 +200,7 @@ class UpdateUserForm(forms.ModelForm):
 				profile.bio = self.cleaned_data['bio']
 				profile.username = self.cleaned_data['username']
 				profile.likes_public = self.cleaned_data['likes_public']
+				profile.search_indexing = self.cleaned_data['search_indexing']
 				profile.dm_policy = self.cleaned_data['dm_policy'] or profile.dm_policy
 				self._replace_image(profile, 'avatar', DEFAULT_AVATAR)
 				self._replace_image(profile, 'banner', '')

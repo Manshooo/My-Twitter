@@ -139,6 +139,7 @@ def collect_user_data(user):
 			'bio': profile.bio,
 			'likes_public': profile.likes_public,
 			'is_private': profile.is_private,
+			'search_indexing': profile.search_indexing,
 			'is_verified': profile.is_verified,
 			'avatar': attach(profile.avatar, 'profile'),
 			'banner': attach(profile.banner, 'profile'),
@@ -252,7 +253,7 @@ def erase_account(user):
 		profile.bio = ''
 		profile.avatar = DEFAULT_AVATAR
 		profile.banner = ''
-		profile.is_verified = profile.likes_public = profile.is_private = False
+		profile.is_verified = profile.likes_public = profile.is_private = profile.search_indexing = False
 		profile.save()
 
 
