@@ -1,6 +1,16 @@
 {% load azzb_ui show_posts %}{% if group.verb == 'reply' or group.verb == 'quote' or group.verb == 'mention' %}
 	{# Ответ, цитата и упоминание — обычная карточка поста: на неё сразу можно ответить или лайкнуть. #}
 	<div class="notif-reply{% if group.unread %} notif-unread{% endif %}">{% with post=group.post %}{% show_posts %}{% endwith %}</div>
+{% elif group.verb == 'poll_end' %}
+	{# Итоги — в самой карточке: после окончания опроса результаты видны всем. #}
+	<div class="notif-reply notif-poll{% if group.unread %} notif-unread{% endif %}">
+		<p class="notif-poll-head">
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-poll"></use></svg>
+			<span>{% if group.post.author.user_id == user.pk %}Ваш опрос завершён{% else %}Опрос, в котором вы голосовали, завершён{% endif %}
+			<span class="muted">· <time datetime="{{ group.latest|date:'c' }}" title="{{ group.latest|date:'j E Y, H:i' }}">{{ group.latest|ago }}</time></span></span>
+		</p>
+		{% with post=group.post %}{% show_posts %}{% endwith %}
+	</div>
 {% else %}
 <article class="card notif{% if group.unread %} notif-unread{% endif %}">
 	<span class="notif-icon notif-{{ group.verb }}" aria-hidden="true">

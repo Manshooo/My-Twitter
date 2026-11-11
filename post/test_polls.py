@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -7,6 +8,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.account import collect_user_data, erase_account
+from notifications.models import Notification
+from notifications.services import unread_count
 
 from .models import Poll, PollVote
 from .services import delete_post, publish_post, purge_posts, toggle_repost, vote
@@ -97,3 +100,37 @@ class PollTests(TestCase):
 		delete_post(self.post)
 		purge_posts(Post.objects.filter(pk=self.post.pk))
 		self.assertFalse(Poll.objects.exists())
+
+
+class PollEndedNotificationTests(TestCase):
+	def setUp(self):
+		self.ann, self.bob, self.cat = make('ann'), make('bob'), make('cat')
+		self.post = publish_post(self.ann.profile, 'Чай или кофе?', poll_options=['Чай', 'Кофе'], poll_duration='24')
+		vote(self.post, self.bob.profile, self.post.poll.options.first().pk)
+
+	def end_poll(self):
+		Poll.objects.filter(pk=self.post.poll.pk).update(ends_at=timezone.now() - timedelta(minutes=1))
+
+	def ended(self, user):
+		return Notification.objects.filter(recipient=user.profile, verb=Notification.Verb.POLL_ENDED).count()
+
+	def test_author_and_voters_notified_once(self):
+		self.assertEqual(unread_count(self.ann), 0)
+		self.end_poll()
+		with patch('notifications.services.push') as push:
+			self.assertEqual(unread_count(self.cat), 0)
+		push.assert_called_once()
+		self.assertEqual((self.ended(self.ann), self.ended(self.bob), self.ended(self.cat)), (1, 1, 0))
+		unread_count(self.ann)
+		self.assertEqual(self.ended(self.ann), 1)
+		self.client.force_login(self.bob)
+		self.assertContains(self.client.get(reverse('notifications')), 'Опрос, в котором вы голосовали, завершён')
+		self.client.force_login(self.ann)
+		self.assertContains(self.client.get(reverse('notifications')), 'Ваш опрос завершён')
+
+	def test_deleted_post_is_closed_silently(self):
+		delete_post(self.post)
+		self.end_poll()
+		unread_count(self.ann)
+		self.assertEqual(self.ended(self.bob), 0)
+		self.assertIsNotNone(Poll.objects.get(pk=self.post.poll.pk).closed_at)

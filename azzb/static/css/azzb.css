@@ -514,6 +514,10 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .notif-like { color: var(--danger); }
 .notif-repost { color: var(--accent); }
 .notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.notif-poll { display: flex; flex-direction: column; gap: 8px; }
+.notif-poll-head { display: flex; align-items: flex-start; gap: 6px; padding: 0 6px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.notif-poll-head > .icon { flex: none; margin-top: 2px; }
+.notif-poll-head time { white-space: nowrap; }
 .notif-avatars { display: flex; gap: 6px; }
 .notif-text { font-size: 15px; line-height: 1.45; }
 .notif-name { font-weight: 800; color: var(--text); }

@@ -18,11 +18,13 @@ class Notification(models.Model):
 		MENTION = 'mention', 'Упоминание'
 		FOLLOW_REQUEST = 'follow_req', 'Заявка на подписку'
 		FOLLOW_ACCEPTED = 'follow_ok', 'Заявка одобрена'
+		POLL_ENDED = 'poll_end', 'Опрос завершён'
 
 	recipient = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='notifications', verbose_name='Кому')
 	actor = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='+', verbose_name='Кто')
 	verb = models.CharField('Что', max_length=10, choices=Verb.choices)
 	# Лайк и репост — исходный пост, ответ, цитата и упоминание — сам новый пост, подписка — пусто.
+	# «Опрос завершён» — пост с опросом, actor — его автор (и у самого автора тоже).
 	post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name='+', verbose_name='Пост')
 	created_at = models.DateTimeField('Когда', auto_now_add=True)
 	read_at = models.DateTimeField('Прочитано', null=True, blank=True)

@@ -347,10 +347,15 @@ class Poll(models.Model):
 	автору, проголосовавшим и всем после окончания. Создаётся только через post.services.publish_post."""
 	post = models.OneToOneField(Post, on_delete=models.CASCADE, related_name='poll', verbose_name='Пост')
 	ends_at = models.DateTimeField('Заканчивается')
+	# Когда разосланы уведомления «Опрос завершён» (notifications.services.notify_ended_polls).
+	closed_at = models.DateTimeField('Итоги разосланы', null=True, blank=True)
 
 	class Meta:
 		verbose_name = 'Опрос'
 		verbose_name_plural = 'Опросы'
+		indexes = [
+			models.Index(fields=['ends_at'], condition=models.Q(closed_at__isnull=True), name='poll_waiting_close'),
+		]
 
 	def __str__(self):
 		return f'Опрос к {self.post_id}'
