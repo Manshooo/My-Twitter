@@ -29,6 +29,14 @@ class CookieBannerTests(TestCase):
 		self.client.cookies.pop(CONSENT_COOKIE)
 		self.assertContains(self.client.get(reverse('account_login')), 'data-cookie-banner>')
 
+	def test_banner_names_no_services(self):
+		# Конкретные сервисы — в политике cookie; в баннере — только что и зачем.
+		html = self.client.get(reverse('index')).content.decode()
+		banner = html[html.index('data-cookie-banner'):html.index('</section>', html.index('data-cookie-banner'))]
+		self.assertNotIn('Яндекс', banner)
+		self.assertNotIn('Метрик', banner)
+		self.assertIn('просмотры и переходы', banner)
+
 	@override_settings(YANDEX_METRIKA_ID='12345')
 	def test_metrika_only_with_consent(self):
 		self.assertContains(self.client.get(reverse('index')), '<meta name="azzb-metrika" content="12345">')
