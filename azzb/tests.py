@@ -338,6 +338,12 @@ class DeployTests(TestCase):
 		self.assertEqual(len(mail.outbox), 1)
 		self.assertIn('RuntimeError', mail.outbox[0].body)
 
+	def test_s3_client_trusts_selectel_root(self):
+		from botocore.httpsession import get_cert_path
+
+		with open(get_cert_path(True)) as bundle:
+			self.assertIn('GlobalSign Root CA - R6', bundle.read())
+
 	def test_s3_media_links_point_to_site(self):
 		from storages.backends.s3 import S3Storage
 

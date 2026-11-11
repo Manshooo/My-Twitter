@@ -15,6 +15,8 @@ gunicorn==27.0.0
 whitenoise==6.12.0
 django-storages[s3]==1.14.6
 boto3==1.44.0
+# Корни сертификатов для boto3: в его собственном cacert.pem нет GlobalSign Root R6, которым подписан S3 Selectel.
+certifi==2026.10.18
 # Реальное время (F1): WebSocket через Django Channels, процесс uvicorn, Redis между ним и gunicorn.
 channels==4.3.2
 channels-redis==4.3.0
