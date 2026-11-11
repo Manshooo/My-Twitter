@@ -4,8 +4,9 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.contrib.sitemaps import views as sitemap_views
 from django.urls import include, path
+from django.views.generic import RedirectView
 
-from accounts.account import account_settings, delete_account, export_data
+from accounts.account import account_settings, delete_account, end_sessions, export_data
 from accounts.views import (
 	ChangeProfileView, UserProfileDetailView, answer_follow_request, blocked_accounts, follow_requests, set_theme,
 )
@@ -46,6 +47,8 @@ urlpatterns = [
 	path('compose/', compose, name='compose'),
 	path('admin/', admin.site.urls),
 	# Вход, регистрация с подтверждением почты, сброс и смена пароля и почты — django-allauth (E1).
+	# Список сеансов allauth — у нас в «Данные и аккаунт».
+	path('auth/sessions/', RedirectView.as_view(pattern_name='account-settings')),
 	path('auth/', include('allauth.urls')),
 	# Гостю — карточка без постов (accounts/profile_guest.html): для превью ссылок и поисковиков.
 	path('users/<str:slug>/', UserProfileDetailView.as_view(), name='profile'),
@@ -60,6 +63,7 @@ urlpatterns = [
 	path("settings/requests/<str:username>/", login_required(answer_follow_request), name="follow-request-answer"),
 	path("settings/account/", account_settings, name="account-settings"),
 	path("settings/account/export/", export_data, name="account-export"),
+	path("settings/account/sessions/", end_sessions, name="account-sessions-end"),
 	path("settings/account/delete/", delete_account, name="account-delete"),
 	# Правила и документы (C5, E6) — открыты всем, в том числе забаненным.
 	path("rules/", legal_page("legal/rules.html"), name="rules"),

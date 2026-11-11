@@ -20,6 +20,35 @@
 
 		<hr class="auth-hr">
 
+		<div class="form" style="gap: 10px" id="devices">
+			<h2 class="section-title">Где выполнен вход</h2>
+			<p class="hint">Браузеры и устройства, где вы сейчас в аккаунте. Незнакомое — завершите сеанс и <a href="{% url 'account_change_password' %}">смените пароль</a>. О входе с нового устройства мы пишем на почту.</p>
+			<ul class="sessions">
+				{% for session in sessions %}
+					<li class="session">
+						<span class="session-info">
+							<b>{{ session.title }}</b>
+							<span class="hint">{% if session.current %}Это устройство{% else %}Активность {{ session.last_seen_at|date:"j E, H:i" }}{% endif %} · IP {{ session.ip }} · вход {{ session.created_at|date:"j E Y" }}</span>
+						</span>
+						{% if not session.current %}
+							<form method="post" action="{% url 'account-sessions-end' %}">
+								{% csrf_token %}
+								<button class="btn btn-outline btn-sm" type="submit" name="session" value="{{ session.pk }}">Выйти</button>
+							</form>
+						{% endif %}
+					</li>
+				{% endfor %}
+			</ul>
+			{% if sessions|length > 1 %}
+				<form method="post" action="{% url 'account-sessions-end' %}" data-confirm="Выйти из аккаунта на всех остальных устройствах?">
+					{% csrf_token %}
+					<button class="btn btn-outline btn-danger" type="submit" name="session" value="others">Выйти на остальных устройствах</button>
+				</form>
+			{% endif %}
+		</div>
+
+		<hr class="auth-hr">
+
 		<div class="form" style="gap: 10px">
 			<h2 class="section-title" style="color: var(--danger)">Удалить аккаунт</h2>
 			<p class="hint">Аккаунт @{{ user.username }} сразу пропадёт для всех: профиль, посты и ответы, лайки, подписки. Войти в него будет нельзя, отменить удаление — тоже. Удалённое хранится ещё полгода на случай законных запросов и затем стирается; раньше — по письму на <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Удаление отзывает <a href="{% url 'pd-consent' %}">согласие на обработку данных</a>. Подробнее — в <a href="{% url 'privacy' %}">политике конфиденциальности</a>.</p>

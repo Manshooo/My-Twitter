@@ -18,6 +18,8 @@ RETENTION_METADATA = timedelta(days=365)
 def purge_expired(now=None):
 	"""Стереть всё, у чего вышел срок хранения. Возвращает {что: сколько}."""
 	from accounts.account import erase_account
+	from allauth.usersessions.models import UserSession
+	from django.contrib.sessions.models import Session
 	from accounts.models import CustomUser
 	from dm.models import Message
 	from dm.services import purge_messages
@@ -35,4 +37,7 @@ def purge_expired(now=None):
 	posts = purge_posts(Post.objects.filter(deleted_at__lt=content_edge))
 	messages = purge_messages(Message.objects.filter(deleted_at__lt=content_edge))
 	records, _ = ActivityRecord.objects.filter(created_at__lt=now - RETENTION_METADATA).delete()
-	return {'accounts': accounts, 'posts': posts, 'messages': messages, 'activity': records}
+	# Истёкшие сеансы и их записи об устройствах (IP, браузер): Django сам их не удаляет.
+	Session.objects.filter(expire_date__lt=now).delete()
+	sessions, _ = UserSession.objects.exclude(session_key__in=Session.objects.values('session_key')).delete()
+	return {'accounts': accounts, 'posts': posts, 'messages': messages, 'activity': records, 'sessions': sessions}
