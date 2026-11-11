@@ -9,6 +9,7 @@ from notifications.models import Notification
 from .models import Bookmark, Post
 from .pagination import PAGE_SIZE
 from .services import delete_post, publish_post, toggle_bookmark, toggle_repost
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 HX = {'HTTP_HX_REQUEST': 'true'}
@@ -16,8 +17,8 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 
 class BookmarkTests(TestCase):
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.post = publish_post(self.ann.profile, 'пост в закладки')
 		self.client.force_login(self.bob)
 

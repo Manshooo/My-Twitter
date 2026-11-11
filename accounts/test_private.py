@@ -11,6 +11,7 @@ from post.services import publish_post
 
 from . import relations
 from .models import FollowRequest, FollowThrough
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 Verb = Notification.Verb
@@ -20,7 +21,7 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 class PrivateAccountTests(TestCase):
 	def setUp(self):
 		self.owner, self.fan, self.stranger = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('owner', 'fan', 'stranger')
+			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('owner', 'fan', 'stranger')
 		)
 		relations.set_private(self.owner.profile, True)
 		self.post = publish_post(self.owner.profile, 'только для своих #секрет')

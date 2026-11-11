@@ -10,6 +10,7 @@ from post.tests import MEDIA_ROOT, make_upload
 
 from .middleware import SetLastVisitMiddleware
 from .models import CustomUser, FollowThrough, Profile
+from azzb.testing import ACTIVE
 
 # Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
 User = CustomUser
@@ -17,28 +18,37 @@ User = CustomUser
 
 class ProfileSignalTests(TestCase):
 	def test_user_gets_exactly_one_profile_without_self_follow(self):
-		user = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		user = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 		self.assertEqual(Profile.objects.filter(user=user).count(), 1)
 		self.assertEqual(user.profile.username, 'alice')
 		self.assertFalse(user.profile.follows.exists())
 
 
 class PublicProfilesTests(TestCase):
-	"""Profile.objects.public: брошенные регистрации (почта есть, но не подтверждена) не видны другим."""
+	"""Profile.objects.public: кто ни разу не входил (брошенная регистрация, бот), не виден другим."""
 
 	def setUp(self):
-		self.viewer = User.objects.create_user('viewer', 'viewer@example.com', 'pass-12345')
+		self.viewer = User.objects.create_user('viewer', 'viewer@example.com', 'pass-12345', **ACTIVE)
 		self.client.force_login(self.viewer)
+		# Почта не подтверждена — войти не мог.
 		self.pending = User.objects.create_user('pending', 'pending@example.com', 'pass-12345')
 		EmailAddress.objects.create(user=self.pending, email='pending@example.com', verified=False, primary=True)
-		self.confirmed = User.objects.create_user('confirmed', 'confirmed@example.com', 'pass-12345')
+		self.confirmed = User.objects.create_user('confirmed', 'confirmed@example.com', 'pass-12345', **ACTIVE)
 		EmailAddress.objects.create(user=self.confirmed, email='confirmed@example.com', verified=True, primary=True)
-		# Заведён вручную (createsuperuser, админка): адресов в allauth нет вовсе.
-		self.manual = User.objects.create_user('manual', 'manual@example.com', 'pass-12345')
+		# Бот: несколько регистраций с одной почтой разом — аккаунт без записи об адресе, не входил.
+		self.bot = User.objects.create_user('jimqilqoht', 'bot@example.com', 'pass-12345')
+		# createsuperuser: адресов нет, не входил, но staff.
+		self.admin = User.objects.create_user('admin', 'admin@example.com', 'pass-12345', is_staff=True)
 
-	def test_public_hides_only_unconfirmed_signups(self):
+	def test_public_shows_only_who_logged_in_and_staff(self):
 		logins = set(Profile.objects.public().values_list('user__username', flat=True))
-		self.assertEqual(logins, {'viewer', 'confirmed', 'manual'})
+		self.assertEqual(logins, {'viewer', 'confirmed', 'admin'})
+
+	def test_confirmed_but_never_logged_in_appears_after_first_login(self):
+		EmailAddress.objects.filter(user=self.pending).update(verified=True)
+		self.assertFalse(Profile.objects.public().filter(pk=self.pending.profile.pk).exists())
+		self.client.force_login(self.pending)
+		self.assertTrue(Profile.objects.public().filter(pk=self.pending.profile.pk).exists())
 
 	def test_changing_email_keeps_profile_visible(self):
 		EmailAddress.objects.create(user=self.confirmed, email='new@example.com', verified=False, primary=False)
@@ -62,7 +72,7 @@ class PublicProfilesTests(TestCase):
 
 class SetLastVisitMiddlewareTests(TestCase):
 	def setUp(self):
-		self.user = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.user = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.calls = 0
 
 		def get_response(request):
@@ -106,7 +116,7 @@ class SetLastVisitMiddlewareTests(TestCase):
 @override_settings(MEDIA_ROOT=MEDIA_ROOT)
 class AvatarAndBannerTests(TestCase):
 	def setUp(self):
-		self.user = User.objects.create_user('carol', 'carol@example.com', 'pass-12345')
+		self.user = User.objects.create_user('carol', 'carol@example.com', 'pass-12345', **ACTIVE)
 		self.client.force_login(self.user)
 
 	def edit(self, **extra):
@@ -168,7 +178,7 @@ class ThemeTests(TestCase):
 	"""C1: выбор темы хранится в аккаунте, cookie — для гостей и быстрого первого кадра."""
 
 	def setUp(self):
-		self.user = User.objects.create_user('dora', 'dora@example.com', 'pass-12345')
+		self.user = User.objects.create_user('dora', 'dora@example.com', 'pass-12345', **ACTIVE)
 
 	def html_tag(self, response):
 		content = response.content.decode()
@@ -261,8 +271,8 @@ class BlockMuteTests(TestCase):
 
 	def setUp(self):
 		from post.models import Post
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.alice_post = Post.objects.create(author=self.alice.profile, text='пост Алисы')
 		self.bob_post = Post.objects.create(author=self.bob.profile, text='пост Боба')
 		self.client.force_login(self.alice)
@@ -336,9 +346,9 @@ class BlockMuteTests(TestCase):
 class BlockedAccountsPageTests(TestCase):
 	def test_lists_and_unblocks(self):
 		from .models import Block, Mute
-		alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
-		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345')
+		alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
+		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345', **ACTIVE)
 		Block.objects.create(blocker=alice.profile, blocked=bob.profile)
 		Mute.objects.create(muter=alice.profile, muted=carol.profile)
 		self.client.force_login(alice)
@@ -368,8 +378,8 @@ class AccountDataTests(TestCase):
 
 	def setUp(self):
 		from post.models import Post
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.post = Post.objects.create(author=self.alice.profile, text='мой пост')
 		Post.objects.create(author=self.bob.profile, text='пост Боба')
 		self.client.force_login(self.alice)

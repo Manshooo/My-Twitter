@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core import validators
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Exists, F, OuterRef, Q
+from django.db.models import F, Q
 from django.db.models.functions import Upper
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
@@ -132,20 +132,16 @@ class FollowThrough(models.Model):
 class ProfileQuerySet(models.QuerySet['Profile']):
 	def public(self):
 		"""Единственное место, которое решает, кого из людей показывать другим (как
-		Post.objects.visible_to для постов): аккаунт не удалён и не отключён, регистрация завершена.
+		Post.objects.visible_to для постов): аккаунт не удалён и не отключён и хоть раз входил.
 
-		Регистрация через сайт заводит профиль сразу, а войти можно только после подтверждения почты
-		(ACCOUNT_EMAIL_VERIFICATION = 'mandatory'). Брошенные регистрации — боты, опечатки в адресе —
-		прячем: у них есть адрес, но ни один не подтверждён. Аккаунты без адресов вовсе (createsuperuser,
-		админка) — заведены вручную и видны. При смене почты старый подтверждённый адрес живёт,
-		пока не подтвердят новый, так что профиль не пропадает.
+		Войти можно только с подтверждённой почтой (ACCOUNT_EMAIL_VERIFICATION = 'mandatory'). Кто ни разу
+		не входил — брошенная регистрация или бот (боты, отправив несколько регистраций с одной почтой
+		разом, получают аккаунты даже без записи об адресе), — для других не существует; подтвердивший
+		почту появится после первого входа. Исключение — staff: createsuperuser не входит.
 		Забаненных не прячем: профиль открывается, а посты скрывает Post.objects.visible_to.
 		"""
-		from allauth.account.models import EmailAddress  # приложения allauth грузятся после accounts
-
-		addresses = EmailAddress.objects.filter(user_id=OuterRef('user_id'))
 		return self.filter(
-			Exists(addresses.filter(verified=True)) | ~Exists(addresses),
+			Q(user__last_login__isnull=False) | Q(user__is_staff=True),
 			user__is_active=True, user__deleted_at__isnull=True,
 		)
 

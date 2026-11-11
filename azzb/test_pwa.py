@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from azzb.testing import ACTIVE
 
 
 class ProgressiveWebAppTests(TestCase):
@@ -16,7 +17,7 @@ class ProgressiveWebAppTests(TestCase):
 		self.assertContains(self.client.get('/'), '<meta name="azzb-sw" content="/sw.js">', html=True)
 
 	def test_offline_page_has_nothing_personal(self):
-		user = get_user_model().objects.create_user('ann', 'ann@example.com', 'pass-12345')
+		user = get_user_model().objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
 		user.theme = 'dark'
 		user.save()
 		self.client.force_login(user)

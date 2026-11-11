@@ -9,6 +9,7 @@ from .models import Mention
 from .services import delete_post, edit_post, publish_post, purge_posts
 from .models import Post
 from .text import hashtags, linkify, mentions
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 Verb = Notification.Verb
@@ -33,7 +34,7 @@ class ParseTests(SimpleTestCase):
 class EntityTests(TestCase):
 	def setUp(self):
 		self.ann, self.bob, self.cat = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('ann', 'bob', 'cat')
+			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat')
 		)
 
 	def mentioned(self, user):

@@ -8,6 +8,7 @@ from django.urls import reverse
 from azzb.models import ActivityRecord
 
 from .devices import describe, device
+from azzb.testing import ACTIVE
 
 Action = ActivityRecord.Action
 IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -16,7 +17,7 @@ ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, 
 
 
 def make(name):
-	user = get_user_model().objects.create_user(name, f'{name}@example.com', 'pass-12345')
+	user = get_user_model().objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
 	EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 	return user
 
