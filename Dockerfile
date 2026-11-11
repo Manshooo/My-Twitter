@@ -1,5 +1,6 @@
 # Образ сайта (A10). Собирает CI после зелёных тестов и кладёт в ghcr.io; на сервере только скачивается.
 # Схема и выкладка — docs/deploy/docker.md.
+# Та же версия, что в CI (.github/workflows/tests.yml).
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

@@ -255,9 +255,11 @@ sudo cp /etc/nginx/sites-available/azzb ~/azzb.nginx.uwsgi
 - `max-age` в трёх строках `Strict-Transport-Security` — ваш текущий шаг HSTS;
 - публичный домен бакета (`<uuid>.selstorage.ru`) в двух строках `/media/`.
 
-Блок `default_server`, если он у вас в этом файле, оставьте. Затем:
+Блок `default_server`, если он у вас в этом файле, оставьте. Затем — папка для кэша картинок
+(пакет nginx в Debian её не создаёт, а nginx создаёт только последний уровень пути) и проверка:
 
 ```bash
+sudo mkdir -p /var/cache/nginx
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -316,20 +318,30 @@ sudo systemctl daemon-reload
 
 ## 9. Восстановление из копии
 
-Проверьте один раз сразу после настройки, потом раз в несколько месяцев: копия, из которой ни
-разу не восстанавливали, — не копия.
+Проверяйте копию один раз сразу после настройки, потом раз в несколько месяцев — **на своём
+компьютере**: копия, из которой ни разу не восстанавливали, — не копия. Полная проверка —
+восстановить дамп в пустую базу локального PostgreSQL (в pgAdmin: новая база → Restore, формат
+Custom, «Do not save: Owner»), посмотреть таблицы и удалить базу.
 
-На своём компьютере:
+На своём компьютере. Свежий дамп проще всего скачать из панели Selectel: бакет копий → «Объекты» →
+`db/` → файл → «Скачать». Или rclone (на Windows — `winget install Rclone.Rclone`, затем раздел
+`[backups]` из `rclone.conf` сервера в файл, который покажет `rclone config file`):
 
 ```bash
 rclone copy backups:azzb-backups/db/azzb-ГГГГ-ММ-ДД.dump.age .
-age --decrypt -i azzb-backup.key azzb-ГГГГ-ММ-ДД.dump.age > azzb.dump
+age --decrypt -i azzb-backup.key -o azzb.dump azzb-ГГГГ-ММ-ДД.dump.age
 pg_restore --list azzb.dump | head
 ```
 
-Если rclone на компьютере не настроен, файл можно скачать из панели Selectel.
+`-o` вместо `> azzb.dump`: в PowerShell перенаправление может испортить двоичный файл. Расшифровался —
+значит, ключ подходит. Без PostgreSQL на компьютере (`pg_restore`) достаточно увидеть начало файла:
+в PowerShell `Format-Hex azzb.dump -Count 16` — первые буквы `PGDMP`.
 
-**База** на сервере (сайт на это время остановлен):
+Проверка на этом заканчивается. Дальше — **только при аварии**, когда база или картинки потеряны:
+восстановление заменяет всё текущее содержимым копии, и сделанное пользователями после неё пропадёт.
+
+**База** на сервере. Расшифрованный `azzb.dump` сначала скопируйте с компьютера в `/srv/azzb`
+(`scp azzb.dump azzb_user@azzb.ru:/srv/azzb/`): ключа для расшифровки на сервере нет. Сайт на это время остановлен:
 
 ```bash
 cd /srv/azzb && docker compose -f docker-compose.prod.yml stop web
