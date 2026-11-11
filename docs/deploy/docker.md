@@ -106,7 +106,9 @@ sudo systemctl restart systemd-journald
 
 ## 4. Selectel: бакеты, ключ, шифрование копий
 
-**Бакеты** (пул ru-6, адресация vHosted):
+**Бакеты** (адресация vHosted; пулы могут быть разными — у каждого свой адрес S3 API, его
+показывает вкладка «Подключение»). Имена бакетов глобальные: если ваши отличаются (например,
+`azzb-media-1`), подставляйте их везде ниже вместо `azzb-media` и `azzb-backups`:
 
 | Бакет | Класс | Доступ |
 |---|---|---|
@@ -155,10 +157,11 @@ rclone version | head -1
 
 Сам он не обновляется: раз в несколько месяцев — `sudo rclone selfupdate`.
 
-От `azzb_user` создайте `~/.config/rclone/rclone.conf` с правами `chmod 600`:
+От `azzb_user` создайте `~/.config/rclone/rclone.conf` с правами `chmod 600`. По разделу на пул:
+`endpoint` и `region` — с вкладки «Подключение» каждого бакета (ниже — медиа в ru-6, копии в ru-7):
 
 ```ini
-[selectel]
+[media]
 type = s3
 provider = Other
 access_key_id = ВАШ_ACCESS_KEY
@@ -166,9 +169,21 @@ secret_access_key = ВАШ_SECRET_KEY
 endpoint = https://s3.ru-6.storage.selcloud.ru
 region = ru-6
 force_path_style = false
+
+[backups]
+type = s3
+provider = Other
+access_key_id = ВАШ_ACCESS_KEY
+secret_access_key = ВАШ_SECRET_KEY
+endpoint = https://s3.ru-7.storage.selcloud.ru
+region = ru-7
+force_path_style = false
 ```
 
-Проверка: `rclone lsd selectel:` — должны быть видны оба бакета.
+Проверка: `rclone lsd media:` и `rclone lsd backups:` — в каждом виден свой бакет.
+
+Копии в другом пуле надёжнее (другая площадка), но картинки тогда копируются через сервер:
+исходящий трафик Selectel платный, а ночью копируются только новые файлы — копейки.
 
 **Ключ шифрования копий** создаётся **на вашем компьютере**: на Windows `winget install FiloSottile.age`,
 затем
@@ -189,7 +204,7 @@ echo "age1…" > /srv/azzb/backup-key.pub
 ## 5. Картинки в бакет
 
 ```bash
-rclone copy /var/www/azzb/media selectel:azzb-media --progress \
+rclone copy /var/www/azzb/media media:azzb-media --progress \
     --header-upload "Cache-Control: public, max-age=31536000, immutable"
 curl -sI https://ВАШ-UUID.selstorage.ru/default/default_user_avatar.jpg | head -1
 ```
@@ -239,7 +254,7 @@ sudo nginx -t && sudo systemctl reload nginx
 1. `curl -sI https://azzb.ru | head -1` — `HTTP/2 200`.
 2. `curl -sI https://azzb.ru/media/default/default_user_avatar.jpg | grep -i x-cache` — `MISS`, при
    повторе `HIT`.
-3. Вход, пост с картинкой (картинка появилась в бакете: `rclone ls selectel:azzb-media/posts | tail -1`),
+3. Вход, пост с картинкой (картинка появилась в бакете: `rclone ls media:azzb-media/posts | tail -1`),
    смена аватара, удаление поста.
 4. В админке, в «Журнале действий», у вашего входа стоит ваш настоящий IP.
 
@@ -249,7 +264,7 @@ sudo nginx -t && sudo systemctl reload nginx
 копирует только новые):
 
 ```bash
-rclone copy /var/www/azzb/media selectel:azzb-media --header-upload "Cache-Control: public, max-age=31536000, immutable"
+rclone copy /var/www/azzb/media media:azzb-media --header-upload "Cache-Control: public, max-age=31536000, immutable"
 ```
 
 Включите автовыкладку (шаг 1.3).
@@ -264,6 +279,8 @@ sudo systemctl disable --now azzb
 и `purge_expired` в crontab `azzb_user`. Новые — в `crontab -e` под `azzb_user`:
 
 ```cron
+AZZB_MEDIA=media:azzb-media
+AZZB_BACKUP=backups:azzb-backups
 30 3 * * * /srv/azzb/backup.sh >> /srv/azzb/backups/backup.log 2>&1
 15 4 * * * /srv/azzb/manage.sh purge_expired >> /srv/azzb/backups/purge.log 2>&1
 ```
@@ -271,7 +288,7 @@ sudo systemctl disable --now azzb
 Запустите копию сразу, не дожидаясь ночи, и проверьте, что она дошла:
 
 ```bash
-/srv/azzb/backup.sh && rclone ls selectel:azzb-backups/db
+AZZB_MEDIA=media:azzb-media AZZB_BACKUP=backups:azzb-backups /srv/azzb/backup.sh && rclone ls backups:azzb-backups/db
 ```
 
 **Через неделю**, если всё работает, удалите старое:
@@ -293,7 +310,7 @@ sudo systemctl daemon-reload
 На своём компьютере:
 
 ```bash
-rclone copy selectel:azzb-backups/db/azzb-ГГГГ-ММ-ДД.dump.age .
+rclone copy backups:azzb-backups/db/azzb-ГГГГ-ММ-ДД.dump.age .
 age --decrypt -i azzb-backup.key azzb-ГГГГ-ММ-ДД.dump.age > azzb.dump
 pg_restore --list azzb.dump | head
 ```
@@ -311,7 +328,7 @@ docker compose -f docker-compose.prod.yml start web
 **Картинки:**
 
 ```bash
-rclone copy selectel:azzb-backups/media selectel:azzb-media
+rclone copy backups:azzb-backups/media media:azzb-media
 ```
 
 Файлы, стёртые сайтом за последние 30 дней, лежат в `azzb-backups/media-deleted/<дата>/`.
@@ -322,7 +339,7 @@ rclone copy selectel:azzb-backups/media selectel:azzb-media
 sudo cp ~/azzb.nginx.uwsgi /etc/nginx/sites-available/azzb
 sudo systemctl enable --now azzb
 sudo nginx -t && sudo systemctl reload nginx
-rclone copy selectel:azzb-media /var/www/azzb/media
+rclone copy media:azzb-media /var/www/azzb/media
 ```
 
 Последняя команда забирает картинки, загруженные уже в бакет. Старый код читает их с диска.
