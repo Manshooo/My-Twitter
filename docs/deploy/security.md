@@ -93,7 +93,7 @@ systemctl restart azzb
    systemctl list-timers | grep -i certbot
    sudo certbot renew --dry-run
    ```
-3. На страницах нет ресурсов по `http://` (все внешние — Google Fonts, Метрика, SmartCaptcha — по HTTPS).
+3. На страницах нет ресурсов по `http://` (все внешние — Метрика и SmartCaptcha — по HTTPS).
 
 ### Включение
 
