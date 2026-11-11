@@ -113,7 +113,19 @@ sudo systemctl restart systemd-journald
 | `azzb-media` | стандартный | публичный: картинки и сейчас открыты по ссылке. Список файлов nginx наружу не отдаёт |
 | `azzb-backups` | холодный, если пул его предлагает, иначе стандартный | **приватный** |
 
-Удалять старые копии будет `backup.sh`, правила жизненного цикла в бакете не нужны.
+Удалять старые копии будет `backup.sh`, правила жизненного цикла в бакете не нужны. Cache-Control,
+CORS, «Веб-сайт» и «Домены» в панели не настраивайте: заголовок кэша сайт пишет в каждый файл сам,
+а картинки браузер получает с azzb.ru через nginx.
+
+**Список файлов `azzb-media` должен быть закрыт.** Публичным должно быть только чтение файла по
+точному имени, иначе любой получит перечень всех картинок, включая картинки закрытых аккаунтов:
+
+```bash
+curl -s https://azzb-media.s3.ru-6.storage.selcloud.ru/ | head -c 300
+```
+
+Если в ответе `ListBucketResult` — список открыт: в «Политике доступа» бакета оставьте публичным
+только чтение объектов (`s3:GetObject`), без `s3:ListBucket`. Правильный ответ — `AccessDenied`.
 
 **Ключ.** В панели Selectel создайте сервисного пользователя с доступом к объектному хранилищу
 проекта и выпустите ему S3-ключ. Пара Access key и Secret key пойдёт в `.env`
@@ -122,11 +134,17 @@ sudo systemctl restart systemd-journald
 Один ключ на оба бакета — компромисс: при взломе сервера им можно удалить и картинки, и копии.
 Поэтому раз в месяц скачивайте свежий дамп к себе (раздел 9).
 
-**rclone** на сервере:
+**rclone и age** на сервере. rclone нужен не старше 1.69 (так советует Selectel), а в Debian 12
+из apt ставится 1.60, поэтому — пакет с сайта rclone:
 
 ```bash
-sudo apt install rclone age
+sudo apt install age
+curl -fsSLO https://downloads.rclone.org/rclone-current-linux-amd64.deb
+sudo apt install ./rclone-current-linux-amd64.deb && rm rclone-current-linux-amd64.deb
+rclone version | head -1
 ```
+
+Сам он не обновляется: раз в несколько месяцев — `sudo rclone selfupdate`.
 
 От `azzb_user` создайте `~/.config/rclone/rclone.conf` с правами `chmod 600`:
 
