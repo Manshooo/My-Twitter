@@ -13,14 +13,8 @@ concurrency:
 
 jobs:
   django:
-    name: django (py ${{ matrix.python-version }}, postgres)
+    name: django (py 3.13, postgres)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # 3.13 — в образе (Dockerfile), 3.11 — старая схема на uWSGI, пока на неё можно откатиться
-        # (docs/deploy/docker.md), 3.14 — самая новая версия, которую поддерживает Django 5.2.
-        python-version: ["3.11", "3.13", "3.14"]
     services:
       postgres:
         # 15 — то, что ставит `apt install postgresql` в Debian 12 на сервере.
@@ -49,7 +43,8 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          # Та же версия, что в образе (Dockerfile): меняете одну — меняйте и другую.
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.txt
 
