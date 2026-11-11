@@ -321,15 +321,19 @@ sudo systemctl daemon-reload
 Проверьте один раз сразу после настройки, потом раз в несколько месяцев: копия, из которой ни
 разу не восстанавливали, — не копия.
 
-На своём компьютере:
+На своём компьютере. Свежий дамп проще всего скачать из панели Selectel: бакет копий → «Объекты» →
+`db/` → файл → «Скачать». Или rclone (на Windows — `winget install Rclone.Rclone`, затем раздел
+`[backups]` из `rclone.conf` сервера в файл, который покажет `rclone config file`):
 
 ```bash
 rclone copy backups:azzb-backups/db/azzb-ГГГГ-ММ-ДД.dump.age .
-age --decrypt -i azzb-backup.key azzb-ГГГГ-ММ-ДД.dump.age > azzb.dump
+age --decrypt -i azzb-backup.key -o azzb.dump azzb-ГГГГ-ММ-ДД.dump.age
 pg_restore --list azzb.dump | head
 ```
 
-Если rclone на компьютере не настроен, файл можно скачать из панели Selectel.
+`-o` вместо `> azzb.dump`: в PowerShell перенаправление может испортить двоичный файл. Расшифровался —
+значит, ключ подходит. Без PostgreSQL на компьютере (`pg_restore`) достаточно увидеть начало файла:
+в PowerShell `Format-Hex azzb.dump -Count 16` — первые буквы `PGDMP`.
 
 **База** на сервере (сайт на это время остановлен):
 
