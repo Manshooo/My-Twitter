@@ -8,6 +8,8 @@ DIR=${AZZB_DIR:-/srv/azzb}
 TAG=${1:-latest}
 cd "$DIR"
 export AZZB_TAG=$TAG
+# Правка .env (например, включение realtime) пересоздаёт контейнеры: compose видит новый отпечаток.
+export AZZB_ENV_HASH=$(sha256sum .env | cut -c1-12)
 compose() { docker compose -f docker-compose.prod.yml "$@"; }
 PREVIOUS=$(cat .deployed-tag 2>/dev/null || true)
 

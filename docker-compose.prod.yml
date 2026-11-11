@@ -15,6 +15,10 @@ x-app: &app
   volumes:
     # Настройки читает python-dotenv, как и раньше; env_file не годится — compose подставляет в нём `$`.
     - ./.env:/app/.env:ro
+  environment: &app-env
+    # Отпечаток .env от deploy.sh: файл подключён томом, и его правку compose сам не видит —
+    # без отпечатка контейнер со старыми настройками не пересоздаётся.
+    AZZB_ENV_HASH: ${AZZB_ENV_HASH:-}
 
 x-healthcheck: &healthcheck
   interval: 30s
@@ -51,6 +55,7 @@ services:
       - --ws-ping-timeout=20
       - --timeout-graceful-shutdown=10
     environment:
+      <<: *app-env
       # В ASGI постоянные соединения с базой не переиспользуются между потоками — Django советует 0.
       POSTGRES_CONN_MAX_AGE: "0"
     depends_on:
