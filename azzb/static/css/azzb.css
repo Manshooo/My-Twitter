@@ -770,3 +770,7 @@ body.modal-open { overflow: hidden; }
 	.dm-back { display: grid; }
 	.shell-wide { padding: 0; }
 }
+
+/* «Новые уведомления» поверх списка (F3). */
+.new-pill { position: sticky; top: 12px; z-index: 5; align-self: center; box-shadow: var(--shadow); }
+@media (max-width: 760px) { .new-pill { top: 68px; } }

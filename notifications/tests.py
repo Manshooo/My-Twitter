@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -112,3 +113,29 @@ class NotificationTests(TestCase):
 		relations.follow(self.ann.profile, self.bob.profile)
 		erase_account(self.bob)
 		self.assertFalse(Notification.objects.exists())
+
+
+class RealtimeSignalTests(TestCase):
+	"""F3: значки обновляются по сигналу из сокета, а не только опросом."""
+
+	def setUp(self):
+		self.ann, self.bob = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('ann', 'bob'))
+		self.post = publish_post(self.ann.profile, 'привет')
+
+	def test_new_notification_signals_recipient_once(self):
+		with mock.patch('notifications.services.push') as push:
+			toggle_like(self.post, self.bob.profile)
+			toggle_like(self.post, self.ann.profile)  # свой лайк — без уведомления
+		push.assert_called_once_with([self.ann.pk], 'notifications')
+
+	def test_retract_and_read_refresh_badges(self):
+		toggle_like(self.post, self.bob.profile)
+		with mock.patch('notifications.services.push') as push:
+			toggle_like(self.post, self.bob.profile)
+		push.assert_called_once_with([self.ann.pk], 'badges')
+		toggle_like(self.post, self.bob.profile)
+		with mock.patch('notifications.services.push') as push:
+			self.client.force_login(self.ann)
+			self.client.get(reverse('notifications'))
+			self.client.get(reverse('notifications'))  # читать уже нечего — сигнала нет
+		push.assert_called_once_with([self.ann.pk], 'badges')

@@ -69,15 +69,20 @@
 		if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data));
 	};
 
-	// Лайки сыплются пачкой — счётчики спрашиваем не чаще раза в секунду.
+	// Лайки сыплются пачкой — пачку сигналов превращаем в один запрос счётчиков.
 	function refreshBadges() {
 		clearTimeout(badgesTimer);
 		badgesTimer = setTimeout(() => {
 			const poller = document.querySelector('[data-badges]');
 			if (poller && window.htmx) htmx.trigger(poller, 'azzb:refresh-badges');
-		}, 1000);
+		}, 300);
 	}
 	document.addEventListener('azzb:ws:badges', refreshBadges);
+	document.addEventListener('azzb:ws:notifications', () => {
+		refreshBadges();
+		const pill = document.querySelector('[data-new-notifications]');
+		if (pill) pill.hidden = false;
+	});
 
 	if (wsPath && 'WebSocket' in window) wsConnect();
 

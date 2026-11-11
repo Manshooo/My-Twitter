@@ -22,9 +22,14 @@ def _send(user_ids, message):
 	layer = get_channel_layer()
 	if layer is None:
 		return
-	try:
+
+	async def send_all():
+		# Один цикл событий и одно соединение с Redis на все группы.
 		for user_id in user_ids:
-			async_to_sync(layer.group_send)(user_group(user_id), message)
+			await layer.group_send(user_group(user_id), message)
+
+	try:
+		async_to_sync(send_all)()
 	except Exception:
 		# Redis недоступен — запрос пользователя всё равно должен пройти; вкладки догонят опросом.
 		logger.warning('Не удалось отправить сигнал %s', message.get('event'), exc_info=True)

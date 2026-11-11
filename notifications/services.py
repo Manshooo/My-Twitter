@@ -6,6 +6,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from accounts.models import Block, Mute, Profile
+from azzb.realtime import push
 from post.models import Post
 
 from .models import Notification
@@ -18,12 +19,17 @@ NAMES_SHOWN = 2
 
 def notify(recipient, actor, verb, post=None):
 	if recipient.pk != actor.pk:
-		Notification.objects.get_or_create(recipient=recipient, actor=actor, verb=verb, post=post)
+		_, created = Notification.objects.get_or_create(recipient=recipient, actor=actor, verb=verb, post=post)
+		if created:
+			# F3: значок обновится сразу, а открытая страница уведомлений предложит показать новые.
+			push([recipient.user_id], 'notifications')
 
 
 def retract(recipient, actor, verb, post=None):
 	"""Сняли лайк или отписались — уведомление больше не правда."""
-	Notification.objects.filter(recipient=recipient, actor=actor, verb=verb, post=post).delete()
+	deleted, _ = Notification.objects.filter(recipient=recipient, actor=actor, verb=verb, post=post).delete()
+	if deleted:
+		push([recipient.user_id], 'badges')
 
 
 def visible_for(user):
@@ -45,7 +51,8 @@ def unread_count(user):
 
 
 def mark_all_read(user):
-	Notification.objects.filter(recipient=user.profile, read_at__isnull=True).update(read_at=timezone.now())
+	if Notification.objects.filter(recipient=user.profile, read_at__isnull=True).update(read_at=timezone.now()):
+		push([user.pk], 'badges')  # другие вкладки этого человека
 
 
 def parse_before(raw):
