@@ -23,8 +23,9 @@ class RateCounter(models.Model):
 
 
 class ActivityRecord(models.Model):
-	"""Журнал действий пользователей: кто, когда и с какого адреса входил, публиковал, правил
-	и удалял. Нужен, чтобы отвечать на законные запросы госорганов: сведения о фактах приёма
+	"""Журнал действий пользователей: кто, когда и с какого адреса входил (и неудачно пытался),
+	менял пароль и почту, публиковал, правил и удалял. Входы — ещё и для писем о новом устройстве
+	(accounts/devices.py). Нужен, чтобы отвечать на законные запросы госорганов: сведения о фактах приёма
 	и передачи сообщений и о пользователях хранятся год (RETENTION_METADATA в azzb/retention.py)
 	и выдаются только по такому запросу. Логин и почта копируются в запись:
 	они должны пережить стирание аккаунта. Пишется через azzb.activity.record."""
@@ -32,6 +33,11 @@ class ActivityRecord(models.Model):
 	class Action(models.TextChoices):
 		SIGNUP = 'signup', 'Регистрация'
 		LOGIN = 'login', 'Вход'
+		LOGIN_FAILED = 'login_failed', 'Неудачный вход'
+		PASSWORD_CHANGE = 'password_change', 'Смена пароля'
+		PASSWORD_RESET = 'password_reset', 'Сброс пароля'
+		EMAIL_CHANGE = 'email_change', 'Смена почты'
+		SESSIONS_END = 'sessions_end', 'Завершение сеансов'
 		POST_CREATE = 'post_create', 'Пост или ответ'
 		POST_EDIT = 'post_edit', 'Правка поста'
 		POST_DELETE = 'post_delete', 'Удаление поста'

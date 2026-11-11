@@ -1,0 +1,10 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}В аккаунт @{{ user.username }} вошли с устройства, с которого раньше не входили:
+
+{{ device }}
+IP-адрес: {{ ip }}
+Время: {{ when|date:"j E Y, H:i" }}
+
+Если это вы — ничего делать не нужно.
+
+Если не вы — смените пароль ({{ password_url }}): все остальные сеансы при этом завершатся. Список устройств, где выполнен вход: {{ settings_url }}{% endautoescape %}{% endblock content %}

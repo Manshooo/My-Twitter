@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -30,6 +31,7 @@ from notifications.models import Notification
 from post.models import Bookmark, Like, Mention, PollVote, Post
 from post.services import delete_posts, purge_posts
 
+from . import devices
 from .models import DEFAULT_AVATAR, Block, FollowRequest, FollowThrough, Mute
 
 
@@ -53,7 +55,27 @@ class DeleteAccountForm(forms.Form):
 
 @login_required
 def account_settings(request):
-	return render(request, 'accounts/account_settings.html', {'delete_form': DeleteAccountForm(request.user)})
+	return render(request, 'accounts/account_settings.html', {
+		'delete_form': DeleteAccountForm(request.user),
+		'sessions': devices.sessions(request),
+	})
+
+
+@require_POST
+@login_required
+def end_sessions(request):
+	"""Выйти на одном устройстве (session=<id>) или на всех, кроме этого (session=others)."""
+	target = request.POST.get('session', '')
+	ended = 0
+	for session in devices.sessions(request):
+		if session.current or (target != 'others' and str(session.pk) != target):
+			continue
+		session.end()
+		ended += 1
+	if ended:
+		record(request, Action.SESSIONS_END)
+		messages.success(request, 'Сеанс завершён' if ended == 1 else 'Сеансы завершены')
+	return redirect(f"{reverse('account-settings')}#devices")
 
 
 def _media_name(field, folder):

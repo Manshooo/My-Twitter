@@ -517,6 +517,10 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .notif-like { color: var(--danger); }
 .notif-repost { color: var(--accent); }
 .notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.sessions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.session { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.session:first-child { border-top: 0; }
+.session-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .notif-poll { display: flex; flex-direction: column; gap: 8px; }
 .notif-poll-head { display: flex; align-items: flex-start; gap: 6px; padding: 0 6px; font-size: 14px; font-weight: 600; color: var(--text-2); }
 .notif-poll-head > .icon { flex: none; margin-top: 2px; }

@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',
 	'allauth.account',
+	# Сеансы на устройствах: список в «Данные и аккаунт», завершение (accounts/devices.py).
+	'allauth.usersessions',
 
 	'rest_framework',
 	'corsheaders',
