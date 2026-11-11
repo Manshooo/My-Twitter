@@ -1109,10 +1109,11 @@
 		window.ym.l = Date.now();
 		const script = document.createElement('script');
 		script.async = true;
-		script.src = 'https://mc.yandex.ru/metrika/tag.js';
+		script.src = 'https://mc.yandex.ru/metrika/tag.js?id=' + id;
 		document.head.append(script);
-		// Вебвизор выключен намеренно: запись действий на экране — лишнее для соцсети.
-		window.ym(id, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+		// Как в коде счётчика из Метрики, но без <noscript>-пикселя (он считал бы и тех, кто не давал согласия),
+		// без trackHash (на сайте нет навигации по #) и ecommerce. Вебвизор выключен: запись экрана — лишнее для соцсети.
+		window.ym(id, 'init', { ssr: true, clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
 	}
 
 	function dropMetrikaCookies() {
