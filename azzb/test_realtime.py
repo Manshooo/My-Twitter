@@ -4,7 +4,7 @@ from unittest import mock
 from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.test import override_settings
+from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -76,3 +76,15 @@ class RealtimeTests(ConsumerTestCase):
 			self.assertNotContains(self.client.get(reverse('index')), 'data-ws-path')
 		with override_settings(REALTIME_WS=True):
 			self.assertContains(self.client.get(reverse('index')), 'data-ws-path="/ws/"')
+
+
+class RedisLayerConfigTests(SimpleTestCase):
+	def test_read_timeout_outlives_layer_wait(self):
+		from channels_redis.core import RedisChannelLayer
+
+		from azzb.settings import redis_channel_layer
+
+		host = redis_channel_layer('redis://127.0.0.1:6379/0')['CONFIG']['hosts'][0]
+		# Иначе redis-py обрывает ожидание сообщения раньше channels_redis, и сокет закрывается.
+		self.assertGreater(host['socket_timeout'], RedisChannelLayer.brpop_timeout)
+		self.assertLess(host['socket_connect_timeout'], 5)
