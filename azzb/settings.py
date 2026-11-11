@@ -291,11 +291,27 @@ CACHES = {
 # gunicorn, сокеты — отдельный процесс uvicorn, между ними Redis. Без REDIS_URL слой в памяти
 # процесса — годится для тестов и для разработки под одним uvicorn (REALTIME_WS=1).
 REDIS_URL = env('REDIS_URL')
-CHANNEL_LAYERS = {
-	'default': {
+
+
+def redis_channel_layer(url):
+	return {
 		'BACKEND': 'channels_redis.core.RedisChannelLayer',
-		'CONFIG': {'hosts': [REDIS_URL], 'prefix': 'azzb'},
-	} if REDIS_URL else {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
+		'CONFIG': {
+			'hosts': [{
+				'address': url,
+				# channels_redis ждёт сообщений командой с таймаутом 5 с, а redis-py 8 по умолчанию рвёт
+				# чтение тоже через 5 с — сокет вкладки закрывался каждые 5 секунд. Чтение — с запасом,
+				# подключение — коротко: упавший Redis не должен задерживать запросы страниц.
+				'socket_timeout': 15,
+				'socket_connect_timeout': 2,
+			}],
+			'prefix': 'azzb',
+		},
+	}
+
+
+CHANNEL_LAYERS = {
+	'default': redis_channel_layer(REDIS_URL) if REDIS_URL else {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
 }
 # Открывать ли вкладкам сокет. Выключено — счётчики и сообщения приходят опросом, как раньше.
 REALTIME_WS = env_bool('REALTIME_WS', bool(REDIS_URL))
