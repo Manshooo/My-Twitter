@@ -1,0 +1,23 @@
+{% load azzb_ui %}{% for item in members %}
+	{% with peer=item.peer last=item.last_message %}
+	<li>
+		<a class="dm-item nu{% if item.has_unread %} unread{% endif %}" href="{% url 'dm-conversation' item.conversation_id %}"{% if item.conversation_id == active %} aria-current="page"{% endif %}>
+			{% avatar peer 'sm' %}
+			<span class="dm-item-body">
+				<span class="dm-item-head">
+					<b class="clip1">{{ peer.username }}</b>
+					<span class="muted clip1">@{{ peer.user.username }}</span>
+					<time class="muted" datetime="{{ item.conversation.last_message_at|date:'c' }}">{{ item.conversation.last_message_at|ago }}</time>
+				</span>
+				<span class="dm-item-preview clip1">{% if last.sender_id == item.profile_id %}Вы: {% endif %}{% if last.deleted_at %}<i>Сообщение удалено</i>{% elif last.text %}{{ last.text|truncatechars:80 }}{% elif last.images.all %}Картинка{% endif %}</span>
+			</span>
+			{% if item.has_unread %}<span class="dm-dot" role="img" aria-label="Есть непрочитанные"></span>{% endif %}
+		</a>
+	</li>
+	{% endwith %}
+{% endfor %}
+{% if next_url %}
+	<li class="dm-more">
+		<button class="btn btn-ghost btn-sm" type="button" hx-get="{{ next_url }}" hx-target="closest li" hx-swap="outerHTML">Показать ещё</button>
+	</li>
+{% endif %}

@@ -1,0 +1,73 @@
+{% load azzb_ui %}
+<header class="dm-head">
+	<a class="icon-btn dm-back" href="{% url 'dm-inbox' %}" aria-label="К списку диалогов"><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></a>
+	<a class="dm-peer nu" href="{% url 'profile' peer.user.username %}">
+		{% avatar peer 'sm' %}
+		<span class="who" style="display: flex; flex-direction: column; min-width: 0">
+			<b class="clip1">{{ peer.username }}{% badges peer %}</b>
+			<span class="muted clip1" style="font-size: 13px" id="dm-status">@{{ peer.user.username }}</span>
+			<span class="dm-typing" id="dm-typing" aria-live="polite" hidden>печатает…</span>
+		</span>
+	</a>
+	{% if member %}
+		<div class="menu-wrap">
+			<button class="icon-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="dm-menu" aria-label="Действия с диалогом" data-menu-toggle>
+				<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
+			</button>
+			<div class="menu" id="dm-menu" role="menu" hidden>
+				<a class="menu-item" role="menuitem" href="{% url 'profile-report' peer.user.username %}">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
+				</a>
+				<form method="post" action="{% url 'dm-clear' member.conversation_id %}" data-confirm="Удалить диалог у себя? У @{{ peer.user.username }} переписка останется.">
+					{% csrf_token %}
+					<button class="menu-item danger" type="submit" role="menuitem">
+						<svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"></use></svg>Удалить диалог
+					</button>
+				</form>
+			</div>
+		</div>
+	{% endif %}
+</header>
+
+<div class="dm-scroll" id="dm-scroll" data-dm-chat="{{ member.conversation_id|default:'' }}">
+	{% if member %}
+		{% include "dm/_older.html" %}
+		{% if not chat_messages %}<p class="hint dm-empty">Сообщений нет.</p>{% endif %}
+	{% else %}
+		<p class="hint dm-empty">Здесь появится ваша переписка с @{{ peer.user.username }}.</p>
+	{% endif %}
+	<ol class="dm-messages" id="dm-messages" aria-live="polite"></ol>
+	<p class="dm-seen hint" id="dm-seen"{% if not seen %} hidden{% endif %}>Прочитано</p>
+</div>
+
+{% if member %}
+	{# Новые сообщения: по сигналу из сокета (azzb:dm-update), после отправки и без сокета — опросом. #}
+	<div hidden data-silent data-dm-updates hx-get="{% url 'dm-updates' member.conversation_id %}"
+		hx-trigger="azzb:dm-update from:document, every 5s [document.visibilityState === 'visible' && !window.azzbLive]"
+		hx-target="#dm-messages" hx-swap="beforeend" hx-sync="this:queue last"></div>
+{% endif %}
+
+<footer class="dm-foot">
+	{% if refusal %}
+		<p class="dm-refusal">{{ refusal }}</p>
+	{% else %}
+		<form class="dm-form" method="post" enctype="multipart/form-data"
+			action="{% if member %}{% url 'dm-send' member.conversation_id %}{% else %}{% url 'dm-start' peer.user.username %}{% endif %}"
+			hx-post="{% if member %}{% url 'dm-send' member.conversation_id %}{% else %}{% url 'dm-start' peer.user.username %}{% endif %}"
+			hx-encoding="multipart/form-data" hx-swap="none" hx-disabled-elt="find button[type=submit]" data-dm-form data-error="Не удалось отправить. Попробуйте ещё раз.">
+			{% csrf_token %}
+			<ul class="dm-attachments" data-dm-previews hidden></ul>
+			<div class="dm-row">
+				<label class="icon-btn dm-attach" title="Картинка">
+					<svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg>
+					<span class="sr">Прикрепить картинки (до {{ max_images }})</span>
+					<input class="sr" type="file" name="images" accept="{{ image_accept }}" multiple data-dm-files data-max="{{ max_images }}" data-max-mb="{{ max_upload_mb }}">
+				</label>
+				<textarea name="text" rows="1" maxlength="{{ message_max_length }}" placeholder="Сообщение" aria-label="Сообщение для @{{ peer.user.username }}" data-dm-text></textarea>
+				<button class="icon-btn dm-send" type="submit" aria-label="Отправить">
+					<svg class="icon" aria-hidden="true"><use href="#i-send"></use></svg>
+				</button>
+			</div>
+		</form>
+	{% endif %}
+</footer>

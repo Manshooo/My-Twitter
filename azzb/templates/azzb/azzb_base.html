@@ -8,7 +8,7 @@
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% endif %}>
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}>
 		{% include "azzb/includes/icons.html" %}
 		{% with url_name=request.resolver_match.url_name %}
 		<header class="topbar">
@@ -31,7 +31,7 @@
 			</div>
 		</header>
 
-		<div class="shell">
+		<div class="shell{% block shell_class %}{% endblock shell_class %}">
 			<nav class="side" aria-label="Основное меню">
 				<div class="side-logo">
 					{% include "azzb/includes/logo.html" %}
@@ -46,6 +46,10 @@
 					<a class="nav-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
 						{% include "notifications/_badge.html" with badge_id="notif-badge-side" %}
+					</a>
+					<a class="nav-item" href="{% url 'dm-inbox' %}"{% if url_name|slice:":3" == "dm-" %} aria-current="page"{% endif %}>
+						<svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>Сообщения
+						{% include "dm/_badge.html" with badge_id="dm-badge-side" %}
 					</a>
 					<a class="nav-item" href="{% url 'bookmarks' %}"{% if url_name == 'bookmarks' %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>Закладки
@@ -132,6 +136,10 @@
 					<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
 					{% include "notifications/_badge.html" with badge_id="notif-badge-tab" badge_class="tab-badge" %}
 				</a>
+				<a class="tab-item" href="{% url 'dm-inbox' %}"{% if url_name|slice:":3" == "dm-" %} aria-current="page"{% endif %}>
+					<svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>Сообщения
+					{% include "dm/_badge.html" with badge_id="dm-badge-tab" badge_class="tab-badge" %}
+				</a>
 				<a class="tab-item" href="{% url 'profile' user.username %}"{% if url_name == 'profile' and profile.pk == user.profile.pk %} aria-current="page"{% endif %}>
 					<svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Профиль
 				</a>
@@ -144,9 +152,9 @@
 		{% endwith %}
 
 		{% if user.is_authenticated %}
-			{# Счётчик уведомлений: опрос раз в 30 с, пока вкладка на экране (D1; позже — WebSocket, F3). #}
-			<div hidden data-silent hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible']" hx-swap="none"></div>
-			{% if request.resolver_match.url_name != 'edit-profile' %}
+			{# Счётчики: по сигналу из сокета (azzb:refresh-badges, F1), а без сокета — опрос раз в 30 с, пока вкладка на экране. #}
+			<div hidden data-silent data-badges hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible' && !window.azzbLive], azzb:refresh-badges" hx-swap="none"></div>
+			{% if request.resolver_match.url_name != 'edit-profile' and request.resolver_match.url_name|slice:":3" != 'dm-' %}
 				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
 					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
 				</button>

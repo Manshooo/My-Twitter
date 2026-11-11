@@ -47,6 +47,13 @@ class Theme(models.TextChoices):
 	DARK = 'dark', 'Тёмная'
 
 
+class DmPolicy(models.TextChoices):
+	"""Кто может начать со мной диалог (F2). Ответить в диалоге, где я уже писал(а), можно всегда."""
+	EVERYONE = 'everyone', 'Все'
+	FOLLOWING = 'following', 'Те, на кого я подписан(а)'
+	NOBODY = 'nobody', 'Никто'
+
+
 class CustomUser(AbstractUser):
 	username_validator = UsernameValidator()
 	username = models.CharField(
@@ -157,6 +164,7 @@ class Profile(models.Model):
 	likes_public = models.BooleanField("Показывать лайки всем", default=False)
 	# Закрытый аккаунт (E5): посты видят только одобренные подписчики, подписка — через заявку.
 	is_private = models.BooleanField("Закрытый аккаунт", default=False)
+	dm_policy = models.CharField("Кто может писать мне", max_length=10, choices=DmPolicy.choices, default=DmPolicy.EVERYONE)
 	# Закреплённый пост (B8): первым на вкладке «Посты». Только свой пост, меняется через post.services.toggle_pin.
 	pinned_post = models.ForeignKey(
 		'post.Post', verbose_name="Закреплённый пост", null=True, blank=True, on_delete=models.SET_NULL, related_name='+',

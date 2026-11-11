@@ -2,6 +2,8 @@
 {% block title %}Уведомления{% endblock title %}
 {% block content %}
 	<h1 class="display" style="font-size: 22px; padding: 4px 6px">Уведомления</h1>
+	{# Пришло новое, пока страница открыта (сигнал из сокета, F3), — показываем по нажатию, а не сдвигаем список. #}
+	<a class="btn btn-sm new-pill" href="{% url 'notifications' %}" data-new-notifications hidden>Новые уведомления</a>
 	<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
 		{% if groups %}
 			{% include "notifications/_page.html" %}

@@ -1,0 +1,24 @@
+{% load azzb_ui %}<li class="msg{% if message.sender_id == me_id %} msg-mine{% endif %}" id="m{{ message.pk }}" data-message-id="{{ message.pk }}">
+	{% if message.deleted_at %}
+		<div class="msg-bubble msg-gone">Сообщение удалено</div>
+	{% else %}
+		<div class="msg-bubble">
+			{% with images=message.images.all %}{% if images %}{% with count=images|length %}
+				<div class="media media-{{ count }}"{% if count == 1 %} style="aspect-ratio: {{ images.0.ratio }}"{% endif %} data-gallery>
+					{% for image in images %}
+						<a class="media-cell nu" href="{{ image.file.url }}" data-lightbox="{{ forloop.counter0 }}" aria-label="Открыть картинку {{ forloop.counter }} из {{ count }}">
+							<img src="{{ image.file.url }}" alt="Картинка {{ forloop.counter }}"{% if image.width %} width="{{ image.width }}" height="{{ image.height }}"{% endif %} loading="lazy" decoding="async">
+						</a>
+					{% endfor %}
+				</div>
+			{% endwith %}{% endif %}{% endwith %}
+			{% if message.text %}<p class="msg-text">{{ message.text|linkify }}</p>{% endif %}
+		</div>
+	{% endif %}
+	<div class="msg-meta">
+		<time datetime="{{ message.created_at|date:'c' }}" title="{{ message.created_at|date:'j E Y, H:i' }}">{{ message.created_at|msg_time }}</time>
+		{% if message.sender_id == me_id and not message.deleted_at %}
+			<button class="msg-delete" type="button" hx-post="{% url 'dm-delete' message.conversation_id message.pk %}" hx-target="closest .msg" hx-swap="outerHTML" hx-confirm="Удалить сообщение у вас и у собеседника?">Удалить</button>
+		{% endif %}
+	</div>
+</li>

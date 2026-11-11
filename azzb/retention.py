@@ -2,7 +2,7 @@
 
 Законодательство страны, где работает сайт, может требовать хранить сообщения пользователей и
 сведения о них какое-то время после удаления и выдавать их по законному запросу госорганов.
-Поэтому удаление на сайте мягкое: пост или аккаунт сразу пропадают для всех, а сообщения (тексты,
+Поэтому удаление на сайте мягкое: пост, личное сообщение или аккаунт сразу пропадают для всех, а сообщения (тексты,
 картинки) стираются через RETENTION_CONTENT, журнал действий (ActivityRecord) — через
 RETENTION_METADATA, командой purge_expired (cron раз в сутки, см. docs/deploy/retention.md).
 Раньше срока по просьбе человека данные стирает модератор через админку. Сроки — здесь, в одном месте.
@@ -19,6 +19,8 @@ def purge_expired(now=None):
 	"""Стереть всё, у чего вышел срок хранения. Возвращает {что: сколько}."""
 	from accounts.account import erase_account
 	from accounts.models import CustomUser
+	from dm.models import Message
+	from dm.services import purge_messages
 	from post.models import Post
 	from post.services import purge_posts
 
@@ -31,5 +33,6 @@ def purge_expired(now=None):
 		erase_account(user)
 		accounts += 1
 	posts = purge_posts(Post.objects.filter(deleted_at__lt=content_edge))
+	messages = purge_messages(Message.objects.filter(deleted_at__lt=content_edge))
 	records, _ = ActivityRecord.objects.filter(created_at__lt=now - RETENTION_METADATA).delete()
-	return {'accounts': accounts, 'posts': posts, 'activity': records}
+	return {'accounts': accounts, 'posts': posts, 'messages': messages, 'activity': records}

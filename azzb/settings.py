@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 	'accounts',
 	'moderation',
 	'notifications',
+	'dm',
 
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',
@@ -281,6 +282,19 @@ CACHES = {
 		'LOCATION': 'azzb_cache',
 	},
 }
+
+# Реальное время (F1, docs/deploy/realtime.md): сигналы во вкладки по WebSocket. Страницы отдаёт
+# gunicorn, сокеты — отдельный процесс uvicorn, между ними Redis. Без REDIS_URL слой в памяти
+# процесса — годится для тестов и для разработки под одним uvicorn (REALTIME_WS=1).
+REDIS_URL = env('REDIS_URL')
+CHANNEL_LAYERS = {
+	'default': {
+		'BACKEND': 'channels_redis.core.RedisChannelLayer',
+		'CONFIG': {'hosts': [REDIS_URL], 'prefix': 'azzb'},
+	} if REDIS_URL else {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
+}
+# Открывать ли вкладкам сокет. Выключено — счётчики и сообщения приходят опросом, как раньше.
+REALTIME_WS = env_bool('REALTIME_WS', bool(REDIS_URL))
 
 # Лимиты частоты (E2). За nginx настоящий IP посетителя приходит в заголовке, который nginx
 # ставит сам: proxy_set_header X-Real-IP $remote_addr; (docs/deploy/security.md).

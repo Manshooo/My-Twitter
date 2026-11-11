@@ -15,6 +15,11 @@ gunicorn==27.0.0
 whitenoise==6.12.0
 django-storages[s3]==1.14.6
 boto3==1.44.0
+# Реальное время (F1): WebSocket через Django Channels, процесс uvicorn, Redis между ним и gunicorn.
+channels==4.3.2
+channels-redis==4.3.0
+uvicorn==0.54.0
+websockets==17.4
 
 # Зависимости зависимостей — тоже закреплены: `pip install -r` не обновляет уже стоящий пакет,
 # если его версия подходит, и без этого на сервере годами живёт старая (так было с sqlparse 0.4.4).
@@ -26,6 +31,10 @@ python-dateutil==2.9.0.post0
 s3transfer==0.19.3
 six==1.17.0
 urllib3==2.8.0
+click==8.5.1
+h11==0.16.0
+msgpack==1.2.4
+redis==8.1.0
 
 # Только для разработки: подключается в settings.py при DJANGO_DEBUG=true.
 django-debug-toolbar==8.0.0

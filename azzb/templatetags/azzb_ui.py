@@ -34,6 +34,20 @@ def ago(value, mode=''):
 
 
 @register.filter
+def msg_time(value):
+	"""Время сообщения: «14:05», «вчера, 14:05», «12 ноября, 14:05», в прошлые годы — с годом."""
+	if not value:
+		return ''
+	local = timezone.localtime(value)
+	today = timezone.localdate()
+	if local.date() == today:
+		return date_format(local, 'H:i')
+	if local.date() == today - timedelta(days=1):
+		return 'вчера, ' + date_format(local, 'H:i')
+	return date_format(local, 'j E, H:i' if local.year == today.year else 'j E Y, H:i')
+
+
+@register.filter
 def linkify(text):
 	from post.text import linkify as render
 	return render(text)
