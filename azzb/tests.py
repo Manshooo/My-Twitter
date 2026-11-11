@@ -313,3 +313,21 @@ class RateLimitTests(TestCase):
 				self.client.post('/auth/signup/', {**data, 'smart-token': 'ok'})
 			self.assertTrue(User.objects.filter(username='newbie').exists())
 		check.assert_called_once()
+
+
+class DeployTests(TestCase):
+	"""A10: проверка живости для выкладки и ссылки на картинки из S3."""
+
+	def test_healthz(self):
+		response = self.client.get('/healthz')
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.content, b'ok')
+
+	def test_s3_media_links_point_to_site(self):
+		from storages.backends.s3 import S3Storage
+
+		storage = S3Storage(
+			bucket_name='azzb-media', endpoint_url='https://s3.ru-6.storage.selcloud.ru',
+			custom_domain='azzb.ru/media', querystring_auth=False,
+		)
+		self.assertEqual(storage.url('posts/2026/11/abc.webp'), 'https://azzb.ru/media/posts/2026/11/abc.webp')

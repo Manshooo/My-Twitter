@@ -19,17 +19,19 @@
 
 В `location /` сайта — в зависимости от того, как nginx передаёт запросы приложению.
 
-uWSGI по своему протоколу (`uwsgi_pass`, так на проде):
+uWSGI по своему протоколу (`uwsgi_pass`, так было до перехода на Docker):
 
 ```nginx
 include uwsgi_params;
 uwsgi_param HTTP_X_REAL_IP $remote_addr;
 ```
 
-HTTP-прокси (`proxy_pass`, например на gunicorn или uvicorn):
+HTTP-прокси (`proxy_pass` на gunicorn в контейнере — так сейчас, [docker.md](docker.md)):
 
 ```nginx
 proxy_set_header X-Real-IP $remote_addr;
+# Без него Django считает запросы небезопасными и отклоняет вход и формы (CSRF).
+proxy_set_header X-Forwarded-Proto $scheme;
 ```
 
 В обоих случаях nginx **перезаписывает** значение, присланное посетителем.
@@ -126,6 +128,9 @@ curl -sI https://azzb.ru/static/css/azzb.css | grep -i strict-transport
 Если что-то пошло не так — поставьте `max-age=0`: браузеры забудут правило при следующем заходе.
 
 ## 6. Python-зависимости на сервере
+
+> После перехода на Docker ([docker.md](docker.md)) этот раздел не нужен: окружения на сервере нет,
+> зависимости ставятся в образ при каждой сборке из `requirements.txt`, а `pip-audit` проверяет их в CI.
 
 `pip install -r requirements.txt` ставит недостающее и меняет версии закреплённых пакетов, но
 **не удаляет** лишнее и не трогает то, что поставлено руками. За годы в окружении копятся старые

@@ -14,10 +14,13 @@ from post.views import (
 	repost_post, vote_poll,
 )
 
-from .views import devtools_workspace, follows_updates, hot_news, index, legal_page, search, suggested_people
+from .views import (
+	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, search, suggested_people,
+)
 
 urlpatterns = [
 	path('', index, name='index'),
+	path('healthz', healthz, name='healthz'),
 	path("hot/", hot_news, name="hot-news"),
 	path("search/", search, name="search"),
 	path("people/suggested/", suggested_people, name="who-to-follow"),

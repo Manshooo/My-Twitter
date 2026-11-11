@@ -204,6 +204,8 @@ D1 → D4 → D5 → D2 → D3 → D6, D7 · G1 · E5 · B7, B8
 ### Этап 4. Реальное время и DM (≈ 3–4 недели)
 A10 (ASGI + Redis) → F1 → F2 → F3
 
+- **A10** — код ✅ (2026-11-11), сервер — по [`docs/deploy/docker.md`](deploy/docker.md). Сайт — образ `ghcr.io/manshooo/my-twitter` (gunicorn, gthread 2×4), собирает CI после тестов, выкладывает self-hosted раннер на сервере (`deploy/deploy.sh`: дамп базы → pull → migrate → up → `/healthz`; при ошибке печатает откат). Контейнер в сети хоста: PostgreSQL, Postfix и nginx остались на хосте, как у manshoo.ru. Статика — в образе (whitenoise, имена с хешем). Картинки — в бакете Selectel (`django-storages`, `S3_MEDIA_BUCKET`), nginx проксирует `/media/` с кэшем на сутки и перепроверкой. Ночные копии (`deploy/backup.sh`): дамп, зашифрованный `age` (закрытый ключ только у владельца), и копия бакета картинок; 30 дней. Ошибки 500 — письмом на `ADMINS`; падение сайта ловит uptime-чекер manshoo.ru. Журнал ограничен 300 МБ. Вместо Sentry — письма (решение владельца). Осталось к этапу 4: Redis и uvicorn для `/ws/` — вместе с F1.
+
 ### Этап 5. Умная лента (по мере накопления данных)
 G2 → G3
 

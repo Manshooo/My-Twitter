@@ -10,11 +10,22 @@ python-dotenv==1.2.4
 django-allauth==65.21.1
 # Драйвер PostgreSQL с готовыми бинарными сборками (не нужен libpq-dev на сервере).
 psycopg[binary]==3.3.8
+# Прод (A10): сервер приложения, статика из образа, картинки пользователей в S3.
+gunicorn==27.0.0
+whitenoise==6.12.0
+django-storages[s3]==1.14.6
+boto3==1.44.0
 
 # Зависимости зависимостей — тоже закреплены: `pip install -r` не обновляет уже стоящий пакет,
 # если его версия подходит, и без этого на сервере годами живёт старая (так было с sqlparse 0.4.4).
 asgiref==3.13.0
 sqlparse==0.6.1
+botocore==1.44.0
+jmespath==1.1.0
+python-dateutil==2.9.0.post0
+s3transfer==0.19.3
+six==1.17.0
+urllib3==2.8.0
 
 # Только для разработки: подключается в settings.py при DJANGO_DEBUG=true.
 django-debug-toolbar==8.0.0

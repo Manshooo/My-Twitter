@@ -18,13 +18,13 @@
 
 ## Ежедневная очистка
 
-Стирает всё, у чего вышел срок, команда `purge_expired`. Добавьте в `crontab -e` пользователя, от которого работает сайт (пути — как в unit-файле сервиса `azzb`):
+Стирает всё, у чего вышел срок, команда `purge_expired`. Она запускается в выложенной версии образа, в `crontab -e` пользователя `azzb_user` (см. [docker.md](docker.md), раздел 8):
 
 ```cron
-15 4 * * * cd /srv/azzb && .venv/bin/python manage.py purge_expired >> /var/log/azzb/purge.log 2>&1
+15 4 * * * /srv/azzb/manage.sh purge_expired >> /srv/azzb/backups/purge.log 2>&1
 ```
 
-Переменные окружения (`POSTGRES_*`, `DJANGO_SECRET_KEY`) команда берёт из `.env` в каталоге проекта, как и сам сайт.
+Переменные окружения (`POSTGRES_*`, `DJANGO_SECRET_KEY`) команда берёт из `/srv/azzb/.env`, как и сам сайт. Картинки стёртых постов удаляются из бакета сразу. Из кэша nginx они пропадают не позже чем через сутки, из копий в `azzb-backups` — через 30 дней.
 
 ## Запрос госорганов
 

@@ -1,5 +1,4 @@
 from datetime import timedelta
-from pathlib import Path
 
 from allauth.account.models import EmailAddress
 from django.http import HttpResponse
@@ -123,9 +122,9 @@ class AvatarAndBannerTests(TestCase):
 		self.assertEqual(response.status_code, 302)
 		profile = self.user.profile.__class__.objects.get(pk=self.user.profile.pk)
 		self.assertTrue(profile.has_custom_avatar)
-		with PILImage.open(profile.avatar.path) as avatar:
+		with profile.avatar.open('rb'), PILImage.open(profile.avatar) as avatar:
 			self.assertEqual((avatar.format, avatar.size), ('WEBP', (400, 400)))
-		with PILImage.open(profile.banner.path) as banner:
+		with profile.banner.open('rb'), PILImage.open(profile.banner) as banner:
 			self.assertEqual(banner.size, (1500, 500))
 		page = self.client.get('/users/carol/')
 		self.assertContains(page, profile.banner.url)
@@ -134,18 +133,18 @@ class AvatarAndBannerTests(TestCase):
 	def test_replacing_and_clearing_delete_old_files(self):
 		self.edit(avatar=make_upload())
 		profile = self.user.profile.__class__.objects.get(pk=self.user.profile.pk)
-		first = profile.avatar.path
+		storage, first = profile.avatar.storage, profile.avatar.name
 		with self.captureOnCommitCallbacks(execute=True):
 			self.edit(avatar=make_upload())
 		profile.refresh_from_db()
-		self.assertNotEqual(profile.avatar.path, first)
-		self.assertFalse(Path(first).exists())
-		second = profile.avatar.path
+		self.assertNotEqual(profile.avatar.name, first)
+		self.assertFalse(storage.exists(first))
+		second = profile.avatar.name
 		with self.captureOnCommitCallbacks(execute=True):
 			self.edit(avatar_clear='on')
 		profile.refresh_from_db()
 		self.assertFalse(profile.has_custom_avatar)
-		self.assertFalse(Path(second).exists())
+		self.assertFalse(storage.exists(second))
 
 	def test_bad_file_shows_error_and_keeps_profile(self):
 		from django.core.files.uploadedfile import SimpleUploadedFile

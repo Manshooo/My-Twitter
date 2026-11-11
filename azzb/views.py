@@ -2,7 +2,8 @@ from datetime import date
 from uuid import NAMESPACE_URL, uuid5
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.db import connection
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from django.contrib.auth.decorators import login_required
@@ -80,8 +81,15 @@ def search(request):
 	return render(request, 'azzb/search.html', context)
 
 
+def healthz(request):
+	"""Жив ли сайт и его база: для проверки после выкладки и healthcheck контейнера."""
+	with connection.cursor() as cursor:
+		cursor.execute('SELECT 1')
+	return HttpResponse('ok', content_type='text/plain')
+
+
 # Дата текущей редакции правил, политики и согласия (C5, E6). Меняете текст — меняйте и дату.
-LEGAL_UPDATED = date(2026, 11, 10)
+LEGAL_UPDATED = date(2026, 11, 11)
 
 
 def legal_page(template):

@@ -87,4 +87,4 @@ python manage.py shell --settings=azzb.settings_sqlite -c "from accounts.models 
 30 3 * * * pg_dump --format=custom azzb > /var/backups/azzb/azzb-$(date +\%F).dump && find /var/backups/azzb -name '*.dump' -mtime +14 -delete
 ```
 
-Каталог `/var/backups/azzb` нужно создать заранее и отдать пользователю `postgres`. Восстановление: `pg_restore --clean --dbname azzb azzb-ГГГГ-ММ-ДД.dump`. Резервные копии на том же диске не спасут от поломки сервера, поэтому периодически копируйте их на другую машину. Полностью это закрывает пункт A10.
+Этот cron заменён на `/srv/azzb/backup.sh` (шифрованные копии в S3, [docker.md](docker.md)). Каталог `/var/backups/azzb` нужно создать заранее и отдать пользователю `postgres`. Восстановление: `pg_restore --clean --dbname azzb azzb-ГГГГ-ММ-ДД.dump`. Резервные копии на том же диске не спасут от поломки сервера, поэтому периодически копируйте их на другую машину. Полностью это закрывает пункт A10.
