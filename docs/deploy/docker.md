@@ -69,8 +69,8 @@ id azzb_user
 # uid и gid из `id azzb_user`: контейнер работает от этого пользователя и читает .env.
 AZZB_UID=
 AZZB_GID=
-# Кому письмо об ошибке 500.
-ADMINS=Ваше имя <ваш@адрес>
+# Кому письмо об ошибке 500. Кавычки — вокруг всего значения: его читают и Docker Compose, и Django.
+ADMINS='Ваше имя <ваш@адрес>'
 S3_MEDIA_BUCKET=azzb-media
 S3_ENDPOINT=https://s3.ru-6.storage.selcloud.ru
 S3_REGION=ru-6
