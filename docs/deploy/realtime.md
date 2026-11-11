@@ -1,0 +1,62 @@
+# Реальное время: WebSocket (F1)
+
+```
+вкладка ──wss /ws/──► nginx ──► ws (uvicorn, 127.0.0.1:8002) ◄── redis (127.0.0.1:6379) ◄── web (gunicorn)
+```
+
+- Сокет приносит во вкладку только сигнал «что-то изменилось» (`{"event": "badges"}`,
+  `{"event": "dm", ...}`). Данные вкладка забирает обычным HTTP-запросом, и права проверяют вьюхи,
+  как и раньше. Пропущенный сигнал ничего не ломает: после переподключения вкладка один раз обновляет всё сама.
+- Сигналы шлёт `azzb.realtime.push(user_ids, event, ...)` после коммита транзакции. Если Redis
+  недоступен, сигнал теряется, а запрос пользователя проходит.
+- **Без сокета всё работает, как раньше:** счётчики приходят опросом раз в 30 секунд. Так ведут
+  себя старые браузеры, обрывы связи и сервер без realtime. Сокет открывается, только если задан
+  `REDIS_URL` (или `REALTIME_WS=1`).
+- Сокет принимает только вошедших и незабаненных, и только со страниц из `ALLOWED_HOSTS` (проверяется
+  `Origin`). Отказ приходит кодом закрытия 4401, после него вкладка не переподключается.
+
+## Включить на сервере
+
+Нужен тариф с 2 ГБ памяти. ws занимает около 80 МБ, redis — не больше 32 МБ (`maxmemory`).
+
+1. Добавьте в `/srv/azzb/.env`:
+   ```
+   COMPOSE_PROFILES=realtime
+   REDIS_URL=redis://127.0.0.1:6379/0
+   ```
+   `COMPOSE_PROFILES` включает сервисы `ws` и `redis` в `docker-compose.prod.yml`, `REDIS_URL` —
+   отправку сигналов из gunicorn и сокет во вкладках. Порты 6379 и 8002 должны быть свободны
+   (`ss -ltn | grep -E ':6379|:8002'`).
+2. Добавьте в nginx блоки `upstream azzb_ws` и `location /ws/` из
+   [deploy/nginx/azzb.conf](../../deploy/nginx/azzb.conf), затем `sudo nginx -t && sudo systemctl reload nginx`.
+3. Выполните `/srv/azzb/deploy.sh $(cat /srv/azzb/.deployed-tag)` или дождитесь следующей автовыкладки:
+   `deploy.sh` поднимет `ws` и `redis` и проверит `/healthz` обоих процессов.
+
+Проверка: `docker compose -f docker-compose.prod.yml ps` — три сервиса `healthy`. В браузере
+DevTools → Network → WS: соединение `wss://azzb.ru/ws/` со статусом 101. Лайк с другого аккаунта
+меняет счётчик уведомлений сразу, а не через 30 секунд.
+
+Журналы: `journalctl -t azzb-ws -t azzb-redis -n 50 --no-pager`.
+
+Выключить: уберите обе строки из `.env`, затем `docker compose -f docker-compose.prod.yml down ws redis`
+и `deploy.sh`. Блок `/ws/` в nginx можно оставить.
+
+## Разработка
+
+Без Redis, одним процессом: uvicorn отдаёт и страницы, и сокет, а слой сигналов живёт в памяти процесса.
+
+```bash
+REALTIME_WS=1 uvicorn azzb.asgi:application --reload --port 8000
+```
+
+С Redis, как на проде: сигналы доходят и из других процессов, например из `manage.py shell`.
+
+```bash
+docker run -d --name azzb-redis -p 127.0.0.1:6379:6379 redis:8.10-alpine
+REDIS_URL=redis://127.0.0.1:6379/0 uvicorn azzb.asgi:application --reload --port 8000
+```
+
+`runserver` сокет не обслуживает: с ним всё работает через опрос.
+
+Тесты сокета: `azzb/test_realtime.py`. Клиент — `azzb.testing.WebsocketClient`, потому что
+`channels.testing` требует daphne.

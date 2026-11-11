@@ -8,6 +8,7 @@
 ```
 push в main → тесты → образ ghcr.io/manshooo/my-twitter → раннер на сервере → /srv/azzb/deploy.sh
 nginx (хост) ─┬─ /        → gunicorn в контейнере, 127.0.0.1:8001 → PostgreSQL и Postfix хоста
+              ├─ /ws/     → uvicorn в контейнере, 127.0.0.1:8002 (после 2 ГБ памяти, realtime.md)
               └─ /media/  → бакет Selectel azzb-media (с кэшем на диске)
 cron 03:30 → /srv/azzb/backup.sh → бакет azzb-backups: дамп базы (зашифрован), копия картинок; 30 дней
 ```
@@ -352,5 +353,5 @@ rclone copy media:azzb-media /var/www/azzb/media
 
 На сервере 1 ГБ. На нём manshoo.ru (четыре контейнера), PostgreSQL, Postfix, два раннера и
 gunicorn AzzB: 2 процесса по 4 потока, около 150–200 МБ. После выключения uWSGI его память
-освобождается, так что сейчас должно хватить. Для этапа 4 (Redis и процесс для WebSocket) по-прежнему
-нужен тариф с 2 ГБ. Следить: `free -h`, `docker stats --no-stream`.
+освобождается, так что сейчас должно хватить. Redis и процесс для WebSocket (этап 4) по умолчанию
+выключены: включайте их по [realtime.md](realtime.md) после перехода на тариф с 2 ГБ. Следить: `free -h`, `docker stats --no-stream`.

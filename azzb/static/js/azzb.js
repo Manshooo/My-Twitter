@@ -28,6 +28,59 @@
 	}
 	window.azzbToast = toast;
 
+	// ---------- Реальное время (F1) ----------
+	// Сокет приносит только сигналы ({event: 'badges'}, {event: 'dm', ...}), данные забирает htmx.
+	// Каждый сигнал становится событием документа azzb:ws:<event>. Пока сокета нет, работает опрос
+	// (условие !window.azzbLive в hx-trigger), а после (пере)подключения всё обновляется один раз:
+	// сигналы, пришедшие без нас, потеряны.
+	window.azzbLive = false;
+	const wsPath = document.body.dataset.wsPath;
+	let socket = null;
+	let wsAttempt = 0;
+	let badgesTimer = null;
+
+	function wsConnect() {
+		socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + wsPath);
+		socket.addEventListener('open', () => {
+			wsAttempt = 0;
+			window.azzbLive = true;
+			document.dispatchEvent(new CustomEvent('azzb:ws:open'));
+			refreshBadges();
+		});
+		socket.addEventListener('message', (event) => {
+			let data;
+			try { data = JSON.parse(event.data); } catch (e) { return; }
+			if (data && typeof data.event === 'string') {
+				document.dispatchEvent(new CustomEvent('azzb:ws:' + data.event, {detail: data}));
+			}
+		});
+		socket.addEventListener('close', (event) => {
+			socket = null;
+			window.azzbLive = false;
+			document.dispatchEvent(new CustomEvent('azzb:ws:close'));
+			if (event.code === 4401) return;  // вышли или забанены — переподключаться незачем
+			// 1, 2, 4… до 60 с, вразброс: после перезапуска сервера вкладки не придут все разом.
+			const delay = Math.min(60000, 1000 * 2 ** wsAttempt++) * (0.5 + Math.random());
+			setTimeout(wsConnect, delay);
+		});
+	}
+
+	window.azzbSend = (data) => {
+		if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data));
+	};
+
+	// Лайки сыплются пачкой — счётчики спрашиваем не чаще раза в секунду.
+	function refreshBadges() {
+		clearTimeout(badgesTimer);
+		badgesTimer = setTimeout(() => {
+			const poller = document.querySelector('[data-badges]');
+			if (poller && window.htmx) htmx.trigger(poller, 'azzb:refresh-badges');
+		}, 1000);
+	}
+	document.addEventListener('azzb:ws:badges', refreshBadges);
+
+	if (wsPath && 'WebSocket' in window) wsConnect();
+
 	// ---------- Меню ----------
 	// Меню открывается в верхнем слое страницы (Popover API), поэтому его не обрезает overflow
 	// карточки и не перекрывает чужой z-index — где бы в разметке оно ни стояло. Место считаем сами:

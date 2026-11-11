@@ -41,6 +41,7 @@ def ui(request):
 		'poll_durations': list(POLL_DURATIONS.items()),
 		'poll_option_max_length': POLL_OPTION_MAX_LENGTH,
 		'support_email': settings.SUPPORT_EMAIL,
+		'realtime_ws': settings.REALTIME_WS,
 		# Баннер cookie и счётчик Метрики (azzb/cookies.py).
 		'cookie_choice': cookie_choice(request),
 		'cookie_categories': CATEGORIES,

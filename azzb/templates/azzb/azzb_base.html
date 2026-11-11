@@ -8,7 +8,7 @@
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% endif %}>
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}>
 		{% include "azzb/includes/icons.html" %}
 		{% with url_name=request.resolver_match.url_name %}
 		<header class="topbar">
@@ -144,8 +144,8 @@
 		{% endwith %}
 
 		{% if user.is_authenticated %}
-			{# Счётчик уведомлений: опрос раз в 30 с, пока вкладка на экране (D1; позже — WebSocket, F3). #}
-			<div hidden data-silent hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible']" hx-swap="none"></div>
+			{# Счётчики: по сигналу из сокета (azzb:refresh-badges, F1), а без сокета — опрос раз в 30 с, пока вкладка на экране. #}
+			<div hidden data-silent data-badges hx-get="{% url 'notifications-unread' %}" hx-trigger="every 30s [document.visibilityState === 'visible' && !window.azzbLive], azzb:refresh-badges" hx-swap="none"></div>
 			{% if request.resolver_match.url_name != 'edit-profile' %}
 				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
 					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>

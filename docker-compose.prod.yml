@@ -1,26 +1,94 @@
-# Прод AzzB (A10): каталог /srv/azzb на сервере, туда этот файл кладёт CI (deploy-джоба).
+# Прод AzzB (A10, F1): каталог /srv/azzb на сервере, туда этот файл кладёт CI (deploy-джоба).
 # Снаружи контейнера остаются nginx, PostgreSQL и Postfix хоста — docs/deploy/docker.md.
+# web — страницы (gunicorn :8001), ws — WebSocket /ws/ (uvicorn :8002), redis — сигналы между ними.
+# ws и redis включаются в .env: COMPOSE_PROFILES=realtime и REDIS_URL (docs/deploy/realtime.md).
 name: azzb
+
+x-app: &app
+  image: ghcr.io/manshooo/my-twitter:${AZZB_TAG:-latest}
+  restart: unless-stopped
+  # Сеть хоста: база (localhost:5432) и Postfix (localhost:25) доступны как раньше, без правок
+  # pg_hba.conf и mynetworks. Наружу не торчит: всё слушает только 127.0.0.1.
+  network_mode: host
+  # uid/gid владельца .env (AZZB_UID/AZZB_GID в том же .env): файл с паролями остаётся chmod 600.
+  user: "${AZZB_UID:?AZZB_UID не задан в .env}:${AZZB_GID:?AZZB_GID не задан в .env}"
+  volumes:
+    # Настройки читает python-dotenv, как и раньше; env_file не годится — compose подставляет в нём `$`.
+    - ./.env:/app/.env:ro
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
 
 services:
   web:
-    image: ghcr.io/manshooo/my-twitter:${AZZB_TAG:-latest}
-    restart: unless-stopped
-    # Сеть хоста: база (localhost:5432) и Postfix (localhost:25) доступны как раньше, без правок
-    # pg_hba.conf и mynetworks. Наружу не торчит: gunicorn слушает только 127.0.0.1:8001.
-    network_mode: host
-    # uid/gid владельца .env (AZZB_UID/AZZB_GID в том же .env): файл с паролями остаётся chmod 600.
-    user: "${AZZB_UID:?AZZB_UID не задан в .env}:${AZZB_GID:?AZZB_GID не задан в .env}"
-    volumes:
-      # Настройки читает python-dotenv, как и раньше; env_file не годится — compose подставляет в нём `$`.
-      - ./.env:/app/.env:ro
+    <<: *app
     logging:
       driver: journald
       options:
         tag: azzb-web
     healthcheck:
+      <<: *healthcheck
       test: ["CMD", "python", "-c", "import sys, urllib.request as u; sys.exit(u.urlopen(u.Request('http://127.0.0.1:8001/healthz', headers={'Host': 'azzb.ru'}), timeout=3).status != 200)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+
+  ws:
+    <<: *app
+    profiles: [realtime]
+    command:
+      - uvicorn
+      - azzb.asgi:application
+      - --host=127.0.0.1
+      - --port=8002
+      - --ws=websockets-sansio
+      - --lifespan=off
+      - --no-access-log
+      - --log-level=warning
+      # Вкладка шлёт только короткие сигналы («печатает…»).
+      - --ws-max-size=4096
+      - --ws-ping-interval=25
+      - --ws-ping-timeout=20
+      - --timeout-graceful-shutdown=10
+    environment:
+      # В ASGI постоянные соединения с базой не переиспользуются между потоками — Django советует 0.
+      POSTGRES_CONN_MAX_AGE: "0"
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging:
+      driver: journald
+      options:
+        tag: azzb-ws
+    healthcheck:
+      <<: *healthcheck
+      # Тот же Django: /healthz отвечает и через ASGI.
+      test: ["CMD", "python", "-c", "import sys, urllib.request as u; sys.exit(u.urlopen(u.Request('http://127.0.0.1:8002/healthz', headers={'Host': 'azzb.ru'}), timeout=3).status != 200)"]
+
+  redis:
+    image: redis:8.10-alpine
+    profiles: [realtime]
+    restart: unless-stopped
+    network_mode: host
+    # Только сигналы, ничего не хранит: без записи на диск, потолок памяти.
+    command:
+      - redis-server
+      - --bind
+      - 127.0.0.1
+      - --port
+      - "6379"
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 32mb
+      - --maxmemory-policy
+      - volatile-lru
+    logging:
+      driver: journald
+      options:
+        tag: azzb-redis
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
