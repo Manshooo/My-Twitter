@@ -17,13 +17,16 @@ from post.views import (
 
 from .sitemaps import SITEMAPS
 from .views import (
-	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, robots_txt, search, suggested_people,
+	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, offline, robots_txt, search,
+	service_worker, suggested_people,
 )
 
 urlpatterns = [
 	path('', index, name='index'),
 	path('healthz', healthz, name='healthz'),
 	path('robots.txt', robots_txt, name='robots'),
+	path('sw.js', service_worker, name='service-worker'),
+	path('offline/', offline, name='offline'),
 	path('sitemap.xml', sitemap_views.index, {'sitemaps': SITEMAPS, 'sitemap_url_name': 'sitemap-section'}, name='sitemap'),
 	path('sitemap-<section>.xml', sitemap_views.sitemap, {'sitemaps': SITEMAPS}, name='sitemap-section'),
 	path("hot/", hot_news, name="hot-news"),

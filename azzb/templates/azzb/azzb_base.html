@@ -78,6 +78,9 @@
 							<span style="flex: 1">Тёмная тема</span>
 							<span class="switch" aria-hidden="true"></span>
 						</button>
+						<button class="menu-item" type="button" role="menuitem" data-install-app hidden>
+							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"></use></svg>Установить приложение
+						</button>
 						{% if user.is_authenticated %}
 							<a class="menu-item" role="menuitem" href="{% url 'edit-profile' %}">
 								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки профиля

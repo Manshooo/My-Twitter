@@ -7,6 +7,9 @@
 		<link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
 		<link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
 		<link rel="manifest" href="{% static 'site.webmanifest' %}">
+		<meta name="azzb-sw" content="{% url 'service-worker' %}">
+		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+		<meta name="theme-color" content="#142626" media="(prefers-color-scheme: dark)">
 		<meta property="og:site_name" content="AzzB">
 		<meta property="og:locale" content="ru_RU">
 		{# Счётчик Метрики: azzb.js загрузит его, только если посетитель разрешил аналитику. #}
