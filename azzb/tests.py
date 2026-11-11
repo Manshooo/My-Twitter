@@ -1,10 +1,11 @@
 import json
 import re
+from unittest import mock
 
 from allauth.account.models import EmailAddress
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import Client, TestCase, override_settings
 
 from accounts.forms import SignupForm
 from accounts.models import CustomUser, FollowThrough
@@ -327,6 +328,21 @@ class DeployTests(TestCase):
 		response = self.client.get('/healthz')
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.content, b'ok')
+
+	@override_settings(ADMINS=[('Admin', 'admin@example.com')])
+	def test_server_error_page_and_admin_mail(self):
+		client = Client(raise_request_exception=False)
+		with mock.patch('azzb.views.HttpResponse', side_effect=RuntimeError('сбой')):
+			response = client.get('/healthz')
+		self.assertContains(response, 'Что-то сломалось', status_code=500)
+		self.assertEqual(len(mail.outbox), 1)
+		self.assertIn('RuntimeError', mail.outbox[0].body)
+
+	def test_s3_client_trusts_selectel_root(self):
+		from botocore.httpsession import get_cert_path
+
+		with open(get_cert_path(True)) as bundle:
+			self.assertIn('GlobalSign Root CA - R6', bundle.read())
 
 	def test_s3_media_links_point_to_site(self):
 		from storages.backends.s3 import S3Storage

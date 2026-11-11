@@ -1284,20 +1284,45 @@
 			previews.hidden = !files.length;
 		}
 
-		input.addEventListener('change', () => {
-			const picked = Array.from(input.files).filter((file) => {
+		const attachFiles = (list) => {
+			const picked = Array.from(list).filter((file) => {
 				if (!input.accept.split(',').includes(file.type) || file.size > maxBytes) {
 					toast('Нужна картинка JPEG, PNG, WebP или GIF до ' + input.dataset.maxMb + ' МБ');
 					return false;
 				}
 				return true;
 			});
+			if (!picked.length) return;
 			files = files.concat(picked);
 			if (files.length > maxFiles) {
 				toast('Не больше ' + maxFiles + ' картинок в сообщении');
 				files = files.slice(0, maxFiles);
 			}
 			syncFiles();
+		};
+		input.addEventListener('change', () => attachFiles(input.files));
+		// Картинка из буфера (Ctrl+V) или перетащенная в окно переписки — как выбранная кнопкой.
+		dmForm.addEventListener('paste', (event) => {
+			const pasted = imageFiles(event.clipboardData && event.clipboardData.files);
+			if (!pasted.length) return;
+			event.preventDefault();
+			attachFiles(pasted);
+		});
+		const chat = dmForm.closest('.dm-chat');
+		const draggingFiles = (event) => event.dataTransfer && Array.from(event.dataTransfer.types).includes('Files');
+		chat.addEventListener('dragover', (event) => {
+			if (!draggingFiles(event)) return;
+			event.preventDefault();
+			chat.classList.add('dragging');
+		});
+		chat.addEventListener('dragleave', (event) => {
+			if (!chat.contains(event.relatedTarget)) chat.classList.remove('dragging');
+		});
+		chat.addEventListener('drop', (event) => {
+			if (!draggingFiles(event)) return;
+			event.preventDefault();
+			chat.classList.remove('dragging');
+			attachFiles(event.dataTransfer.files);
 		});
 
 		text.addEventListener('input', () => {

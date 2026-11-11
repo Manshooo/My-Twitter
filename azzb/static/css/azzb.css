@@ -641,6 +641,7 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 }
 .attachment-alt:focus-visible { outline: none; border-color: var(--accent); }
 .composer-form.dragging { outline: 2px dashed var(--accent); outline-offset: -8px; border-radius: 0 0 24px 24px; }
+.dm-chat.dragging { outline: 2px dashed var(--accent); outline-offset: -8px; }
 .composer-form textarea { overflow-y: auto; }
 .composer-keys { white-space: nowrap; }
 @media (max-width: 760px), (pointer: coarse) { .composer-keys { display: none; } }
