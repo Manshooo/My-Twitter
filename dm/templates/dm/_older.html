@@ -1,0 +1,7 @@
+{# Порция ранних сообщений: кнопка «Показать ранние» заменяется ими и, если есть ещё, новой кнопкой. #}
+{% if has_more %}
+	<div class="dm-older">
+		<button class="btn btn-ghost btn-sm" type="button" hx-get="{% url 'dm-conversation' member.conversation_id %}?before={{ chat_messages.0.pk }}" hx-target="closest .dm-older" hx-swap="outerHTML">Показать ранние</button>
+	</div>
+{% endif %}
+<ol class="dm-messages">{% for message in chat_messages %}{% include "dm/_message.html" with me_id=member.profile_id %}{% endfor %}</ol>

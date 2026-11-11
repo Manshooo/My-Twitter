@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 	'accounts',
 	'moderation',
 	'notifications',
+	'dm',
 
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',

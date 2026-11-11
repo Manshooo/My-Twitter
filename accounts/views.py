@@ -4,6 +4,7 @@ from django.db.models.base import Model as Model
 from django.shortcuts import HttpResponse, redirect, render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.functional import SimpleLazyObject
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.views.generic.detail import DetailView
@@ -11,6 +12,7 @@ from django.views.generic.edit import UpdateView
 
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
 from azzb.ratelimit import rate_limit
+from dm import services as dm
 from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 
@@ -173,6 +175,10 @@ class UserProfileDetailView(DetailView):
 			"i_blocked": not is_own and Block.objects.filter(blocker=viewer, blocked=profile).exists(),
 			"blocked_me": not is_own and Block.objects.filter(blocker=profile, blocked=viewer).exists(),
 			"i_muted": not is_own and Mute.objects.filter(muter=viewer, muted=profile).exists(),
+			# «Написать» (F2): есть диалог или можно начать новый. Ленивое — страницы ленты его не выводят.
+			"can_message": SimpleLazyObject(lambda: not is_own and (
+				dm.find_member(viewer, profile) is not None or dm.refusal(viewer, profile) is None
+			)),
 		})
 		return context
 

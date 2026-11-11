@@ -75,6 +75,14 @@
 				{% if user.profile.is_private %}<a href="{% url 'follow-requests' %}" style="font-size: 14px; font-weight: 700">Заявки на подписку</a>{% endif %}
 			</fieldset>
 
+			<fieldset class="choice-row">
+				<legend class="field-label">{{ form.dm_policy.label }}</legend>
+				{% for radio in form.dm_policy %}
+					<label class="choice" for="{{ radio.id_for_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+				{% endfor %}
+				<span class="hint">{{ form.dm_policy.help_text }}</span>
+			</fieldset>
+
 			<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
 				<legend class="field-label" style="padding: 0; margin-bottom: 10px">Аккаунт</legend>
 				<div class="account-row">

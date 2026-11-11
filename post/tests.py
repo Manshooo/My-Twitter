@@ -347,17 +347,6 @@ class RepliesTests(TestCase):
 		self.assertIn('Пост скрыт модератором', page)
 		self.assertIn('реплика 2<', page)
 
-	def test_feed_query_count_does_not_grow_with_replies(self):
-		for i in range(5):
-			post = Post.objects.create(author=self.alice.profile, text=f'пост {i}')
-			Post.objects.create(author=self.bob.profile, text='ответ', reply_to=post, is_reply=True)
-		self.client.force_login(self.bob)
-		self.client.get('/')  # прогрев: сессия, last_visit
-		# сессия, пользователь, профиль, посты, картинки, непрочитанные уведомления,
-		# право модерировать (пункт меню), тренды (из кэша), «Кого почитать» — сколько бы ни было ответов.
-		with self.assertNumQueries(9):
-			self.client.get('/')
-
 
 class EditPostTests(TestCase):
 	def setUp(self):

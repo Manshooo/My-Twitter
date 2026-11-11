@@ -1,0 +1,5 @@
+{% if members %}
+	<ul class="dm-items">{% include "dm/_list_items.html" %}</ul>
+{% else %}
+	<p class="hint" style="padding: 8px 18px 18px">Диалогов пока нет. Начать разговор можно кнопкой «Написать» в профиле.</p>
+{% endif %}

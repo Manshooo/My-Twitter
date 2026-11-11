@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from azzb.htmx import htmx_login_required, is_htmx
+from dm.services import unread_count as unread_messages
 
 from .services import grouped_page, mark_all_read, parse_before, unread_count
 
@@ -24,5 +25,8 @@ def notifications_page(request):
 
 @htmx_login_required
 def unread_badge(request):
-	"""Опрос раз в 30 с из оболочки: значки обновляются через hx-swap-oob."""
-	return render(request, 'notifications/_badges.html', {'unread_notifications': unread_count(request.user)})
+	"""Значки «Уведомления» и «Сообщения» через hx-swap-oob: по сигналу из сокета или опросом раз в 30 с."""
+	return render(request, 'notifications/_badges.html', {
+		'unread_notifications': unread_count(request.user),
+		'unread_messages': unread_messages(request.user.profile),
+	})

@@ -58,6 +58,11 @@
 							<button class="btn btn-outline btn-danger" type="submit" name="unblock">Разблокировать</button>
 						</form>
 					{% elif not blocked_me %}
+						{% if can_message %}
+							<a class="icon-btn" style="border: 1.5px solid var(--border-strong)" href="{% url 'dm-start' profile.user.username %}" aria-label="Написать @{{ profile.user.username }}" title="Написать">
+								<svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>
+							</a>
+						{% endif %}
 						<form method="post" action="{{ profile_url }}">
 							{% csrf_token %}
 							{% if is_subscribed %}

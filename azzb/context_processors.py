@@ -4,6 +4,7 @@ from django.utils.functional import SimpleLazyObject
 from accounts.models import Theme
 from moderation.models import Report
 from moderation.services import can_moderate
+from dm.services import unread_count as unread_messages
 from notifications.services import unread_count
 from post.media import ACCEPT, MAX_UPLOAD_MB
 from post.models import ALT_MAX_LENGTH, MAX_IMAGES, POLL_DURATIONS, POLL_OPTION_MAX_LENGTH
@@ -52,5 +53,9 @@ def ui(request):
 		'open_reports': SimpleLazyObject(lambda: Report.objects.filter(status=Report.Status.OPEN).count()),
 		'unread_notifications': SimpleLazyObject(
 			lambda: unread_count(request.user) if request.user.is_authenticated else 0,
+		),
+		# Значок «Сообщения»: диалоги с непрочитанными (F2).
+		'unread_messages': SimpleLazyObject(
+			lambda: unread_messages(request.user.profile) if request.user.is_authenticated else 0,
 		),
 	}

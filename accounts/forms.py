@@ -13,7 +13,7 @@ from post.media import ACCEPT, parse_crop, process_cropped_image
 
 from . import captcha
 from .relations import set_private
-from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser
+from .models import AVATAR_SIZE, BANNER_SIZE, DEFAULT_AVATAR, USERNAME_MAX_LENGTH, CustomUser, DmPolicy
 
 
 class LoginForm(allauth_forms.LoginForm):
@@ -119,6 +119,15 @@ class UpdateUserForm(forms.ModelForm):
 		required=False,
 	)
 
+	dm_policy = forms.ChoiceField(
+		label="Кто может мне писать",
+		choices=DmPolicy.choices,
+		widget=forms.RadioSelect,
+		# Не пришло (старая форма в открытой вкладке) — настройка не меняется.
+		required=False,
+		help_text="Касается новых диалогов: тем, кому вы уже писали, ответить можно всегда.",
+	)
+
 	# Картинки обрабатываются в post/media.py: обрезка по области из браузера (или по центру),
 	# уменьшение, WebP без EXIF. Поэтому здесь FileField, а не ImageField.
 	avatar = forms.FileField(label="Аватар", required=False, widget=forms.ClearableFileInput(attrs={'accept': ACCEPT}))
@@ -137,6 +146,7 @@ class UpdateUserForm(forms.ModelForm):
 				self.fields['username'].initial = instance.profile.username
 				self.fields['likes_public'].initial = instance.profile.likes_public
 				self.fields['is_private'].initial = instance.profile.is_private
+				self.fields['dm_policy'].initial = instance.profile.dm_policy
 		# Обычный <input type=file> без «Очистить» от ClearableFileInput: для этого свои флажки.
 		for name in ('avatar', 'banner'):
 			self.fields[name].widget = forms.FileInput(attrs={'accept': ACCEPT, 'class': 'sr', 'data-crop-input': name})
@@ -183,6 +193,7 @@ class UpdateUserForm(forms.ModelForm):
 				profile.bio = self.cleaned_data['bio']
 				profile.username = self.cleaned_data['username']
 				profile.likes_public = self.cleaned_data['likes_public']
+				profile.dm_policy = self.cleaned_data['dm_policy'] or profile.dm_policy
 				self._replace_image(profile, 'avatar', DEFAULT_AVATAR)
 				self._replace_image(profile, 'banner', '')
 				profile.save()

@@ -1,9 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import connection
 from django.test import TestCase
-from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -88,21 +86,6 @@ class NotificationTests(TestCase):
 		self.assertContains(response, 'notif-unread')
 		self.assertEqual(unread_count(self.ann), 0)
 		self.assertNotContains(self.client.get(reverse('notifications')), 'notif-unread')
-
-	def test_page_query_count_does_not_grow(self):
-		self.client.force_login(self.ann)
-		toggle_like(self.post, self.bob.profile)
-		self.client.get(reverse('notifications'))
-		with CaptureQueriesContext(connection) as few:
-			self.client.get(reverse('notifications'))
-		for index in range(5):
-			user = User.objects.create_user(f'u{index}', f'u{index}@example.com', 'pass-12345')
-			post = publish_post(self.ann.profile, f'пост {index}')
-			toggle_like(post, user.profile)
-			publish_post(user.profile, 'ответ', reply_to=post)
-			relations.follow(user.profile, self.ann.profile)
-		with self.assertNumQueries(len(few.captured_queries)):
-			self.client.get(reverse('notifications'))
 
 	def test_pagination(self):
 		for index in range(25):

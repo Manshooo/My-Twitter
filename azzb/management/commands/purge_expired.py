@@ -4,10 +4,11 @@ from azzb.retention import purge_expired
 
 
 class Command(BaseCommand):
-	help = 'Стирает удалённые посты и аккаунты старше полугода и журнал действий старше года (сроки — azzb/retention.py).'
+	help = 'Стирает удалённые посты, сообщения и аккаунты старше полугода и журнал действий старше года (сроки — azzb/retention.py).'
 
 	def handle(self, *args, **options):
 		done = purge_expired()
 		self.stdout.write(
-			f"Стёрто: аккаунтов {done['accounts']}, постов {done['posts']}, записей журнала {done['activity']}."
+			f"Стёрто: аккаунтов {done['accounts']}, постов {done['posts']}, сообщений {done['messages']}, "
+			f"записей журнала {done['activity']}."
 		)

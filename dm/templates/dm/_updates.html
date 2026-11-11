@@ -1,0 +1,3 @@
+{% for message in chat_messages %}{% include "dm/_message.html" with me_id=member.profile_id %}{% endfor %}
+<p class="dm-seen hint" id="dm-seen" hx-swap-oob="true"{% if not seen %} hidden{% endif %}>Прочитано</p>
+{% if badges %}{% include "notifications/_badges.html" %}{% endif %}

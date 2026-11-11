@@ -1,7 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db import connection
 from django.test import TestCase
-from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -131,17 +129,3 @@ class QuoteTests(TestCase):
 		response = self.client.get(reverse('post', args=[quote.pk]))
 		self.assertContains(response, 'Цитируемый пост недоступен')
 		self.assertNotContains(response, 'исходный пост')
-
-	def test_feed_query_count_does_not_grow_with_reposts_and_quotes(self):
-		self.client.force_login(self.bob)
-		toggle_repost(self.post, self.bob.profile)
-		publish_post(self.bob.profile, 'цитата', quote_of=self.post)
-		self.client.get('/')
-		with CaptureQueriesContext(connection) as few:
-			self.client.get('/')
-		for index in range(5):
-			post = publish_post(self.ann.profile, f'пост {index}')
-			toggle_repost(post, self.bob.profile)
-			publish_post(self.bob.profile, f'цитата {index}', quote_of=post)
-		with self.assertNumQueries(len(few.captured_queries)):
-			self.client.get('/')

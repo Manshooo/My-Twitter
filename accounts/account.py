@@ -23,6 +23,8 @@ from django.views.decorators.http import require_POST
 from azzb.activity import Action, record
 from azzb.models import ActivityRecord
 from azzb.ratelimit import rate_limit
+from dm.models import Member, Message
+from dm.services import purge_messages
 from moderation.models import Ban, Report
 from notifications.models import Notification
 from post.models import Bookmark, Like, Mention, PollVote, Post
@@ -98,6 +100,23 @@ def collect_user_data(user):
 			],
 		})
 
+	conversations = []
+	for member in Member.objects.filter(profile=profile).select_related('peer__user').order_by('pk'):
+		messages = Message.objects.filter(conversation_id=member.conversation_id, purged_at__isnull=True)
+		conversations.append({
+			'with': member.peer.user.username,
+			'messages': [
+				{
+					'from': 'me' if message.sender_id == profile.pk else member.peer.user.username,
+					'at': message.created_at,
+					'deleted_at': message.deleted_at,
+					'text': message.text,
+					'images': [attach(image.file, f'messages/{member.conversation_id}') for image in message.images.all()],
+				}
+				for message in messages.prefetch_related('images').order_by('pk')
+			],
+		})
+
 	def people(queryset, field):
 		return [{'username': getattr(row, field).user.username, 'since': row.created_at} for row in queryset]
 
@@ -133,6 +152,7 @@ def collect_user_data(user):
 			{'post': vote.poll.post_id, 'option': vote.option.text, 'at': vote.created_at}
 			for vote in PollVote.objects.filter(profile=profile).select_related('poll', 'option')
 		],
+		'conversations': conversations,
 		'bookmarks': [
 			{'post': bookmark.post_id, 'at': bookmark.created_at}
 			for bookmark in Bookmark.objects.filter(profile=profile).order_by('created_at')
@@ -178,6 +198,7 @@ def export_data(request):
 			'Ваши данные из AzzB.\n\n'
 			'data.json — аккаунт, профиль, посты (с прежними версиями и ещё не стёртыми удалёнными), лайки,\n'
 			'подписки, блокировки, жалобы и журнал входов и публикаций.\n'
+			'conversations в data.json — личные сообщения (ваши и собеседников), messages/ — картинки из них.\n'
 			'profile/ и posts/ — загруженные вами картинки (в том виде, в каком они хранятся на сайте).\n'
 		))
 		for name, field in files:
@@ -192,7 +213,7 @@ def export_data(request):
 
 
 def erase_account(user):
-	"""Стереть данные удалённого аккаунта: содержимое постов, лайки, подписки, блокировки,
+	"""Стереть данные удалённого аккаунта: содержимое постов и сообщений, лайки, подписки, блокировки,
 	почту, имя, «О себе», картинки профиля. Строка пользователя остаётся обезличенной
 	(логин deleted-<id>), чтобы ветки обсуждений с его ответами не рвались, а логин освободился.
 	Журнал действий не трогаем — он хранится год (azzb/retention.py)."""
@@ -211,6 +232,9 @@ def erase_account(user):
 		Mute.objects.filter(Q(muter=profile) | Q(muted=profile)).delete()
 		FollowRequest.objects.filter(Q(requester=profile) | Q(target=profile)).delete()
 		Notification.objects.filter(Q(recipient=profile) | Q(actor=profile)).delete()
+		# Свои сообщения стираются у собеседников тоже; их диалоги остаются с «Удалённым аккаунтом».
+		purge_messages(Message.objects.filter(sender=profile))
+		Member.objects.filter(profile=profile).delete()
 		EmailAddress.objects.filter(user=user).delete()
 		for field in media:
 			storage, name = field.storage, field.name

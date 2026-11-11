@@ -76,7 +76,7 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run tests
-        run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications
+        run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications dm
 
   # Образ собирается на каждом PR (проверка Dockerfile), а публикуется только из main.
   image:

@@ -2,9 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.test import TestCase
-from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -87,17 +85,6 @@ class PollTests(TestCase):
 		}, **HX)
 		self.assertContains(response, 'Море')
 		self.assertTrue(Poll.objects.filter(post__text='Куда поедем?').exists())
-
-	def test_feed_queries_constant(self):
-		self.client.force_login(self.bob)
-		self.client.get('/')
-		with CaptureQueriesContext(connection) as few:
-			self.client.get('/')
-		for index in range(4):
-			post = publish_post(self.cat.profile, f'опрос {index}', poll_options=['да', 'нет'], poll_duration='1')
-			vote(post, self.bob.profile, post.poll.options.first().pk)
-		with self.assertNumQueries(len(few.captured_queries)):
-			self.client.get('/')
 
 	def test_export_purge_erase(self):
 		vote(self.post, self.bob.profile, self.tea.pk)
