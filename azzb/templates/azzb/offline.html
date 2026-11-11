@@ -1,0 +1,9 @@
+{% extends "azzb/card_base.html" %}
+{% block title %}Нет соединения{% endblock title %}
+{% block content %}
+	<div data-offline style="display: flex; flex-direction: column; gap: 12px">
+		<h1 class="display" style="font-size: 22px">Нет соединения</h1>
+		<p class="muted" style="font-size: 15px; line-height: 1.5">Проверьте интернет. Страница откроется сама, когда связь вернётся.</p>
+		<button class="btn" type="button" data-reload>Повторить</button>
+	</div>
+{% endblock content %}

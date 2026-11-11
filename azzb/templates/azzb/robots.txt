@@ -9,6 +9,7 @@ Disallow: /follows-updates/
 Disallow: /messages/
 Disallow: /moderation/
 Disallow: /notifications/
+Disallow: /offline/
 Disallow: /people/
 Disallow: /search/
 Disallow: /settings/

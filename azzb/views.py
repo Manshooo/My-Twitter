@@ -1,7 +1,10 @@
+import hashlib
+import json
 from datetime import date
 from uuid import NAMESPACE_URL, uuid5
 
 from django.conf import settings
+from django.templatetags.static import static
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -33,6 +36,33 @@ def render_posts(request, template, context, posts, next_params):
 def robots_txt(request):
 	sitemap_url = request.build_absolute_uri(reverse('sitemap'))
 	return render(request, 'azzb/robots.txt', {'sitemap_url': sitemap_url}, content_type='text/plain; charset=utf-8')
+
+
+# Офлайн-страница и всё, что ей нужно, — в кэше сервис-воркера с установки (PWA).
+OFFLINE_ASSETS = (
+	'css/azzb.css', 'js/azzb.js', 'vendor/htmx-2.0.4.min.js', 'favicon.svg',
+	'fonts/manrope-cyrillic.woff2', 'fonts/manrope-latin.woff2',
+	'fonts/unbounded-cyrillic.woff2', 'fonts/unbounded-latin.woff2',
+)
+
+
+@cache_control(no_cache=True)
+def service_worker(request):
+	"""/sw.js — с корня сайта: иначе воркер управлял бы только /static/."""
+	precache = [static(path) for path in OFFLINE_ASSETS]
+	offline_url = reverse('offline')
+	version = hashlib.sha256(json.dumps([offline_url, *precache]).encode()).hexdigest()[:12]
+	return render(request, 'azzb/sw.js', {
+		'version': version,
+		'offline_url': offline_url,
+		'precache': json.dumps(precache),
+		'static_prefix': settings.STATIC_URL,
+	}, content_type='application/javascript; charset=utf-8')
+
+
+def offline(request):
+	# Страница уходит в кэш браузера надолго — без темы и выбора cookie конкретного человека.
+	return render(request, 'azzb/offline.html', {'theme': None, 'metrika_id': None})
 
 
 def index(request):
