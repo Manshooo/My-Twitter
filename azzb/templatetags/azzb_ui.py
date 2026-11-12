@@ -65,6 +65,19 @@ def plural_ru(number, forms):
 	return many
 
 
+@register.filter
+def count(number):
+	"""Счётчик под постом: 0 → «», 1234 → «1,2 тыс.», 12345 → «12 тыс.», 1,2 млн. Пара в JS — formatCount (util.js)."""
+	n = int(number or 0)
+	for size, unit in ((1_000_000, 'млн'), (1_000, 'тыс.')):
+		if n >= size:
+			# Отбрасываем, а не округляем: 999 999 — «999 тыс.», а не «1000 тыс.».
+			tenths = n * 10 // size
+			text = f'{tenths // 10},{tenths % 10}' if tenths < 100 and tenths % 10 else str(tenths // 10)
+			return f'{text} {unit}'
+	return str(n) if n > 0 else ''
+
+
 @register.inclusion_tag('azzb/includes/avatar.html')
 def avatar(profile, size=''):
 	return {'profile': profile, 'size': size}

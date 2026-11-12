@@ -65,11 +65,10 @@
 			{% if replies %}
 				{% include "post/_replies.html" with posts=replies %}
 			{% else %}
-				<div class="card empty" data-feed-empty>
-					<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-reply"></use></svg></span>
+				<c-empty icon="reply" class="card" data-feed-empty>
 					<h2>Ответов пока нет</h2>
 					<p>Начните обсуждение первым.</p>
-				</div>
+				</c-empty>
 			{% endif %}
 		</div>
 	</section>

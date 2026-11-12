@@ -12,7 +12,9 @@ import { applyTheme, toggleTheme } from './theme.js';
 document.addEventListener('click', (event) => {
 	const target = event.target.closest('button, a');
 	if (!target) {
-		if (!event.target.closest('[role="menu"]')) closeMenus();
+		// Клик по самому меню, а не по пункту, — это и затемнение под нижним листом (::backdrop).
+		const menu = event.target.closest('[role="menu"]');
+		if (!menu || menu === event.target) closeMenus();
 		const modal = composer();
 		if (modal && event.target === modal) closeComposer();
 		// Клик мимо картинки в просмотрщике закрывает его.

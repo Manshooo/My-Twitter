@@ -2,14 +2,14 @@
 <article class="card post{% if variant %} post-{{ variant }}{% endif %}" data-post-id="{{ post.id }}"{% if repost_row %} data-repost-id="{{ repost_row.id }}"{% endif %}{% if post.reply_to_id %} data-reply-of="{{ post.reply_to_id }}"{% endif %}{% if variant == "main" %} data-main-post{% endif %}>
 	{% if variant == "pinned" %}
 		<p class="repost-by muted">
-			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-pin"></use></svg>Закреплённый пост
+			<span class="repost-by-ic" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-pin"></use></svg></span><span class="repost-by-text">Закреплённый пост</span>
 		</p>
 	{% endif %}
 	{% if reposted_by %}
 		<p class="repost-by muted">
-			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-repost"></use></svg>
-			{% if reposted_by.user_id == user.pk %}Вы сделали репост{% else %}<a href="{% url 'profile' reposted_by.user.username %}">{{ reposted_by.username }}</a> сделал(а) репост{% endif %}
-			<span aria-hidden="true">·</span> <time datetime="{{ repost_row.created_at|date:'c' }}">{{ repost_row.created_at|ago }}</time>
+			<span class="repost-by-ic" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-repost"></use></svg></span>
+			<span class="repost-by-text">{% if reposted_by.user_id == user.pk %}Вы сделали репост{% else %}<a href="{% url 'profile' reposted_by.user.username %}">{{ reposted_by.username }}</a> сделал(а) репост{% endif %}
+			<span aria-hidden="true">·</span> <time datetime="{{ repost_row.created_at|date:'c' }}">{{ repost_row.created_at|ago }}</time></span>
 		</p>
 	{% endif %}
 	<header class="post-header">
@@ -69,12 +69,12 @@
 			{% if variant == "main" and user.is_authenticated %}
 				<button class="action" type="button" title="Ответить" data-reply data-reply-name="@{{ author.user.username }}">
 					<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-					<span class="sr">Ответить. Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+					<span class="sr">Ответить. Ответы </span><span class="action-n" data-reply-count data-n="{{ replies_total }}">{{ replies_total|count }}</span>
 				</button>
 			{% else %}
 				<a class="action" href="{% url 'post' post.id %}" title="Ответы">
 					<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-					<span class="sr">Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+					<span class="sr">Ответы </span><span class="action-n" data-reply-count data-n="{{ replies_total }}">{{ replies_total|count }}</span>
 				</a>
 			{% endif %}
 			{% if user.is_authenticated and post.author.is_private and post.author.user_id != user.pk %}
@@ -86,7 +86,7 @@
 			{% elif not user.is_authenticated %}
 				<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы делать репосты">
 					<svg class="icon" aria-hidden="true"><use href="#i-repost"></use></svg>
-					<span class="sr">Репосты </span><span class="action-n">{% if reposts_total %}{{ reposts_total }}{% endif %}</span>
+					<span class="sr">Репосты </span><span class="action-n">{{ reposts_total|count }}</span>
 				</a>
 			{% endif %}
 			{% if user.is_authenticated %}
@@ -94,11 +94,12 @@
 			{% else %}
 				<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
 					<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-					<span class="sr">Нравится </span><span class="action-n">{% if likes_total %}{{ likes_total }}{% endif %}</span>
+					<span class="sr">Нравится </span><span class="action-n">{{ likes_total|count }}</span>
 				</a>
 			{% endif %}
+			<span class="actions-spacer"></span>
 			{% if user.is_authenticated %}{% include "post/_bookmark.html" %}{% endif %}
-			<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
+			<button class="action action-icon" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
 				<svg class="icon" aria-hidden="true"><use href="#i-share"></use></svg>
 			</button>
 		</div>

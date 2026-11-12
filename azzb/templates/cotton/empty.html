@@ -1,0 +1,5 @@
+<c-vars icon tone="" class="" />
+<div class="empty{% if class %} {{ class }}{% endif %}" {{ attrs }}>
+	<span class="empty-icon{% if tone %} {{ tone }}{% endif %}" aria-hidden="true"><svg class="icon"><use href="#i-{{ icon }}"></use></svg></span>
+	{{ slot }}
+</div>

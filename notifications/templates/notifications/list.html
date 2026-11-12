@@ -8,11 +8,10 @@
 		{% if groups %}
 			{% include "notifications/_page.html" %}
 		{% else %}
-			<div class="card empty">
-				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-bell"></use></svg></span>
+			<c-empty icon="bell" class="card">
 				<h2>Пока ничего</h2>
 				<p>Здесь появятся лайки, ответы и новые подписчики.</p>
-			</div>
+			</c-empty>
 		{% endif %}
 	</div>
 {% endblock content %}

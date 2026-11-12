@@ -1,10 +1,15 @@
 /* ---------- Пустые состояния, скелетоны, тосты ---------- */
-.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 24px; }
-.empty-icon { width: 64px; height: 64px; border-radius: 20px; background: var(--brand-soft); color: var(--accent); display: grid; place-items: center; }
-.empty-icon .icon { width: 30px; height: 30px; }
+/* Пустое состояние (<c-empty>, R2-B-Cta): иконка 56, заголовок 17/800, текст до 320 px, одна кнопка. */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-2); padding: 48px var(--space-6); }
+.empty-icon {
+	width: 56px; height: 56px; border-radius: 18px; margin-bottom: var(--space-2);
+	background: var(--brand-soft); color: var(--accent); display: grid; place-items: center;
+}
+.empty-icon .icon { width: 26px; height: 26px; }
 .empty-icon.danger { background: var(--danger-soft); color: var(--danger); }
-.empty h2 { margin-top: 4px; font-size: 18px; font-weight: 800; }
-.empty p { max-width: 360px; font-size: 15px; line-height: 1.5; color: var(--text-2); }
+.empty h2 { font-size: 17px; font-weight: 800; }
+.empty p { max-width: 320px; font-size: 15px; line-height: 1.5; color: var(--text-2); }
+.empty .btn { margin-top: var(--space-2); }
 .ph { background: repeating-linear-gradient(135deg, var(--ph-a) 0 14px, var(--ph-b) 14px 28px); }
 .skel { background: var(--skeleton); animation: az-pulse 1.4s ease-in-out infinite; }
 @keyframes az-pulse { 50% { opacity: .5; } }
@@ -18,12 +23,16 @@
 .skel-avatar { width: 44px; height: 44px; border-radius: 50%; flex: none; }
 .skel-lines { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
 .skel-line { height: 12px; border-radius: 6px; }
+/* Тост: снизу по центру, до 360 px, на телефоне над таб-баром. */
 .toast {
-	position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 60;
-	background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px;
-	font-weight: 700; font-size: 15px; box-shadow: var(--shadow); max-width: calc(100vw - 32px);
+	position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); z-index: 60;
+	max-width: min(360px, calc(100vw - 32px)); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+	background: var(--text); color: var(--bg); font-weight: 700; font-size: 15px; box-shadow: var(--shadow);
+	animation: toast-in var(--dur) ease-out;
 }
-@media (max-width: 760px) { .toast { bottom: 88px; } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+@media (max-width: 760px) { .toast { bottom: calc(var(--h-tabbar) + var(--space-4)); } }
 .alert {
 	display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
 	background: var(--danger-soft); color: var(--danger); font-size: 14px; font-weight: 700;

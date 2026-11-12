@@ -71,10 +71,9 @@
 		</article>
 		{% endwith %}
 	{% empty %}
-		<div class="card empty">
-			<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
+		<c-empty icon="shield" class="card">
 			<h2>Жалоб нет</h2>
 			<p>Новые появятся здесь.</p>
-		</div>
+		</c-empty>
 	{% endfor %}
 {% endblock content %}

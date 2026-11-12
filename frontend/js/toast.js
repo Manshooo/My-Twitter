@@ -6,6 +6,6 @@ export function toast(message) {
 	el.textContent = message;
 	el.hidden = false;
 	clearTimeout(toastTimer);
-	toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+	toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
 }
 window.azzbToast = toast;

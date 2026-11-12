@@ -3,7 +3,7 @@ import { closeMenus } from './menu.js';
 import { rememberFocus, restoreFocus, syncModalOpen } from './modal.js';
 import { filledPollOptions, pollActive, setPoll } from './poll.js';
 import { toast } from './toast.js';
-import { POST_MAX, errorsOf } from './util.js';
+import { POST_MAX, errorsOf, formatCount } from './util.js';
 
 // ---------- Composer ----------
 export const composer = () => document.getElementById('composer');
@@ -161,16 +161,22 @@ export function openQuote(btn) {
 	openComposer({ kind: 'quote', id: btn.dataset.quote, name: btn.dataset.quoteName || '' });
 }
 
+// Число на экране сокращено («1,2 тыс.»), точное — в data-n.
+function setCount(el, n) {
+	el.dataset.n = String(n);
+	el.textContent = formatCount(n);
+}
+
 // Число репостов у всех карточек поста на странице: пост и его репосты — разные карточки.
 export function setRepostCount(postId, count) {
 	document.querySelectorAll('[data-post-id="' + postId + '"] [data-repost-count]').forEach((el) => {
-		el.textContent = count > 0 ? String(count) : '';
+		setCount(el, count);
 	});
 }
 
 function bumpRepostCount(postId, delta) {
 	const el = document.querySelector('[data-post-id="' + postId + '"] [data-repost-count]');
-	if (el) setRepostCount(postId, (Number(el.textContent) || 0) + delta);
+	if (el) setRepostCount(postId, (Number(el.dataset.n) || 0) + delta);
 }
 
 export function openEdit(btn) {
@@ -225,8 +231,7 @@ export function bumpReplyCount(postId, delta) {
 		seen.add(postId);
 		const cards = Array.from(document.querySelectorAll('[data-post-id="' + postId + '"]'));
 		cards.forEach((card) => card.querySelectorAll('[data-reply-count]').forEach((el) => {
-			const n = Math.max(0, (Number(el.textContent) || 0) + delta);
-			el.textContent = n ? String(n) : '';
+			setCount(el, Math.max(0, (Number(el.dataset.n) || 0) + delta));
 		}));
 		const child = cards.find((card) => card.dataset.replyOf);
 		postId = child ? child.dataset.replyOf : null;

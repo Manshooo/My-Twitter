@@ -1,6 +1,6 @@
-{# Кнопка лайка. После нажатия htmx заменяет её целиком на ту, что вернёт post-like. #}
+{% load azzb_ui %}{# Кнопка лайка. После нажатия htmx заменяет её целиком на ту, что вернёт post-like. #}
 <button class="action{% if liked %} liked{% endif %}" type="button" aria-pressed="{% if liked %}true{% else %}false{% endif %}" title="{% if liked %}Убрать лайк{% else %}Нравится{% endif %}"
 	hx-post="{% url 'post-like' post.id %}" hx-swap="outerHTML" hx-disabled-elt="this" data-error="Не удалось поставить лайк">
 	<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-	<span class="sr">Нравится </span><span class="action-n" data-like-count>{% if likes_total %}{{ likes_total }}{% endif %}</span>
+	<span class="sr">Нравится </span><span class="action-n" data-like-count data-n="{{ likes_total }}">{{ likes_total|count }}</span>
 </button>

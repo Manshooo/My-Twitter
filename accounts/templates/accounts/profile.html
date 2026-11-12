@@ -150,13 +150,13 @@
 			{% if posts %}
 				{% include "azzb/includes/post_page.html" %}
 			{% elif not pinned %}
-				<div class="card empty" data-feed-empty>
+				<c-empty class="card" data-feed-empty
+					icon="{% if profile.user.is_banned %}shield{% elif i_blocked or blocked_me %}block{% elif not can_see or tab == 'likes' and not likes_visible %}lock{% elif tab == 'media' %}image{% elif tab == 'likes' %}heart{% elif tab == 'replies' %}reply{% else %}edit{% endif %}"
+					tone="{% if profile.user.is_banned or i_blocked or blocked_me %}danger{% endif %}">
 					{% if profile.user.is_banned %}
-						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
 						<h2>Аккаунт заблокирован</h2>
 						<p>@{{ profile.user.username }} нарушил(а) <a href="{% url 'rules' %}">правила сообщества</a>, посты скрыты.</p>
 					{% elif i_blocked or blocked_me %}
-						<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-block"></use></svg></span>
 						{% if i_blocked %}
 							<h2>Вы заблокировали @{{ profile.user.username }}</h2>
 							<p>Вы не видите посты друг друга. Разблокировать можно кнопкой выше.</p>
@@ -165,22 +165,19 @@
 							<p>Вы не можете видеть посты этого аккаунта и подписаться на него.</p>
 						{% endif %}
 					{% elif not can_see %}
-						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
 						<h2>Это закрытый аккаунт</h2>
 						<p>Посты @{{ profile.user.username }} видят только подписчики. {% if request_sent %}Заявка уже отправлена.{% else %}Отправьте заявку — @{{ profile.user.username }} решит, одобрить ли её.{% endif %}</p>
 					{% elif tab == 'likes' and not likes_visible %}
-						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-lock"></use></svg></span>
 						<h2>Лайки скрыты</h2>
 						<p>@{{ profile.user.username }} показывает свои лайки только себе.</p>
 					{% else %}
-						<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-{% if tab == 'media' %}image{% elif tab == 'likes' %}heart{% elif tab == 'replies' %}reply{% else %}edit{% endif %}"></use></svg></span>
 						<h2>{% if tab == 'media' %}Картинок пока нет{% elif tab == 'likes' %}Лайков пока нет{% elif tab == 'replies' %}Ответов пока нет{% else %}Постов пока нет{% endif %}</h2>
 						{% if is_own and tab == 'posts' %}
 							<p>Расскажите, что у вас нового.</p>
-							<button class="btn" type="button" style="margin-top: 6px" data-composer-open>Написать пост</button>
+							<button class="btn btn-outline" type="button" data-composer-open>Написать пост</button>
 						{% endif %}
 					{% endif %}
-				</div>
+				</c-empty>
 			{% endif %}
 		</div>
 	{% endif %}

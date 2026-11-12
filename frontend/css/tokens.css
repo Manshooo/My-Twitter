@@ -15,8 +15,15 @@
 	--av1-bg: #b6dfdf; --av1-ink: #13302f; --av2-bg: #f6dccb; --av2-ink: #5b2c16;
 	--av3-bg: #dcd8f3; --av3-ink: #2f2470; --av4-bg: #f3e3b0; --av4-ink: #5a4300;
 	--av5-bg: #d5ecd2; --av5-ink: #1f4a1a;
+	--surface-glass: rgba(255, 255, 255, 0.88); --unread-bg: #e8f4f4;
 	--font: 'Manrope', system-ui, sans-serif;
 	--font-display: 'Unbounded', var(--font);
+	/* Сетка и размеры (ревизия R2): цвета у них не зависят от темы, поэтому только здесь. */
+	--space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+	--radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px; --radius-pill: 999px;
+	--h-control: 44px; --h-tab: 48px; --h-header-m: 56px; --h-tabbar: 64px;
+	--w-nav: 240px; --w-feed: 590px; --w-rail: 340px; --avatar: 44px;
+	--dur: 160ms;
 	color-scheme: light;
 }
 
@@ -33,6 +40,7 @@
 		--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
 		--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
 		--skeleton: #1f3838; --ph-a: #1c3a3a; --ph-b: #224545;
+		--surface-glass: rgba(20, 38, 38, 0.88); --unread-bg: #17302f;
 		--scrim: rgba(0, 0, 0, 0.65); --on-scrim: #ffffff; --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 		--av1-bg: #2c5a5a; --av1-ink: #dff0f0; --av2-bg: #4a2c1e; --av2-ink: #f6dccb;
 		--av3-bg: #2e2850; --av3-ink: #dcd8f3; --av4-bg: #3f3517; --av4-ink: #f3e3b0;
@@ -51,6 +59,7 @@
 	--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
 	--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
 	--skeleton: #1f3838; --ph-a: #1c3a3a; --ph-b: #224545;
+	--surface-glass: rgba(20, 38, 38, 0.88); --unread-bg: #17302f;
 	--scrim: rgba(0, 0, 0, 0.65); --on-scrim: #ffffff; --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 	--av1-bg: #2c5a5a; --av1-ink: #dff0f0; --av2-bg: #4a2c1e; --av2-ink: #f6dccb;
 	--av3-bg: #2e2850; --av3-ink: #dcd8f3; --av4-bg: #3f3517; --av4-ink: #f3e3b0;

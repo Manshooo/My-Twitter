@@ -1,22 +1,22 @@
 /* ---------- Кнопки ---------- */
 .btn {
-	display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px;
-	border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; white-space: nowrap;
+	display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--h-control); padding: 0 var(--space-4);
+	border-radius: var(--radius-md); font-weight: 800; font-size: 15px; cursor: pointer; white-space: nowrap;
 	border: 1.5px solid var(--primary); background: var(--primary); color: var(--on-primary);
 }
 .btn:hover { filter: brightness(1.1); text-decoration: none; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
 .btn-outline { border-color: var(--border-strong); background: transparent; color: var(--text); }
 .btn-outline:hover { background: var(--surface-3); filter: none; }
-.btn-ghost { border-color: transparent; background: transparent; color: var(--accent); padding: 0 12px; }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--accent); padding: 0 var(--space-3); }
 .btn-ghost:hover { background: var(--surface-3); filter: none; }
 .btn-danger { color: var(--danger); }
 .btn-sm { padding: 0 14px; font-size: 14px; }
 .btn-block { width: 100%; }
-.btn-lg { min-height: 52px; font-size: 16px; border-radius: 14px; }
+.btn-lg { min-height: 52px; font-size: 16px; }
 .icon-btn {
-	width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2);
+	width: var(--h-control); height: var(--h-control); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-2);
 	display: grid; place-items: center; cursor: pointer; flex: none; padding: 0;
 }
-.icon-btn:hover { background: var(--surface-3); }
+.icon-btn:hover { background: var(--surface-3); color: var(--text); }
 .icon-btn[aria-current="page"] { background: var(--brand-soft); color: var(--text); }

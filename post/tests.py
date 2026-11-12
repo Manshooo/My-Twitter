@@ -190,7 +190,7 @@ class RepliesTests(TestCase):
 		page = page[page.index('<main'):]
 		self.assertLess(page.index('Первый ответ'), page.index('Второй ответ'))
 		self.assertNotIn('Ответ на ответ', page)  # только прямые ответы
-		self.assertIn('data-reply-count>3<', page)  # счётчик — вся ветка, с ответом на ответ
+		self.assertIn('data-reply-count data-n="3">3<', page)  # счётчик — вся ветка, с ответом на ответ
 
 		nested = Post.objects.get(text='Ответ на ответ')
 		page = self.client.get(f'/p/{nested.pk}/').content.decode()
@@ -233,7 +233,7 @@ class RepliesTests(TestCase):
 		self.bob.is_active = False
 		self.bob.save()
 		self.client.force_login(self.alice)
-		self.assertContains(self.client.get('/'), 'data-reply-count>1<')
+		self.assertContains(self.client.get('/'), 'data-reply-count data-n="1">1<')
 		page = self.client.get(f'/p/{self.root.pk}/')
 		self.assertContains(page, 'Пост недоступен')
 		self.assertNotContains(page, 'Скрытый ответ')
@@ -432,7 +432,7 @@ class HtmxActionsTests(TestCase):
 		response = self.client.post(url, headers=HTMX)
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'aria-pressed="true"')
-		self.assertContains(response, 'data-like-count>1<')
+		self.assertContains(response, 'data-like-count data-n="1">1<')
 		self.assertContains(response, f'hx-post="{url}"')
 		response = self.client.post(url, headers=HTMX)
 		self.assertContains(response, 'aria-pressed="false"')

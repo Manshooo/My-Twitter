@@ -16,11 +16,10 @@
 			{% if peer %}
 				{% include "dm/_chat.html" %}
 			{% else %}
-				<div class="empty" style="margin: auto">
-					<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-mail"></use></svg></span>
+				<c-empty icon="mail" style="margin: auto">
 					<h2>Выберите диалог</h2>
 					<p>Или откройте профиль человека и нажмите «Написать».</p>
-				</div>
+				</c-empty>
 			{% endif %}
 		</section>
 	</div>

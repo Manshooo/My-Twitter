@@ -1,17 +1,19 @@
-{# Репост и цитата — пункты меню под одной кнопкой. После репоста htmx заменяет весь блок на тот, что вернёт post-repost. #}
+{% load azzb_ui %}{# Репост и цитата — пункты меню под одной кнопкой. После репоста htmx заменяет весь блок на тот, что вернёт post-repost. #}
 <div class="menu-wrap repost-wrap">
 	<button class="action{% if reposted %} reposted{% endif %}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="repost-menu-{{ key }}" title="Репост или цитата" data-menu-toggle>
 		<svg class="icon" aria-hidden="true"><use href="#i-repost"></use></svg>
-		<span class="sr">{% if reposted %}Вы сделали репост. {% endif %}Репосты </span><span class="action-n" data-repost-count>{% if reposts_total %}{{ reposts_total }}{% endif %}</span>
+		<span class="sr">{% if reposted %}Вы сделали репост. {% endif %}Репосты </span><span class="action-n" data-repost-count data-n="{{ reposts_total }}">{{ reposts_total|count }}</span>
 	</button>
 	<div class="menu menu-start" id="repost-menu-{{ key }}" role="menu" hidden>
 		<button class="menu-item" type="button" role="menuitem"
 			hx-post="{% url 'post-repost' post.id %}" hx-vals='{"key": "{{ key }}"}' hx-target="closest .repost-wrap" hx-swap="outerHTML"
 			hx-disabled-elt="this" data-error="Не удалось сделать репост">
-			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-repost"></use></svg>{% if reposted %}Отменить репост{% else %}Репост{% endif %}
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-repost"></use></svg>
+			<span>{% if reposted %}Отменить репост<small>Убрать из своей ленты</small>{% else %}Сделать репост<small>Поделиться с подписчиками</small>{% endif %}</span>
 		</button>
 		<button class="menu-item" type="button" role="menuitem" data-quote="{{ post.id }}" data-quote-name="@{{ post.author.user.username }}">
-			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Цитировать
+			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>
+			<span>Цитировать<small>Добавить свой комментарий</small></span>
 		</button>
 	</div>
 </div>
