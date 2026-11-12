@@ -271,6 +271,9 @@ class Post(models.Model):
 	)
 	# Репосты и цитаты этого поста, кроме удалённых. Меняется только через shift_repost_counts.
 	reposts_count = models.PositiveIntegerField("Репостов и цитат", default=0)
+	# Сколько людей видели пост в ленте или открыли его (tracking.services.count_views): один раз
+	# на человека за срок хранения показов. Гости и те, у кого сбор не идёт, не считаются.
+	views_count = models.PositiveIntegerField("Просмотров", default=0)
 	# Когда автор последний раз менял текст. updated не годится: он меняется при любом save().
 	edited_at = models.DateTimeField("Изменён", null=True, blank=True)
 	# Скрыт модератором (E4): пропадает у всех, кроме автора, — тот видит пометку с причиной.

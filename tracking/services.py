@@ -6,6 +6,7 @@
 import re
 import uuid
 
+from django.db.models import F
 from django.utils import timezone
 
 from accounts import consent
@@ -52,12 +53,32 @@ def surface_from_referer(request):
 		return Surface.OTHER
 
 
+def count_views(user, post_ids, now):
+	"""+1 к Post.views_count за каждый пост, который человек раньше не видел и не открывал.
+	«Раньше» — пока хранятся показы (30–60 дней): отдельной таблицы «кто что видел навсегда» нет.
+	Вызывается до записи новых событий. Свои посты автору не засчитываются."""
+	post_ids = set(post_ids)
+	if not post_ids:
+		return 0
+	seen = set(Impression.objects.filter(user=user, post_id__in=post_ids).values_list('post_id', flat=True))
+	seen |= set(InteractionEvent.objects.filter(
+		user=user, kind=InteractionEvent.Kind.OPEN, post_id__in=post_ids,
+	).values_list('post_id', flat=True))
+	new = post_ids - seen
+	if not new:
+		return 0
+	return Post.objects.filter(pk__in=new).exclude(author_id=user.pk).update(views_count=F('views_count') + 1)
+
+
 def record(request, kind, *, post=None, target=None, surface=Surface.OTHER, **data):
 	"""Серверное событие (InteractionEvent.Kind) от имени request.user."""
 	if not collecting(request.user):
 		return
 	now = timezone.now()
 	partitions.ensure(now)
+	if kind == InteractionEvent.Kind.OPEN and post is not None and count_views(request.user, [post.pk], now):
+		# Страница ещё не отрисована: пусть открывший сразу увидит себя в счётчике.
+		post.views_count += 1
 	InteractionEvent.objects.create(
 		created_at=now, user=request.user, kind=kind, surface=surface, device=device_of(request),
 		post=post, target=target, data=data,
@@ -136,6 +157,7 @@ def ingest(request, items):
 		events.append(InteractionEvent(created_at=now, user=user, kind=kind, surface=surface, device=device, post_id=post, data=data))
 	if impressions or events:
 		partitions.ensure(now)
+		count_views(user, [i.post_id for i in impressions if i.kind == Impression.Kind.IMPRESSION], now)
 		Impression.objects.bulk_create(impressions)
 		InteractionEvent.objects.bulk_create(events)
 	return len(impressions) + len(events)

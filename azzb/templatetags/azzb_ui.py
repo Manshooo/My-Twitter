@@ -78,6 +78,12 @@ def count(number):
 	return str(n) if n > 0 else ''
 
 
+@register.filter
+def digits(number):
+	"""Полное число с узким неразрывным пробелом между разрядами: 15800 → «15 800»."""
+	return f'{int(number or 0):,}'.replace(',', '\u202f')
+
+
 @register.inclusion_tag('azzb/includes/avatar.html')
 def avatar(profile, size=''):
 	return {'profile': profile, 'size': size}

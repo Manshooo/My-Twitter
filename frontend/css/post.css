@@ -77,8 +77,12 @@
 	font-weight: 700; font-size: 13px; cursor: pointer;
 }
 .action:hover { background: var(--surface-3); text-decoration: none; }
+.action-static { cursor: default; }
+.action-static:hover { background: transparent; }
 .action-icon { flex: 0 0 var(--h-control); justify-content: center; padding: 0; }
-.actions-spacer { flex: 1; }
+.actions-spacer { flex: 1; min-width: var(--space-2); }
+/* Четыре счётчика и две иконки на телефоне впритык: отступы внутри кнопок меньше. */
+@media (max-width: 480px) { .action:not(.action-icon) { padding: 0 6px; } }
 /* Текст .sr в раскладке не участвует (position: absolute) — его читают только скринридеры:
    «Нравится 5», «Ответы» без числа при нуле. */
 .action-n { min-width: 3ch; font-variant-numeric: tabular-nums; white-space: nowrap; }

@@ -192,3 +192,37 @@ class RetentionTests(TestCase):
 		self.assertTrue(InteractionEvent.objects.filter(user=ann).exists())
 		self.client.post(reverse('account-delete'), {'confirm': 'pass-12345'})
 		self.assertFalse(InteractionEvent.objects.filter(user=ann).exists())
+
+
+class ViewsCountTests(TestCase):
+	def setUp(self):
+		self.ann = make('ann')
+		self.bob = make('bob')
+		self.post = publish_post(self.bob.profile, 'пост')
+		self.client.force_login(self.ann)
+
+	def views(self):
+		self.post.refresh_from_db()
+		return self.post.views_count
+
+	def send(self, items):
+		return self.client.post(reverse('api-events'), json.dumps(items), content_type='application/json')
+
+	def test_once_per_person_across_feed_and_page(self):
+		self.send([{'kind': 'impression', 'post': str(self.post.pk), 'feed': '2b8f3c4e-0000-4000-8000-000000000001'}])
+		self.send([{'kind': 'impression', 'post': str(self.post.pk), 'feed': '2b8f3c4e-0000-4000-8000-000000000002'}])
+		self.client.get(reverse('post', args=[self.post.pk]))
+		self.assertEqual(self.views(), 1)
+		cat = make('cat')
+		self.client.force_login(cat)
+		page = self.client.get(reverse('post', args=[self.post.pk]))
+		self.assertEqual(self.views(), 2)
+		self.assertContains(page, '2 просмотра')
+
+	def test_author_guest_and_dwell_do_not_count(self):
+		self.send([{'kind': 'dwell', 'post': str(self.post.pk), 'seconds': 5}])
+		self.client.force_login(self.bob)
+		self.client.get(reverse('post', args=[self.post.pk]))
+		self.client.logout()
+		self.client.get(reverse('post', args=[self.post.pk]))
+		self.assertEqual(self.views(), 0)

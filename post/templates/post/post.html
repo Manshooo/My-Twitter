@@ -64,7 +64,7 @@
 		{% if post.poll %}{% load show_posts %}{% poll_block post %}{% endif %}
 		{% if quote %}{% include "post/_quote.html" %}{% endif %}
 		{% if variant == "main" %}
-			<p class="post-fulldate muted"><time datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"H:i · j E Y" }}</time>{% if post.edited_at %} · изменено{% endif %}</p>
+			<p class="post-fulldate muted"><time datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"H:i · j E Y" }}</time>{% if post.edited_at %} · изменено{% endif %}{% if post.views_count %} · {{ post.views_count|digits }} {{ post.views_count|plural_ru:"просмотр,просмотра,просмотров" }}{% endif %}</p>
 		{% endif %}
 		<div class="actions" role="group" aria-label="Действия с постом">
 			{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
@@ -100,6 +100,11 @@
 					<span class="sr">Нравится </span><span class="action-n">{{ likes_total|count }}</span>
 				</a>
 			{% endif %}
+			{# Не кнопка: просмотры только показываются (tracking.services.count_views). #}
+			<span class="action action-static" title="Просмотры: сколько людей видели пост">
+				<svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg>
+				<span class="sr">Просмотры </span><span class="action-n">{{ post.views_count|count }}</span>
+			</span>
 			<span class="actions-spacer"></span>
 			{% if user.is_authenticated %}{% include "post/_bookmark.html" %}{% endif %}
 			<button class="action action-icon" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
