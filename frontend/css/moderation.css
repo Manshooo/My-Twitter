@@ -1,0 +1,22 @@
+/* ---------- Жалобы и модерация (E4) ---------- */
+.report-quote { margin: 0; padding: 12px 14px; border-left: 3px solid var(--border-strong); border-radius: 4px 12px 12px 4px; background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
+.report-quote p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.mod-card { display: flex; flex-direction: column; gap: 12px; }
+.mod-head { display: flex; align-items: center; gap: 12px; }
+.mod-count { font-weight: 800; font-size: 14px; color: var(--danger); white-space: nowrap; }
+.mod-reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.mod-reasons li { padding: 4px 10px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); font-size: 13px; }
+.mod-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.mod-thumbs img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; }
+.mod-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mod-actions form { margin: 0; }
+.mod-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mod-inline input[type="text"], .mod-inline select {
+	min-height: 36px; padding: 0 10px; border: 1.5px solid var(--border); border-radius: 10px;
+	background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px;
+}
+.mod-inline input[type="text"] { width: 220px; max-width: 100%; }
+.mod-badge { min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800; text-align: center; line-height: 20px; }
+.nav-item .mod-badge { margin-left: auto; }
+.tab-item { position: relative; }
+.tab-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 18px; padding: 0 5px; font-size: 11px; line-height: 18px; }

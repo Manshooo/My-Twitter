@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Подтвердите почту{% endblock %}
+{% block preheader %}Подтвердите новый адрес для аккаунта @{{ user.username }}.{% endblock %}
+{% block title_body %}Подтвердите новый адрес{% endblock %}
+{% block content %}<p style="margin: 0;">Здравствуйте! Этот адрес указали как почту аккаунта <b>@{{ user.username }}</b> в AzzB.</p>{% endblock %}
+{% block action %}{% include "account/email/_button.html" with url=activate_url label="Подтвердить адрес" %}{% endblock %}
+{% block reason %}<p style="margin: 0;">Если это были не вы, просто удалите письмо — адрес не привяжется.</p>{% endblock %}

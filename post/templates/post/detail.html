@@ -1,7 +1,7 @@
 {% extends "azzb/azzb_base.html" %}
 {% load show_posts azzb_ui seo %}
 {% block title %}{% if not post.available %}Пост недоступен{% else %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endif %}{% endblock title %}
-{% block meta_description %}{% if post.available %}{{ post.text|truncatechars:160 }}{% endif %}{% endblock meta_description %}
+{% block meta_description %}{% if post.available %}{% if post.text %}{{ post.text|truncatechars:160 }}{% else %}Пост @{{ post.author.user.username }} в AzzB{% endif %}{% endif %}{% endblock meta_description %}
 {% block og_type %}{% if post.available %}article{% else %}website{% endif %}{% endblock og_type %}
 {% block og_title %}{% if post.available %}{{ post.author.username }} (@{{ post.author.user.username }}){% else %}Пост недоступен{% endif %}{% endblock og_title %}
 {% block metatags %}

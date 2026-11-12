@@ -1,0 +1,13 @@
+<!doctype html>
+<!-- Логотип для писем: azzb/static/images/email-logo.png (вдвое крупнее, в письме — 124×36).
+     PNG, а не SVG: Gmail и Outlook SVG не показывают. Пересобрать из корня проекта:
+     node -e "require('playwright').chromium.launch().then(async b=>{const p=await b.newPage({deviceScaleFactor:2});await p.goto('file://'+process.cwd()+'/docs/brand/email-logo.html');await p.evaluate(()=>document.fonts.ready);await p.locator('.logo').screenshot({path:'azzb/static/images/email-logo.png',omitBackground:true});await b.close()})" -->
+<meta charset="utf-8">
+<style>
+	@font-face { font-family: 'Unbounded'; font-weight: 700; src: url('../../azzb/static/fonts/unbounded-latin.woff2') format('woff2'); }
+	body { margin: 0; background: transparent; }
+	.logo { display: inline-flex; align-items: center; gap: 10px; height: 36px; padding-right: 2px;
+		font: 700 24px 'Unbounded'; letter-spacing: -0.02em; color: #13302f; }
+	svg { width: 36px; height: 36px; }
+</style>
+<div class="logo"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#13302f"/><path d="M19 47 L32 16 L45 47" fill="none" stroke="#b6dfdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.5"/><circle cx="32" cy="38" r="3.6" fill="#b6dfdf"/></svg>AzzB</div>

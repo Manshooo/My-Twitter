@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}Этот адрес указали как почту аккаунта @{{ user.username }} в AzzB.
+
+Чтобы подтвердить его, откройте ссылку:
+{{ activate_url }}
+
+Если это были не вы, просто проигнорируйте письмо — адрес не привяжется.{% endautoescape %}{% endblock content %}

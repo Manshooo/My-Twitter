@@ -2,7 +2,7 @@
 {% load azzb_ui seo %}
 {# Профиль для гостя — только карточка: посты, подписки и действия — после входа. У закрытого аккаунта — без «О себе» и баннера. #}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
-{% block meta_description %}{% if profile.is_private %}Закрытый аккаунт на AzzB{% elif profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}Профиль @{{ profile.user.username }} на AzzB{% endif %}{% endblock meta_description %}
+{% block meta_description %}{% if profile.is_private %}Закрытый аккаунт в AzzB{% elif profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
 {% block og_type %}profile{% endblock og_type %}
 {% block metatags %}
 	<meta property="profile:username" content="{{ profile.user.username }}">

@@ -122,6 +122,9 @@ def bookmarks(request):
 
 def hashtag(request, name):
 	"""Посты с тегом, от новых к старым, вместе с ответами. Открыта и гостям: на тег ссылаются."""
+	if name != name.lower():
+		# Теги хранятся в нижнем регистре: один адрес на тег, без дублей в поиске.
+		return redirect('hashtag', name=name.lower(), permanent=True)
 	tag = Hashtag.objects.filter(name=name.lower()).first()
 	queryset = Post.objects.none()
 	if tag is not None:
@@ -310,6 +313,7 @@ def post_detail(request, pk):
 	if not cursor_in and len(replies) == 1 and replies[0].replies_count:
 		conversation = follow_conversation(replies[0], request.user)
 	ancestors, gap = thread_ancestors(post, request.user)
+	# Заглушку недоступного поста показываем ради ответов, но со статусом 404 — для поисковиков это не страница.
 	return render(request, "post/detail.html", {
 		"post": post,
 		"ancestors": ancestors,
@@ -317,7 +321,7 @@ def post_detail(request, pk):
 		"replies": replies,
 		"conversation": conversation,
 		"next_url": next_url,
-	})
+	}, status=200 if post.available else 404)
 
 
 def post_conversation(request, pk):

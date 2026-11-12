@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}С адресом {{ email }} пытались войти в AzzB или восстановить пароль, но аккаунта с этой почтой нет.
+
+Если это вы, зарегистрируйтесь:
+{{ signup_url }}
+
+Если это были не вы, просто проигнорируйте письмо.{% endautoescape %}{% endblock content %}

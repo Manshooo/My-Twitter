@@ -73,10 +73,25 @@ jobs:
       - name: Run tests
         run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications dm
 
+  # CSS и JS из frontend/ (docs/frontend.md): ESLint и сборка esbuild.
+  frontend:
+    name: frontend (lint, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # Та же версия, что на первой стадии образа (Dockerfile).
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run build
+
   # Образ собирается на каждом PR (проверка Dockerfile), а публикуется только из main.
   image:
     name: docker image
-    needs: django
+    needs: [django, frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read

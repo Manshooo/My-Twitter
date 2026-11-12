@@ -1,6 +1,8 @@
 {% extends "azzb/azzb_base.html" %}
 {% load azzb_ui seo %}
 {% block title %}{% if feed == 'hot' %}Горячее{% elif feed == 'following' %}Подписки{% else %}Главная{% endif %}{% endblock title %}
+{% block full_title %}{% if feed == 'latest' %}AzzB{% else %}{{ block.super }}{% endif %}{% endblock full_title %}
+{% block meta_description %}{% if feed == 'hot' %}Самое обсуждаемое в AzzB прямо сейчас: посты, которые лайкают, обсуждают и репостят.{% else %}{{ block.super }}{% endif %}{% endblock meta_description %}
 {% block og_title %}{% if feed == 'latest' %}AzzB — социальная сеть коротких постов{% else %}{{ block.super }}{% endif %}{% endblock og_title %}
 {% block metatags %}
 	{% if feed == 'latest' %}

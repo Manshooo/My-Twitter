@@ -1,0 +1,59 @@
+/* AzzB — дизайн-система. Все цвета только через токены ниже.
+   Тема: без атрибута — как в системе; data-theme="light" / "dark" на <html> — выбор пользователя. */
+:root {
+	--bg: #eef5f5; --surface: #ffffff; --surface-2: #f4f9f9; --surface-3: #e4f0f0;
+	--border: #d6e8e8; --border-strong: #9fcfcf;
+	--text: #13302f; --text-2: #4e6867;
+	--brand: #b6dfdf; --brand-soft: #dff0f0; --brand-ink: #13302f;
+	--accent: #1d6464; --primary: #13302f; --on-primary: #ffffff;
+	--logo-bg: #13302f; --logo-ink: #b6dfdf;
+	--like: #b23a26; --like-soft: #fbe9e4; --repost: #1f6b4a; --repost-soft: #e2f2e9; --bookmark: #8a5300;
+	--danger: #b3261e; --danger-soft: #fde8e6; --warn: #8a5300;
+	--badge: #c2410c; --on-badge: #ffffff; --verified: #2a8a8a; --staff: #2f2470;
+	--skeleton: #e1eded; --ph-a: #d6eeee; --ph-b: #c8e7e7;
+	--scrim: rgba(10, 30, 30, 0.55); --on-scrim: #ffffff; --shadow: 0 12px 32px rgba(19, 48, 47, 0.16);
+	--av1-bg: #b6dfdf; --av1-ink: #13302f; --av2-bg: #f6dccb; --av2-ink: #5b2c16;
+	--av3-bg: #dcd8f3; --av3-ink: #2f2470; --av4-bg: #f3e3b0; --av4-ink: #5a4300;
+	--av5-bg: #d5ecd2; --av5-ink: #1f4a1a;
+	--font: 'Manrope', system-ui, sans-serif;
+	--font-display: 'Unbounded', var(--font);
+	color-scheme: light;
+}
+
+/* Тёмная тема: значения повторены дважды — для системной темы и для явного выбора. */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #0e1c1c; --surface: #142626; --surface-2: #1b3131; --surface-3: #234040;
+		--border: #2a4646; --border-strong: #3f6767;
+		--text: #e6f3f3; --text-2: #a3bfbe;
+		--brand: #b6dfdf; --brand-soft: #1d3a3a; --brand-ink: #13302f;
+		--accent: #8fd3d3; --primary: #b6dfdf; --on-primary: #102828;
+		--logo-bg: #b6dfdf; --logo-ink: #13302f;
+		--like: #ff8f7a; --like-soft: #3a201b; --repost: #7fd6a8; --repost-soft: #183a2a; --bookmark: #f2c46b;
+		--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
+		--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
+		--skeleton: #1f3838; --ph-a: #1c3a3a; --ph-b: #224545;
+		--scrim: rgba(0, 0, 0, 0.65); --on-scrim: #ffffff; --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+		--av1-bg: #2c5a5a; --av1-ink: #dff0f0; --av2-bg: #4a2c1e; --av2-ink: #f6dccb;
+		--av3-bg: #2e2850; --av3-ink: #dcd8f3; --av4-bg: #3f3517; --av4-ink: #f3e3b0;
+		--av5-bg: #1f3a1d; --av5-ink: #d5ecd2;
+		color-scheme: dark;
+	}
+}
+:root[data-theme="dark"] {
+	--bg: #0e1c1c; --surface: #142626; --surface-2: #1b3131; --surface-3: #234040;
+	--border: #2a4646; --border-strong: #3f6767;
+	--text: #e6f3f3; --text-2: #a3bfbe;
+	--brand: #b6dfdf; --brand-soft: #1d3a3a; --brand-ink: #13302f;
+	--accent: #8fd3d3; --primary: #b6dfdf; --on-primary: #102828;
+	--logo-bg: #b6dfdf; --logo-ink: #13302f;
+	--like: #ff8f7a; --like-soft: #3a201b; --repost: #7fd6a8; --repost-soft: #183a2a; --bookmark: #f2c46b;
+	--danger: #ff8a80; --danger-soft: #3b1d1b; --warn: #f2c46b;
+	--badge: #ff9a6b; --on-badge: #2a1206; --verified: #6cc6c6; --staff: #c9c2f5;
+	--skeleton: #1f3838; --ph-a: #1c3a3a; --ph-b: #224545;
+	--scrim: rgba(0, 0, 0, 0.65); --on-scrim: #ffffff; --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+	--av1-bg: #2c5a5a; --av1-ink: #dff0f0; --av2-bg: #4a2c1e; --av2-ink: #f6dccb;
+	--av3-bg: #2e2850; --av3-ink: #dcd8f3; --av4-bg: #3f3517; --av4-ink: #f3e3b0;
+	--av5-bg: #1f3a1d; --av5-ink: #d5ecd2;
+	color-scheme: dark;
+}

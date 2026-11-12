@@ -13,13 +13,15 @@
 	</div>
 {% else %}
 <article class="card notif{% if group.unread %} notif-unread{% endif %}">
-	<span class="notif-icon notif-{{ group.verb }}" aria-hidden="true">
-		<svg class="icon"><use href="#{% if group.verb == 'like' %}i-heart{% elif group.verb == 'repost' %}i-repost{% elif group.verb == 'follow_req' %}i-lock{% else %}i-user{% endif %}"></use></svg>
-	</span>
-	<div class="notif-body">
+	<div class="notif-header">
+		<span class="notif-icon notif-{{ group.verb }}" aria-hidden="true">
+			<svg class="icon"><use href="#{% if group.verb == 'like' %}i-heart{% elif group.verb == 'repost' %}i-repost{% elif group.verb == 'follow_req' %}i-lock{% else %}i-user{% endif %}"></use></svg>
+		</span>
 		<div class="notif-avatars">
 			{% for actor in group.actors %}<a class="nu" href="{% url 'profile' actor.user.username %}" tabindex="-1" aria-hidden="true">{% avatar actor 'sm' %}</a>{% endfor %}
 		</div>
+	</div>
+	<div class="notif-body">
 		<p class="notif-text">
 			{% for actor in group.actors %}<a class="notif-name" href="{% url 'profile' actor.user.username %}">{{ actor.username }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if group.others %} и ещё {{ group.others }}{% endif %}
 			{% if group.verb == 'like' %}

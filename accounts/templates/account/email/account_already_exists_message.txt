@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}С адресом {{ email }} пытались зарегистрироваться в AzzB, но аккаунт с этой почтой уже есть.
+
+Если это вы и забыли пароль, восстановите его:
+{{ password_reset_url }}
+
+Если это были не вы, просто проигнорируйте письмо.{% endautoescape %}{% endblock content %}

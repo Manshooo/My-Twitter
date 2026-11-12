@@ -1,0 +1,83 @@
+/* ---------- Сообщения (F2) ---------- */
+/* Без правой колонки: список диалогов и переписка рядом. На телефоне — по очереди (data-open). */
+.shell-wide .rail, .shell-wide .main-footer { display: none; }
+.shell-wide .main { flex-basis: 960px; padding-bottom: 16px; }
+.dm { display: flex; gap: 14px; height: calc(100dvh - 32px); min-height: 420px; }
+.dm-list { flex: 0 0 340px; display: flex; flex-direction: column; overflow: hidden; }
+.dm-title { font-size: 22px; padding: 16px 18px 8px; }
+#dm-list { flex: 1; overflow-y: auto; }
+.dm-items { list-style: none; margin: 0; padding: 0 6px 8px; }
+.dm-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; color: var(--text); }
+.dm-item:hover { background: var(--surface-3); }
+.dm-item[aria-current="page"] { background: var(--brand-soft); }
+.dm-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dm-item-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 15px; }
+.dm-item-head time { margin-left: auto; flex: none; font-size: 13px; }
+.dm-item-preview { font-size: 14px; color: var(--text-2); }
+.dm-item.unread .dm-item-preview { color: var(--text); font-weight: 700; }
+.dm-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--badge); flex: none; }
+.dm-more { display: flex; justify-content: center; padding: 6px; }
+.dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.dm-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.dm-peer { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; color: var(--text); }
+.dm-back { display: none; }
+.dm-typing { font-size: 13px; color: var(--accent); font-weight: 700; }
+#dm-status:has(+ .dm-typing:not([hidden])) { display: none; }
+.dm-scroll { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.dm-messages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dm-messages:empty { display: none; }
+.dm-older { display: flex; justify-content: center; }
+.dm-empty { text-align: center; margin: auto 0; }
+.msg { display: flex; flex-direction: column; align-items: flex-start; max-width: min(78%, 480px); }
+.msg-mine { align-self: flex-end; align-items: flex-end; }
+.msg-bubble {
+	display: flex; flex-direction: column; gap: 6px; padding: 9px 13px; border-radius: 18px 18px 18px 6px;
+	background: var(--surface-3); overflow-wrap: anywhere; max-width: 100%;
+}
+.msg-mine .msg-bubble { background: var(--primary); color: var(--on-primary); border-radius: 18px 18px 6px 18px; }
+.msg-mine .msg-bubble a { color: inherit; text-decoration: underline; }
+.msg-bubble .media { width: min(320px, 62vw); border-radius: 12px; }
+/* Только картинки — без «пузыря» вокруг. */
+.msg-bubble:has(.media):not(:has(.msg-text)) { padding: 0; background: transparent; }
+.msg-text { white-space: pre-wrap; font-size: 15px; line-height: 1.4; }
+.msg-gone { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-2); font-style: italic; }
+.msg-mine .msg-gone { background: transparent; color: var(--text-2); }
+.msg-meta { display: flex; gap: 8px; align-items: center; padding: 2px 6px 0; font-size: 12px; color: var(--text-2); }
+.msg-delete { border: 0; background: none; padding: 0; color: var(--text-2); font-size: 12px; cursor: pointer; opacity: 0; }
+.msg:hover .msg-delete, .msg-delete:focus-visible { opacity: 1; }
+@media (pointer: coarse) { .msg-delete { opacity: 1; } }
+.dm-seen { align-self: flex-end; padding: 0 6px; }
+.dm-foot { border-top: 1px solid var(--border); padding: 10px 12px; }
+.dm-refusal { text-align: center; color: var(--text-2); font-size: 14px; padding: 6px; }
+.dm-form { display: flex; flex-direction: column; gap: 8px; }
+.dm-row { display: flex; align-items: flex-end; gap: 6px; }
+.dm-row textarea {
+	flex: 1; min-height: 44px; max-height: 160px; resize: none; border: 1.5px solid var(--border); border-radius: 22px;
+	background: var(--surface-2); padding: 10px 16px; font-size: 16px; line-height: 1.4; overflow-y: auto;
+}
+.dm-row textarea:focus-visible { outline: none; border-color: var(--accent); }
+.dm-attach { color: var(--accent); cursor: pointer; }
+.dm-attach:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.dm-send { background: var(--primary); color: var(--on-primary); }
+.dm-send:hover { background: var(--primary); filter: brightness(1.1); }
+.dm-attachments { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.dm-attachments li { position: relative; }
+.dm-attachments img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; display: block; }
+.dm-attachments button {
+	position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 0;
+	background: var(--scrim); color: var(--on-scrim); display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+@media (max-width: 760px) {
+	.shell-wide .main { padding: 0; }
+	/* Шапка ≈56 px и таб-бар 64 px. */
+	.dm { height: calc(100dvh - 120px); min-height: 0; gap: 0; }
+	.dm .card { border-radius: 0; border-left: 0; border-right: 0; }
+	.dm-list { flex: 1; }
+	.dm[data-open] .dm-list, .dm:not([data-open]) .dm-chat { display: none; }
+	.dm-back { display: grid; }
+	.shell-wide { padding: 0; }
+}
+
+/* «Новые уведомления» поверх списка (F3). */
+.new-pill { position: sticky; top: 12px; z-index: 5; align-self: center; box-shadow: var(--shadow); }
+@media (max-width: 760px) { .new-pill { top: 68px; } }

@@ -1,0 +1,16 @@
+{
+	"name": "azzb-frontend",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "node frontend/build.mjs",
+		"watch": "node frontend/build.mjs --watch",
+		"lint": "eslint frontend"
+	},
+	"devDependencies": {
+		"@eslint/js": "10.0.1",
+		"esbuild": "0.28.2",
+		"eslint": "10.14.0",
+		"globals": "17.14.0"
+	}
+}

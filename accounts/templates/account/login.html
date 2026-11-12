@@ -1,7 +1,8 @@
 {% extends "account/base_entrance.html" %}
 {% load allauth %}
 {% block head_title %}Вход{% endblock head_title %}
-{% block meta_description %}Вход в AzzB{% endblock meta_description %}
+{% block meta_description %}Войдите в AzzB, чтобы читать подписки, писать посты и отвечать.{% endblock meta_description %}
+{% block og_title %}Вход · AzzB{% endblock og_title %}
 {% block content %}
 	<h1>Вход</h1>
 	{% url 'account_login' as login_url %}

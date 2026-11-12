@@ -293,8 +293,8 @@ class BlockMuteTests(TestCase):
 		self.assertIn(self.bob_post, Post.objects.visible_to(None))
 		self.assertNotContains(self.client.get('/'), 'пост Боба')
 		page = self.client.get(f'/p/{self.bob_post.pk}/')  # по прямой ссылке — заглушка
-		self.assertContains(page, 'Пост недоступен')
-		self.assertNotContains(page, 'пост Боба')
+		self.assertContains(page, 'Пост недоступен', status_code=404)
+		self.assertNotContains(page, 'пост Боба', status_code=404)
 
 	def test_blocked_user_cannot_follow_like_or_reply(self):
 		from .models import Block, FollowThrough
