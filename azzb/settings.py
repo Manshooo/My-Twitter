@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 	'moderation',
 	'notifications',
 	'dm',
+	'tracking',
 
 	# Регистрация с подтверждением почты, вход, сброс и смена пароля и почты (E1).
 	'allauth',
@@ -73,6 +74,8 @@ MIDDLEWARE = [
 	'allauth.account.middleware.AccountMiddleware',
 	# Забаненным — экран «Аккаунт заблокирован» вместо страниц (E4).
 	'moderation.middleware.BanMiddleware',
+	# Новая редакция согласия — сначала экран «Принимаю» (docs/data-collection.md, раздел 10).
+	'accounts.middleware.ConsentMiddleware',
 	'accounts.middleware.SetLastVisitMiddleware',
 	'azzb.htmx.HtmxVaryMiddleware',
 ]
@@ -126,6 +129,7 @@ TEMPLATES = [
 				'django.contrib.auth.context_processors.auth',
 				'django.contrib.messages.context_processors.messages',
 				'azzb.context_processors.ui',
+				'azzb.context_processors.tracking',
 			],
 		},
 	},

@@ -1,6 +1,5 @@
 import hashlib
 import json
-from datetime import date
 from uuid import NAMESPACE_URL, uuid5
 
 from django.conf import settings
@@ -18,6 +17,9 @@ from .discover import who_to_follow
 from .ratelimit import rate_limit
 from django.views.generic import TemplateView
 
+from accounts import consent
+from tracking import services as tracking
+from tracking.models import InteractionEvent, Surface
 from post.models import Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, number_page, page_url
 
@@ -66,7 +68,7 @@ def offline(request):
 
 
 def index(request):
-	queryset = Post.objects.for_feed(request.user).top_level().without_muted(request.user)
+	queryset = Post.objects.for_feed(request.user).top_level().without_muted(request.user).without_not_interested(request.user)
 	posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
 	# Свой новый пост из composer логично показать сверху именно «Свежего».
 	context = {"feed": "latest", "prepend": True}
@@ -83,7 +85,7 @@ def follows_updates(request):
 def hot_news(request):
 	queryset = (
 		# Без репостов (hot() их отбрасывает): иначе пост стоял бы здесь столько раз, сколько его репостили.
-		Post.objects.for_feed(request.user).top_level().without_muted(request.user).hot()
+		Post.objects.for_feed(request.user).top_level().without_muted(request.user).without_not_interested(request.user).hot()
 	)
 	posts, next_page = number_page(queryset, request.GET.get("page"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})
@@ -111,6 +113,9 @@ def search(request):
 	context = {'query': query, 'tab': tab, 'feed': 'search'}
 	if not query:
 		return render(request, 'azzb/search.html', context)
+	if not request.GET.get('page'):
+		# Поиск без подгрузки: запрос — одно событие, а не по событию на страницу результатов.
+		tracking.record(request, InteractionEvent.Kind.SEARCH, surface=Surface.SEARCH, query=query[:200], tab=tab)
 	if tab == 'posts':
 		found, next_page = number_page(finder.posts(request.user, query), request.GET.get('page'))
 		return render_posts(request, 'azzb/search.html', context, found, next_page and {'page': next_page})
@@ -126,8 +131,7 @@ def healthz(request):
 	return HttpResponse('ok', content_type='text/plain')
 
 
-# Дата текущей редакции правил, политики и согласия (C5, E6). Меняете текст — меняйте и дату.
-LEGAL_UPDATED = date(2026, 11, 11)
+LEGAL_UPDATED = consent.EDITION
 
 
 def legal_page(template):

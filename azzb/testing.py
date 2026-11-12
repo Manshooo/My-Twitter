@@ -49,5 +49,10 @@ class WebsocketClient(ApplicationCommunicator):
 		await self.wait(timeout)
 
 
-# Пользователь тестов — как настоящий: хоть раз входил. Иначе Profile.objects.public() его не покажет.
-ACTIVE = {'last_login': datetime(2026, 1, 1, tzinfo=timezone.utc)}
+# Пользователь тестов — как настоящий: хоть раз входил (иначе Profile.objects.public() его не покажет)
+# и принял текущую редакцию согласия (иначе accounts.middleware.ConsentMiddleware уведёт на её экран).
+ACTIVE = {
+	'last_login': datetime(2026, 1, 1, tzinfo=timezone.utc),
+	'pd_consent_at': datetime(2026, 11, 12, 12, tzinfo=timezone.utc),
+	'terms_accepted_at': datetime(2026, 11, 12, 12, tzinfo=timezone.utc),
+}

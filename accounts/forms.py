@@ -208,3 +208,34 @@ class UpdateUserForm(forms.ModelForm):
 				if profile.is_private != self.cleaned_data['is_private']:
 					set_private(profile, self.cleaned_data['is_private'])
 		return user
+
+
+class ConsentUpdateForm(forms.Form):
+	"""Новая редакция документов (accounts.consent): согласие на ПДн — отдельной галочкой,
+	правила — только тем, кто их ещё не принимал (аккаунты до появления галочек)."""
+	pd_consent = forms.BooleanField(required=True, error_messages={'required': 'Без согласия на обработку данных пользоваться сайтом нельзя.'})
+	accept_rules = forms.BooleanField(required=True, error_messages={'required': 'Без согласия с правилами пользоваться сайтом нельзя.'})
+
+	def __init__(self, user, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.user = user
+		self.fields['pd_consent'].label = format_html(
+			'Даю <a href="{}" target="_blank">согласие на обработку персональных данных</a> '
+			'на условиях <a href="{}" target="_blank">политики конфиденциальности</a>',
+			reverse('pd-consent'), reverse('privacy'),
+		)
+		if user.terms_accepted_at:
+			del self.fields['accept_rules']
+		else:
+			self.fields['accept_rules'].label = format_html(
+				'Принимаю <a href="{}" target="_blank">правила сообщества</a>', reverse('rules'),
+			)
+
+	def save(self):
+		now = timezone.now()
+		self.user.pd_consent_at = now
+		fields = ['pd_consent_at']
+		if 'accept_rules' in self.fields:
+			self.user.terms_accepted_at = now
+			fields.append('terms_accepted_at')
+		self.user.save(update_fields=fields)
