@@ -16,6 +16,13 @@ document.addEventListener('azzb:post-deleted', (event) => {
 	if (replyOf) bumpReplyCount(replyOf, -1);
 });
 
+// «Не интересно» (tracking/views.py): карточка уходит из ленты сразу.
+document.addEventListener('azzb:hide-post', (event) => {
+	closeMenus();
+	// Открытый пост на своей странице остаётся: человек сам на него пришёл.
+	document.querySelectorAll('[data-post-id="' + event.detail.id + '"]:not([data-main-post])').forEach((card) => card.remove());
+});
+
 // Ошибка запроса не из composer (у него свой блок ошибок) — короткий тост.
 function requestFailed(event) {
 	if (composerOf(event)) return;

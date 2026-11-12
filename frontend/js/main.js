@@ -16,3 +16,4 @@ import './cookies.js';
 import './dm.js';
 import './events.js';
 import './pwa.js';
+import './tracker.js';
