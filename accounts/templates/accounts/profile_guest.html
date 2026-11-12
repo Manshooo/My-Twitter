@@ -1,6 +1,6 @@
 {% extends "azzb/guest_base.html" %}
 {% load azzb_ui seo show_posts %}
-{% comment %} Профиль для гостя (R2-GuestProfile): шапка и три последних поста, если автор разрешил поисковики;
+{% comment %} Профиль для гостя (R2-GuestProfile): шапка и первая страница постов, если автор разрешил поисковики;
    подписки и действия — после входа. У закрытого аккаунта — без «О себе», баннера и постов. {% endcomment %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
 {% block meta_description %}{% if profile.is_private %}Закрытый аккаунт в AzzB{% elif profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
@@ -58,9 +58,4 @@
 		</c-empty>
 	{% endif %}
 {% endblock content %}
-{% block dock_cta %}
-	<c-cta class="dock-cta" title="Присоединяйтесь к обсуждению" text="Отвечайте, ставьте лайки и подписывайтесь на авторов">
-		<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
-		<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
-	</c-cta>
-{% endblock dock_cta %}
+{% block dock_cta %}{% include "azzb/includes/guest_cta.html" %}{% endblock dock_cta %}

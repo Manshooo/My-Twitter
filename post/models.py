@@ -8,7 +8,7 @@ from django.db import connection, models
 from django.db.models import (
 	BooleanField, Case, Count, Exists, F, FloatField, IntegerField, OuterRef, Prefetch, Q, Subquery, Value, When,
 )
-from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
+from django.db.models.functions import Cast, Coalesce, Extract, Greatest, Least, Now, Power
 from django.utils import timezone
 
 from accounts.models import Block, FollowThrough, Mute, Profile
@@ -134,11 +134,11 @@ class PostQuerySet(models.QuerySet['Post']):
 		return self.visible_to(user)._cards(user)
 
 	def hot(self):
-		"""«Горячее» (G1): (лайки + 2·ответы + 3·репосты) / (часы + 2)^1.5 — свежее обсуждаемое выше
-		старого популярного. Считается в запросе: ответы и репосты хранятся в посте, лайки уже
+		"""«Горячее» (G1): вовлечённость × спорность / (часы + 2)^1.5 — свежее обсуждаемое выше
+		старого популярного (формула — docs/feed.md). Считается в запросе: ответы и репосты хранятся в посте, лайки уже
 		посчитаны для карточек (likes_n), поэтому вызывать после for_feed(). Окно HOT_WINDOW
 		ограничивает работу базы: через месяц пост с любым числом лайков в топ уже не попадёт."""
-		return self._ranked(HOT_WINDOW, _engagement() / _age_penalty())
+		return self._ranked(HOT_WINDOW, _engagement() * _controversy() / _age_penalty())
 
 	def for_you(self, user):
 		"""«Для вас», сортировка «Популярное»: оценка «Горячего», умноженная на личные множители
@@ -161,6 +161,9 @@ class PostQuerySet(models.QuerySet['Post']):
 		reposted_by_follows = Exists(Post.objects.filter(
 			repost_of_id=OuterRef('pk'), is_repost=True, deleted_at__isnull=True, author__id__in=followee_ids,
 		))
+		quoted_by_follows = Exists(Post.objects.filter(
+			quote_of_id=OuterRef('pk'), deleted_at__isnull=True, author__id__in=followee_ids,
+		))
 		liked_tags = PostHashtag.objects.filter(
 			post__like__profile_id=me, post__like__created_at__gte=since,
 		).values('hashtag_id')
@@ -170,18 +173,24 @@ class PostQuerySet(models.QuerySet['Post']):
 			return Case(When(condition, then=Value(factor)), default=Value(1.0), output_field=FloatField())
 
 		score = (
-			(_engagement() + Value(1.0)) / _age_penalty()
+			(_engagement() + Value(1.0)) * _controversy() / _age_penalty()
 			* boost(followed, 3.0)
 			* boost(liked_author | replied_author, 2.0)
-			* boost(liked_by_follows | reposted_by_follows, 1.5)
+			* boost(liked_by_follows | reposted_by_follows | quoted_by_follows, 1.5)
 			* boost(tagged, 1.5)
 		)
 		return self._ranked(FOR_YOU_WINDOW, score)
 
 	def _ranked(self, window, score):
 		# Без репостов: иначе пост стоял бы в ленте столько раз, сколько его репостили.
+		# Цитаты входят в reposts_count; для оценки их нужно отдельно — считаем подзапросом.
+		quotes = (
+			Post.objects.filter(quote_of_id=OuterRef('pk'), deleted_at__isnull=True)
+			.order_by().values('quote_of_id').annotate(n=Count('pk')).values('n')
+		)
 		return (
 			self.filter(is_repost=False, created_at__gte=timezone.now() - window)
+			.annotate(quotes_n=Coalesce(Subquery(quotes, output_field=IntegerField()), 0))
 			.annotate(hot_score=score)
 			.order_by('-hot_score', '-created_at', '-id')
 		)
@@ -202,10 +211,31 @@ HOT_WINDOW = timedelta(days=30)
 FOR_YOU_WINDOW = timedelta(days=7)
 # За какой срок лайки и ответы говорят об интересах (авторы, теги).
 AFFINITY_WINDOW = timedelta(days=30)
+# Насколько спорность может опустить пост: не ниже половины оценки — обсуждение тоже интерес.
+CONTROVERSY_FLOOR = 0.5
+
+
+def _approval():
+	# Репосты без цитат: reposts_count считает и то и другое.
+	return Cast(F('likes_n') + F('reposts_count') - F('quotes_n'), FloatField())
+
+
+def _discussion():
+	return Cast(F('replies_count') + F('quotes_n'), FloatField())
 
 
 def _engagement():
-	return Cast(F('likes_n') + 2 * F('replies_count') + 3 * F('reposts_count'), FloatField())
+	"""Вовлечённость: лайк — 1, ответ и цитата — 2 (это высказывание), репост — 3 (поделиться с подписчиками)."""
+	reposts = F('reposts_count') - F('quotes_n')
+	return Cast(F('likes_n') + 2 * F('replies_count') + 2 * F('quotes_n') + 3 * reposts, FloatField())
+
+
+def _controversy():
+	"""Спорность: когда ответов и цитат заметно больше, чем лайков и репостов, пост скорее
+	высмеивают или спорят с ним («ratio»), чем поддерживают. Множитель от 0,5 до 1:
+	2·(одобрение + 1) / (обсуждение + 1), не больше 1 и не меньше 0,5."""
+	ratio = Value(2.0) * (_approval() + Value(1.0)) / (_discussion() + Value(1.0))
+	return Greatest(Value(CONTROVERSY_FLOOR), Least(Value(1.0), ratio))
 
 
 def _age_penalty():

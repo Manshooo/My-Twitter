@@ -18,7 +18,15 @@ MENTION_VERBS = (Notification.Verb.REPLY, Notification.Verb.QUOTE, Notification.
 
 @login_required
 def notifications_page(request):
-	tab = 'mentions' if request.GET.get('tab') == 'mentions' else 'all'
+	tab = request.GET.get('tab') if request.GET.get('tab') in ('mentions', 'requests') else 'all'
+	me = request.user.profile
+	requests = FollowRequest.objects.filter(target=me, requester__in=Profile.objects.public())
+	if tab == 'requests' and not is_htmx(request):
+		# Заявки — прямо во вкладке, с ответом на месте (страница в настройках тоже осталась).
+		return render(request, 'notifications/list.html', {
+			'tab': tab, 'requests': requests.count(), 'show_requests': True,
+			'request_list': requests.select_related('requester__user').order_by('-created_at'),
+		})
 	before = parse_before(request.GET.get('before'))
 	groups, next_before = grouped_page(request.user, before, verbs=MENTION_VERBS if tab == 'mentions' else None)
 	# Прочитанным считается всё, что пришло до открытия страницы; подсветка новых уже посчитана выше.
@@ -30,9 +38,8 @@ def notifications_page(request):
 	context = {'groups': groups, 'next_url': f"{request.path}?{urlencode(params)}" if params else None}
 	if is_htmx(request):
 		return render(request, 'notifications/_page.html', context)
-	me = request.user.profile
-	requests = FollowRequest.objects.filter(target=me, requester__in=Profile.objects.public()).count()
-	context.update({'tab': tab, 'requests': requests, 'show_requests': me.is_private or requests})
+	pending = requests.count()
+	context.update({'tab': tab, 'requests': pending, 'show_requests': me.is_private or pending})
 	return render(request, 'notifications/list.html', context)
 
 

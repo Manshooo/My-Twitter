@@ -48,7 +48,6 @@
 .topbar:has(.topbar-title) { justify-content: flex-start; padding-left: var(--space-2); }
 .topbar-title { flex: 1; min-width: 0; font-weight: 800; font-size: 17px; }
 .topbar .icon-btn { color: var(--text); }
-.show-m { display: none; }
 .tabbar {
 	position: sticky; bottom: 0; z-index: 20; justify-content: space-around; align-items: stretch; height: 64px;
 	background: var(--surface); border-top: 1px solid var(--border);
@@ -107,7 +106,14 @@
 .page-title { min-width: 0; font-size: 20px; font-weight: 800; }
 .page-head:not(:has(.icon-btn)) { padding-left: var(--space-4); }
 @media (max-width: 760px) {
-	.show-m { display: grid; }
 	/* Заголовок страницы на телефоне — в шапке. */
 	.page-head { display: none; }
 }
+
+/* Прокрутка вниз на телефоне прячет липкие шапку и вкладки (chrome.js). */
+@media (max-width: 760px) {
+	.topbar, .ghead, .tabs { transition: transform var(--dur) ease-out; }
+	.chrome-hidden :is(.topbar, .ghead) { transform: translateY(-100%); }
+	.chrome-hidden .tabs-under-head { transform: translateY(calc(-1 * var(--h-header-m))); }
+}
+@media (prefers-reduced-motion: reduce) { .topbar, .ghead, .tabs { transition: none; } }

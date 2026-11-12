@@ -18,6 +18,8 @@
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; flex-direction: column; }
 .dock-cta { justify-content: center; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 0; box-shadow: var(--shadow); }
 .dock-cta > * { max-width: 520px; }
+.dock-cta[hidden] { display: none; }
+.dock-cta .cta-btns { align-items: center; }
 
 /* Витрина: слева знак и фраза, справа кнопки или форма. */
 .land {
@@ -25,7 +27,8 @@
 	display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 64px; align-items: center;
 }
 .land-mark { width: 120px; height: 120px; display: block; }
-.land-heading { margin: 28px 0 12px; font: 500 44px/1.15 var(--font-display); letter-spacing: -.01em; }
+.land-kicker { margin-top: 28px; font-size: 16px; font-weight: 800; color: var(--accent); }
+.land-heading { margin: var(--space-2) 0 12px; font: 500 44px/1.15 var(--font-display); letter-spacing: -.01em; }
 .land-text { font-size: 18px; line-height: 1.55; color: var(--text-2); max-width: 460px; }
 .land-side { display: flex; justify-content: center; }
 .land-auth, .land .auth-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 380px; }
@@ -47,14 +50,18 @@
 @media (max-width: 760px) {
 	.land { grid-template-columns: 1fr; gap: var(--space-8); padding: var(--space-8) var(--space-4) var(--space-6); }
 	.land-mark { width: 72px; height: 72px; }
-	.land-heading { font-size: 30px; margin-top: 20px; }
+	.land-kicker { margin-top: 20px; font-size: 15px; }
+	.land-heading { font-size: 30px; }
 	.land-text { font-size: 16px; }
 	.land-auth, .land .auth-card { max-width: none; }
 	.trend { border-radius: 0; border-inline: 0; }
 	.gmain.main-col { padding-bottom: 0; }
-	.dock-cta .cta-btns > * { flex: 1; }
+	.dock-cta .cta-btns > .btn { flex: 1; }
 	.dock-cta .cta-btns { flex: 1 1 100%; }
 	.ghead .btn-ghost { display: none; }
 	/* Под липкой плашкой и строкой cookie — чтобы подвал и последний ответ не прятались. */
-	.gfoot { padding-bottom: 320px; }
+	.gfoot { padding-bottom: 240px; }
+	/* Вход и регистрация: форма сразу на первом экране, витрина — только на главной. */
+	.land:has(.auth-card) { padding-top: var(--space-6); }
+	.land:has(.auth-card) .land-intro { display: none; }
 }

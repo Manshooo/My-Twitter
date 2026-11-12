@@ -25,9 +25,34 @@
 				{% avatar profile 'xl' %}
 				<div class="profile-buttons">
 					{% if is_own %}
-						{# На телефоне закладки и настройки живут здесь, на десктопе — в левом меню. #}
-						<a class="icon-btn icon-btn-outline show-m" href="{% url 'bookmarks' %}" aria-label="Закладки"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg></a>
-						<a class="icon-btn icon-btn-outline show-m" href="{% url 'edit-profile' %}" aria-label="Настройки"><svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg></a>
+						{# Второстепенное своего профиля — в «⋯»: ссылка на профиль, а на телефоне ещё закладки и настройки. #}
+						<div class="menu-wrap">
+							<button class="icon-btn icon-btn-outline" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="own-profile-menu" aria-label="Ещё" data-menu-toggle>
+								<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
+							</button>
+							<div class="menu menu-start" id="own-profile-menu" role="menu" hidden>
+								<button class="menu-item" type="button" role="menuitem" data-copy="{{ profile_url }}" data-share>
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"></use></svg>Поделиться профилем
+								</button>
+								<a class="menu-item" role="menuitem" href="{% url 'bookmarks' %}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-bookmark"></use></svg>Закладки
+								</a>
+								<a class="menu-item" role="menuitem" href="{% url 'edit-profile' %}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg>Настройки
+								</a>
+								{% if profile.is_private %}
+									<a class="menu-item" role="menuitem" href="{% url 'notifications' %}?tab=requests">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-lock"></use></svg>Заявки на подписку
+									</a>
+								{% endif %}
+								<form method="post" action="{% url 'account_logout' %}">
+									{% csrf_token %}
+									<button class="menu-item" type="submit" role="menuitem">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"></use></svg>Выйти
+									</button>
+								</form>
+							</div>
+						</div>
 						<a class="btn btn-outline" href="{% url 'edit-profile' %}">Редактировать<span class="hide-m">&nbsp;профиль</span></a>
 					{% else %}
 						<div class="menu-wrap">

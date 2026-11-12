@@ -49,7 +49,7 @@
 				{% include "post/_like.html" with liked=post.is_liked likes_total=post.likes_n %}
 			</div>
 		{% elif verb == 'follow_req' %}
-			<a class="btn btn-sm" href="{% url 'follow-requests' %}">Посмотреть заявки</a>
+			<a class="btn btn-sm" href="{% url 'notifications' %}?tab=requests">Посмотреть заявки</a>
 		{% endif %}
 	</div>
 </article>

@@ -20,7 +20,7 @@ from tracking import services as tracking
 from tracking.models import InteractionEvent
 
 from .models import Bookmark, Hashtag, Post
-from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
+from .pagination import PAGE_SIZE, PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from .services import (
 	delete_post as soft_delete_post, edit_post, find_post_target, find_reply_target, original, publish_post,
 	toggle_bookmark, toggle_like, toggle_pin, toggle_repost, vote,
@@ -295,17 +295,24 @@ def follow_conversation(start, user, limit=CONVERSATION_PAGE):
 	}
 
 
-# Сколько сообщений ветки под ответом видно сразу; дальше — «Показать продолжение».
+# Сколько сообщений ветки под ответом видно сразу; дальше — «Развернуть ветку».
 BRANCH_PREVIEW = 2
+# У скольких ответов страницы ветка раскрыта сразу: у остальных — кнопка «Показать ветку»,
+# иначе число запросов к базе росло бы с длиной страницы.
+BRANCHES_OPEN = 5
 
 
 def attach_branches(replies, user, open_single=False):
 	"""Ветка под каждым ответом с ответами (вариант B ревизии R2): начало разговора одной линией,
 	без вложенности глубже одного уровня. Единственный ответ на странице раскрыт целиком —
-	это переписка. Запросы — только для ответов, у которых есть свои ответы."""
+	это переписка. Запросы — только для первых BRANCHES_OPEN ответов, у которых есть свои ответы."""
 	limit = CONVERSATION_PAGE if open_single and len(replies) == 1 else BRANCH_PREVIEW
+	opened = 0
 	for reply in replies:
-		reply.branch = follow_conversation(reply, user, limit) if reply.replies_count else None
+		reply.branch = None
+		if reply.replies_count and opened < BRANCHES_OPEN:
+			reply.branch = follow_conversation(reply, user, limit)
+			opened += 1
 
 
 def post_detail(request, pk):
@@ -335,12 +342,12 @@ def post_detail(request, pk):
 	return render_detail(request, post, ancestors, gap, {"replies": replies, "next_url": next_url})
 
 
-# Гостю под постом — два первых ответа, остальные после входа (R2-GuestPost).
-GUEST_REPLIES = 2
+# Гостю под постом — первая страница ответов; подгрузка и ветки — после входа.
+GUEST_REPLIES = PAGE_SIZE
 
 
 def guest_post_detail(request, post):
-	"""Пост для гостя: гостевая шапка без меню приложения, два ответа и «Ещё N ответов» ко входу.
+	"""Пост для гостя: гостевая шапка без меню приложения, первая страница ответов и «Ещё N ответов» ко входу.
 	Подгрузка ответов — тоже после входа."""
 	if request.GET.get("cursor") or is_load_more(request):
 		return redirect_to_login(request.get_full_path())

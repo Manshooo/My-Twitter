@@ -53,6 +53,15 @@ document.addEventListener('htmx:load', (event) => {
 export async function copyLink(btn) {
 	closeMenus();
 	const url = new URL(btn.dataset.copy, window.location.origin).href;
+	// data-share: на телефоне — системное меню «Поделиться», где оно есть; иначе копируем ссылку.
+	if (btn.hasAttribute('data-share') && navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+		try {
+			await navigator.share({ url });
+			return;
+		} catch (e) {
+			if (e.name === 'AbortError') return;
+		}
+	}
 	try {
 		await navigator.clipboard.writeText(url);
 		toast('Ссылка скопирована');

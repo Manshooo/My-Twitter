@@ -8,13 +8,23 @@
 		<c-tabs.item href="{% url 'notifications' %}" current="{% if tab == 'all' %}1{% endif %}">Все</c-tabs.item>
 		<c-tabs.item href="{% url 'notifications' %}?tab=mentions" current="{% if tab == 'mentions' %}1{% endif %}">Упоминания</c-tabs.item>
 		{% if show_requests %}
-			<c-tabs.item href="{% url 'follow-requests' %}" count="{% if requests %}{{ requests }}{% endif %}">Заявки</c-tabs.item>
+			<c-tabs.item href="{% url 'notifications' %}?tab=requests" current="{% if tab == 'requests' %}1{% endif %}" count="{% if requests %}{{ requests }}{% endif %}">Заявки</c-tabs.item>
 		{% endif %}
 	</c-tabs>
 	{# Пришло новое, пока страница открыта (сигнал из сокета, F3), — показываем по нажатию, а не сдвигаем список. #}
 	<a class="btn btn-sm new-pill" href="{% url 'notifications' %}" data-new-notifications hidden>Новые уведомления</a>
 	<div class="feed">
-		{% if groups %}
+		{% if tab == 'requests' %}
+			{% url 'notifications' as notifications_url %}
+			{% for item in request_list %}
+				<div class="notif">{% include "accounts/includes/request_row.html" with next=notifications_url|add:"?tab=requests" %}</div>
+			{% empty %}
+				<c-empty icon="lock">
+					<h2>Новых заявок нет</h2>
+					<p>{% if user.profile.is_private %}Здесь появятся люди, которые хотят подписаться на вас.{% else %}Аккаунт открыт: подписаться может любой, заявки не нужны.{% endif %}</p>
+				</c-empty>
+			{% endfor %}
+		{% elif groups %}
 			{% include "notifications/_page.html" %}
 		{% else %}
 			<c-empty icon="bell">
