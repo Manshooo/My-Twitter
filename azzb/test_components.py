@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase, TestCase
 
-from azzb.templatetags.azzb_ui import count
+from azzb.templatetags.azzb_ui import count, count_plural
 
 
 class CountFilterTests(SimpleTestCase):
@@ -10,6 +10,13 @@ class CountFilterTests(SimpleTestCase):
 		for number, text in cases.items():
 			with self.subTest(number=number):
 				self.assertEqual(count(number), text)
+
+	def test_plural_after_short_form(self):
+		forms = 'репост,репоста,репостов'
+		self.assertEqual(count_plural(2, forms), 'репоста')
+		self.assertEqual(count_plural(21, forms), 'репост')
+		self.assertEqual(count_plural(12_344, forms), 'репостов')  # «12 тыс. репостов»
+		self.assertEqual(count_plural(1_001, forms), 'репостов')
 
 
 class EmptyComponentTests(TestCase):

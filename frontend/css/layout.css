@@ -74,7 +74,7 @@
 	border-inline: 1px solid var(--border);
 }
 .main-col .feed { display: flex; flex-direction: column; }
-.main-col :is(.feed, .load-more) > .card, .main-col > .card {
+.main-col :is(.feed, .load-more) > .card, .main-col > .card, .main-col :is(.post, .post-stub).card {
 	border-width: 0 0 1px; border-radius: 0; background: transparent;
 }
 .main-col .post-stub { background: var(--surface-2); }
@@ -89,3 +89,11 @@
 	/* Строку «Что нового» на телефоне заменяет плавающая кнопка. */
 	.main-col .composer-start { display: none; }
 }
+
+/* Заголовок внутренней страницы в колонке: «Назад» и название, 56 px. */
+.page-head {
+	display: flex; align-items: center; gap: var(--space-2); height: var(--h-header-m);
+	padding: 0 var(--space-4) 0 var(--space-2); border-bottom: 1px solid var(--border);
+}
+.page-head .icon-btn { color: var(--text); }
+.page-title { min-width: 0; font-size: 20px; font-weight: 800; }

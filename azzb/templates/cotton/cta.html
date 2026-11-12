@@ -1,0 +1,5 @@
+<c-vars title text="" class="" />
+<div class="cta{% if class %} {{ class }}{% endif %}" {{ attrs }}>
+	<div class="cta-text"><b>{{ title }}</b>{% if text %}<span>{{ text }}</span>{% endif %}</div>
+	<div class="cta-btns">{{ slot }}</div>
+</div>

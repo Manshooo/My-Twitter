@@ -41,3 +41,12 @@
 .notice { padding: 12px 14px; border-radius: 12px; background: var(--brand-soft); font-size: 15px; }
 .post-hidden { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 14px; }
 .post-hidden .icon { flex: none; margin-top: 2px; }
+/* Призыв войти (<c-cta>, R2-B-Cta): строка в потоке; липкая плашка гостевых страниц — тот же блок. */
+.cta {
+	display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4);
+	padding: var(--space-4); border-bottom: 1px solid var(--border);
+}
+.cta-text { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; }
+.cta-text b { font-size: 16px; font-weight: 800; }
+.cta-text span { font-size: 14px; color: var(--text-2); }
+.cta-btns { display: flex; gap: var(--space-2); }

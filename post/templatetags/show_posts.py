@@ -11,6 +11,7 @@ SHOWN_ANNOTATIONS = ('likes_n', 'is_liked', 'is_reposted', 'is_bookmarked', 'quo
 @register.inclusion_tag(filename='post/post.html', name="show_posts", takes_context=True)
 def show_posts(context, variant=""):
 	"""Карточка поста. variant: "" — в ленте, "main" — главный пост на своей странице,
+	"reply" — ответ на главный пост (без строки «В ответ»),
 	"parent" — пост выше по ветке (с линией к следующему), "chain" — сообщение разговора
 	под ответом (post/_conversation.html).
 	Пост из ветки, который пользователь не видит (available=False, см. Post.objects.in_thread),
@@ -39,8 +40,11 @@ def show_posts(context, variant=""):
 	quote_available = getattr(post, "quote_available", None)
 	if quote is not None and quote_available is None:
 		quote_available = Post.objects.visible_to(request.user).filter(pk=quote.pk).exists()
+	# Цитаты входят в reposts_count; под главным постом они считаются отдельно.
+	quotes_total = post.quotes.filter(deleted_at__isnull=True).count() if variant == "main" else 0
 	return {
-		"post": post, "liked": liked, "likes_total": likes_total, "replies_total": post.replies_count,
+		"post": post, "liked": liked, "quotes_total": quotes_total,
+		"reposts_only": post.reposts_count - quotes_total, "likes_total": likes_total, "replies_total": post.replies_count,
 		"reposted": getattr(post, "is_reposted", False), "reposts_total": post.reposts_count,
 		"bookmarked": getattr(post, "is_bookmarked", False),
 		"reposted_by": reposted_by, "repost_row": row if reposted_by else None,

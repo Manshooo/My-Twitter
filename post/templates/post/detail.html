@@ -24,18 +24,19 @@
 		<meta name="twitter:card" content="summary_large_image">
 	{% else %}{{ block.super }}{% endif %}{% endwith %}
 {% endblock og_image %}
+{% block main_class %} main-col{% endblock main_class %}
 {% block content %}
-	<div style="display: flex; align-items: center; gap: 8px" data-post-page>
+	<div class="page-head" data-post-page>
 		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
 			<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
 		</a>
-		<h1 class="display" style="font-size: 22px">{% if post.is_reply %}Ответ{% else %}Пост{% endif %}</h1>
+		<h1 class="page-title clip1">{% if post.is_reply %}Ответ{% else %}Пост{% endif %}</h1>
 	</div>
 
 	{% if thread_gap or ancestors %}
 		<div class="thread" aria-label="Выше по ветке">
 			{% if thread_gap %}
-				<div class="card thread-gap muted">
+				<div class="thread-gap muted">
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"></use></svg>
 					{% if thread_gap == 'deleted' %}Начало ветки удалено{% else %}Начало ветки недоступно{% endif %}
 				</div>
@@ -50,22 +51,22 @@
 		<h2 id="replies-title" class="sr">Ответы</h2>
 		{% if not post.available %}
 		{% elif user.is_authenticated %}
-			<div class="card composer-start">
-				{% avatar user.profile %}
-				<button class="fake-input" type="button" data-reply data-reply-to="{{ post.id }}" data-reply-name="@{{ post.author.user.username }}">Ответить @{{ post.author.user.username }}</button>
+			<div class="composer-start">
+				{% avatar user.profile 'sm' %}
+				<button class="fake-input" type="button" data-reply data-reply-to="{{ post.id }}" data-reply-name="@{{ post.author.user.username }}">Ваш ответ</button>
 			</div>
 		{% else %}
-			<div class="card card-pad" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
-				<span class="muted" style="flex: 1 1 220px">Войдите, чтобы ответить.</span>
-				<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
-			</div>
+			<c-cta title="Чтобы ответить, войдите" text="Аккаунт создаётся за минуту">
+				<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+				<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
+			</c-cta>
 		{% endif %}
 
-		<div class="feed" style="display: flex; flex-direction: column; gap: 14px" data-replies="{{ post.id }}">
+		<div class="feed" data-replies="{{ post.id }}">
 			{% if replies %}
 				{% include "post/_replies.html" with posts=replies %}
 			{% else %}
-				<c-empty icon="reply" class="card" data-feed-empty>
+				<c-empty icon="reply" data-feed-empty>
 					<h2>Ответов пока нет</h2>
 					<p>Начните обсуждение первым.</p>
 				</c-empty>

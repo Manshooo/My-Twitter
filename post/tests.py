@@ -189,8 +189,10 @@ class RepliesTests(TestCase):
 
 		page = self.client.get(f'/p/{self.root.pk}/').content.decode()
 		page = page[page.index('<main'):]
-		self.assertLess(page.index('Первый ответ'), page.index('Второй ответ'))
-		self.assertNotIn('Ответ на ответ', page)  # только прямые ответы
+		# Ответ на ответ — в ветке под своим ответом (вариант B ревизии R2), до следующего прямого ответа.
+		self.assertLess(page.index('Первый ответ'), page.index('class="branch"'))
+		self.assertLess(page.index('class="branch"'), page.index('Ответ на ответ'))
+		self.assertLess(page.index('Ответ на ответ'), page.index('Второй ответ'))
 		self.assertIn('data-reply-count data-n="3">3<', page)  # счётчик — вся ветка, с ответом на ответ
 
 		nested = Post.objects.get(text='Ответ на ответ')
@@ -332,15 +334,17 @@ class RepliesTests(TestCase):
 		self.assertNotIn('Боб отвечает Алисе', page)
 		self.assertIn('Ещё 2 ответа на этот пост', page)
 
-	def test_several_replies_get_a_button_instead_of_unfolding(self):
-		first, _ = self.chat(self.root, [self.bob, self.alice])
+	def test_several_replies_show_branch_preview(self):
+		from .views import BRANCH_PREVIEW
+		posts = self.chat(self.root, [self.bob, self.alice] * 3)
 		Post.objects.create(author=self.alice.profile, text='Другой ответ', reply_to=self.root, is_reply=True)
 		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
-		self.assertNotIn('реплика 1<', page)
-		self.assertIn(f'/p/{first.pk}/conversation/', page)
-		self.assertIn('Показать ветку · 1 ответ', page)
-		part = self.client.get(f'/p/{first.pk}/conversation/', headers={'HX-Request': 'true'})
-		self.assertContains(part, 'реплика 1<', html=False)
+		self.assertIn('class="branch"', page)
+		self.assertIn(f'реплика {BRANCH_PREVIEW}<', page)
+		self.assertNotIn(f'реплика {BRANCH_PREVIEW + 1}<', page)
+		self.assertIn(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', page)
+		part = self.client.get(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', headers={'HX-Request': 'true'})
+		self.assertContains(part, f'реплика {BRANCH_PREVIEW + 1}<', html=False)
 
 	def test_conversation_shows_unavailable_posts_as_placeholders(self):
 		self.chat(self.root, [self.bob, self.alice, self.bob])
