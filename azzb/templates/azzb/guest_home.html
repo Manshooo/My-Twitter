@@ -1,0 +1,26 @@
+{% extends "azzb/guest_base.html" %}
+{% load seo show_posts %}
+{% block full_title %}AzzB{% endblock full_title %}
+{% block og_title %}AzzB — социальная сеть коротких постов{% endblock og_title %}
+{% block metatags %}
+	<meta name="yandex-verification" content="461141e64faf3f9b">
+	<meta name="mailru-domain" content="6mUzAjqGDGUqpJ3y">
+	{% jsonld_website %}
+{% endblock metatags %}
+{% block content %}
+	<c-landing heading="h1">
+		<div class="land-auth">
+			<a class="btn btn-lg btn-block" href="{% url 'account_signup' %}">Создать аккаунт</a>
+			<div class="or">или</div>
+			<a class="btn btn-outline btn-lg btn-block" href="{% url 'account_login' %}">Войти</a>
+			<p class="legal">Регистрируясь, вы принимаете <a href="{% url 'rules' %}">Правила</a> и даёте <a href="{% url 'pd-consent' %}">согласие на обработку персональных данных</a>. Как мы обращаемся с данными: <a href="{% url 'privacy' %}">политика конфиденциальности</a>.</p>
+		</div>
+	</c-landing>
+	{% if posts %}
+		<section class="trend" aria-labelledby="trend-title">
+			<h2 class="trend-title" id="trend-title">Сейчас обсуждают</h2>
+			<div class="feed">{% for post in posts %}{% show_posts %}{% endfor %}</div>
+			<a class="more more-row" href="{% url 'account_signup' %}">Больше постов после регистрации<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a>
+		</section>
+	{% endif %}
+{% endblock content %}

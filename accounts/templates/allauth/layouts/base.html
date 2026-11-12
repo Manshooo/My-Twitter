@@ -14,17 +14,21 @@
 		{% include "azzb/includes/og_default.html" %}
 		{% block extra_head %}{% endblock extra_head %}
 	</head>
-	<body>
+	<body class="guest no-tabbar">
 		{% include "azzb/includes/icons.html" %}
-		<div class="auth">
-			{% include "azzb/includes/logo.html" %}
-			<main class="card auth-card">
-				{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
-				{% block body %}{% block content %}{% endblock content %}{% endblock body %}
-			</main>
-			{% block footer %}{% include "account/snippets/auth_footer.html" %}{% endblock footer %}
-		</div>
-		{% include "azzb/includes/cookie_banner.html" %}
+		{# Вход и регистрация — в той же сетке, что витрина (R2-Login): одна гостевая шапка и подвал. #}
+		{% include "azzb/includes/guest_head.html" with hide_auth_links=True %}
+		<main class="gmain">
+			<c-landing>
+				<div class="auth-card">
+					{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
+					{% block body %}{% block content %}{% endblock content %}{% endblock body %}
+					{% block footer %}{% endblock footer %}
+				</div>
+			</c-landing>
+		</main>
+		{% include "azzb/includes/guest_foot.html" %}
+		<div class="dock">{% include "azzb/includes/cookie_banner.html" %}</div>
 		{% block extra_body %}{% endblock extra_body %}
 	</body>
 </html>

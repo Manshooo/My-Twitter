@@ -20,8 +20,10 @@
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}>
+	<body{% block body_class %}{% endblock body_class %} hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}>
 		{% include "azzb/includes/icons.html" %}
+		{# Оболочка приложения; гостевые страницы (azzb/guest_base.html) подменяют её своей. #}
+		{% block page %}
 		{% with url_name=request.resolver_match.url_name %}
 		{# Шапка телефона (R2-B-Nav): на Главной — только логотип, на внутренних страницах — «Назад» и заголовок. #}
 		<header class="topbar">
@@ -163,6 +165,7 @@
 			{% endif %}
 		</nav>
 		{% endwith %}
+		{% endblock page %}
 
 		{% if user.is_authenticated %}
 			{# Счётчики: по сигналу из сокета (azzb:refresh-badges, F1), а без сокета — опрос раз в 30 с, пока вкладка на экране. #}
@@ -191,7 +194,7 @@
 			</button>
 			<span class="lb-count" data-lightbox-count aria-live="polite"></span>
 		</div>
-		{% include "azzb/includes/cookie_banner.html" %}
+		{% block dock %}{% include "azzb/includes/cookie_banner.html" %}{% endblock dock %}
 		<div class="toast" id="toast" role="status" aria-live="polite"{% if messages %} data-flash="{% for message in messages %}{{ message }}{% if not forloop.last %} {% endif %}{% endfor %}"{% endif %} hidden></div>
 	</body>
 </html>

@@ -84,14 +84,17 @@ class GuestProfileTests(TestCase):
 		self.alice = make('alice', bio='Пишу про погоду')
 		publish_post(self.alice.profile, 'Секретов нет, но только после входа')
 
-	def test_guest_sees_card_with_preview_but_no_posts(self):
+	def test_guest_sees_header_and_latest_posts(self):
 		response = self.client.get('/users/alice/')
 		self.assertEqual(response.status_code, 200)
 		self.assertTemplateUsed(response, 'accounts/profile_guest.html')
 		self.assertContains(response, '<meta property="og:title" content="alice (@alice)">', html=True)
 		self.assertContains(response, '<meta property="og:type" content="profile">', html=True)
 		self.assertContains(response, '<meta property="og:description" content="Пишу про погоду">', html=True)
-		self.assertNotContains(response, 'Секретов нет')
+		# Индексируемый профиль показывает гостю три последних поста (ревизия R2).
+		self.assertContains(response, 'Секретов нет')
+		self.assertContains(response, 'Присоединяйтесь к обсуждению')
+		self.assertNotContains(response, 'class="tabbar"')
 		self.assertNotContains(response, 'noindex')
 		data = jsonld(response)
 		self.assertEqual(data['@type'], 'ProfilePage')
@@ -106,8 +109,10 @@ class GuestProfileTests(TestCase):
 		self.assertIsNone(jsonld(response))
 
 	def test_opted_out_profile_is_not_indexed(self):
-		make('quiet', search_indexing=False)
+		quiet = make('quiet', search_indexing=False)
+		publish_post(quiet.profile, 'тихий пост')
 		response = self.client.get('/users/quiet/')
+		self.assertNotContains(response, 'тихий пост')
 		self.assertContains(response, '<meta name="robots" content="noindex">', html=True)
 		self.assertIsNone(jsonld(response))
 

@@ -1,0 +1,10 @@
+<c-vars heading="p" />
+{# Сетка витрины (R2-GuestHome, R2-Login): слева знак и фраза, справа — слот (кнопки или форма). #}
+<section class="land">
+	<div class="land-intro">
+		<svg class="land-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="32" fill="var(--logo-bg)"/><path d="M19 47 L32 16 L45 47" fill="none" stroke="var(--logo-ink)" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.5"/><circle cx="32" cy="38" r="3.6" fill="var(--logo-ink)"/></svg>
+		{% if heading == "h1" %}<h1 class="land-heading">Присоединяйтесь к растущему сообществу!</h1>{% else %}<p class="land-heading">Присоединяйтесь к растущему сообществу!</p>{% endif %}
+		<p class="land-text">Короткие посты, картинки и опросы. Читайте тех, кто вам интересен, и спорьте в ответах.</p>
+	</div>
+	<div class="land-side">{{ slot }}</div>
+</section>

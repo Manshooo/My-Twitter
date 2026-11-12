@@ -20,10 +20,8 @@
 			<button class="btn btn-lg btn-block" type="submit">Зарегистрироваться</button>
 		{% endslot %}
 	{% endelement %}
-	<div class="auth-links">
-		<span class="muted">Уже есть аккаунт?</span>
-		<a href="{{ login_url }}">Войти</a>
-	</div>
+	<div class="or">уже есть аккаунт?</div>
+	<a class="btn btn-outline btn-lg btn-block" href="{{ login_url }}">Войти</a>
 {% endblock content %}
 {% block extra_head %}
 	{% if form.captcha_key %}<script src="https://smartcaptcha.yandexcloud.net/captcha.js" defer></script>{% endif %}

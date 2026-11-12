@@ -163,6 +163,8 @@ class RepliesTests(TestCase):
 		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.root = Post.objects.create(author=self.alice.profile, text='Корень ветки')
+		# Ветку целиком видит вошедший; гостю — два ответа (GuestPostTests).
+		self.client.force_login(self.bob)
 
 	def reply(self, user, parent, text):
 		self.client.force_login(user)
@@ -519,6 +521,7 @@ class HtmxActionsTests(TestCase):
 		from .pagination import PAGE_SIZE
 		for i in range(PAGE_SIZE + 1):
 			Post.objects.create(author=self.alice.profile, text=f'пост {i}')
+		self.client.force_login(self.bob)
 		page = self.client.get('/')
 		self.assertContains(page, '<html')
 		self.assertIn('HX-Request', page['Vary'])
@@ -560,6 +563,7 @@ class PageChromeTests(TestCase):
 		from .pagination import PAGE_SIZE
 		for i in range(PAGE_SIZE + 1):
 			Post.objects.create(author=self.alice.profile, text=f'Пост {i}')
+		self.client.force_login(self.alice)
 		response = self.client.get('/')
 		self.assertContains(response, 'class="skel-cards"', count=1)
 		self.assertContains(response, 'hx-target="closest .load-more"')
@@ -579,3 +583,23 @@ class PageChromeTests(TestCase):
 			if re.search(r'\{#(?:(?!#\}).)*\n', path.read_text(encoding='utf-8'), flags=re.S)
 		]
 		self.assertEqual(bad, [])
+
+
+class GuestPostTests(TestCase):
+	"""Пост для гостя (R2-GuestPost): гостевая шапка, два ответа, остальное — после входа."""
+
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.root = Post.objects.create(author=self.alice.profile, text='Корень')
+		for i in range(5):
+			Post.objects.create(author=self.alice.profile, text=f'ответ {i}', reply_to=self.root, is_reply=True)
+
+	def test_two_replies_then_login(self):
+		response = self.client.get(f'/p/{self.root.pk}/')
+		self.assertContains(response, 'ответ 1<')
+		self.assertNotContains(response, 'ответ 2<')
+		self.assertContains(response, 'Ещё 3 ответа. Войдите, чтобы прочитать')
+		self.assertContains(response, 'class="ghead"')
+		self.assertNotContains(response, 'class="tabbar"')
+		self.assertContains(response, '"SocialMediaPosting"')
+		self.assertRedirects(self.client.get(f'/p/{self.root.pk}/?cursor=x'), f'/auth/login/?next=/p/{self.root.pk}/%3Fcursor%3Dx', fetch_redirect_response=False)

@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ValidationError
 from django.db.models import OuterRef, Subquery
 from django.http import Http404, HttpResponse
@@ -314,6 +315,8 @@ def post_detail(request, pk):
 		if post.repost_of_id is None:
 			raise Http404
 		return redirect('post', pk=post.repost_of_id)
+	if not request.user.is_authenticated:
+		return guest_post_detail(request, post)
 	cursor_in = request.GET.get("cursor")
 	replies, cursor = cursor_page(
 		Post.objects.in_thread(request.user).filter(reply_to=post), cursor_in, ascending=True,
@@ -323,13 +326,36 @@ def post_detail(request, pk):
 	if is_load_more(request):
 		return render(request, REPLIES_TEMPLATE, {"posts": replies, "next_url": next_url})
 	ancestors, gap = thread_ancestors(post, request.user)
+	return render_detail(request, post, ancestors, gap, {"replies": replies, "next_url": next_url})
+
+
+# Гостю под постом — два первых ответа, остальные после входа (R2-GuestPost).
+GUEST_REPLIES = 2
+
+
+def guest_post_detail(request, post):
+	"""Пост для гостя: гостевая шапка без меню приложения, два ответа и «Ещё N ответов» ко входу.
+	Подгрузка ответов — тоже после входа."""
+	if request.GET.get("cursor") or is_load_more(request):
+		return redirect_to_login(request.get_full_path())
+	direct = Post.objects.in_thread(None).filter(reply_to=post).order_by('created_at', 'id')
+	replies = list(direct[:GUEST_REPLIES])
+	ancestors, gap = thread_ancestors(post, request.user)
+	return render_detail(request, post, ancestors, gap, {
+		"replies": replies,
+		"replies_hidden": direct.count() - len(replies) if len(replies) == GUEST_REPLIES else 0,
+		"base_template": "azzb/guest_base.html",
+	})
+
+
+def render_detail(request, post, ancestors, gap, context):
 	# Заглушку недоступного поста показываем ради ответов, но со статусом 404 — для поисковиков это не страница.
 	return render(request, "post/detail.html", {
 		"post": post,
 		"ancestors": ancestors,
 		"thread_gap": gap,
-		"replies": replies,
-		"next_url": next_url,
+		"base_template": "azzb/azzb_base.html",
+		**context,
 	}, status=200 if post.available else 404)
 
 

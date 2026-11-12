@@ -1,4 +1,4 @@
-{% extends "azzb/azzb_base.html" %}
+{% extends base_template %}
 {% load show_posts azzb_ui seo %}
 {% block title %}{% if not post.available %}Пост недоступен{% else %}{{ post.author.username }}: «{{ post.text|default:"картинка"|truncatechars:60 }}»{% endif %}{% endblock title %}
 {% block meta_description %}{% if post.available %}{% if post.text %}{{ post.text|truncatechars:160 }}{% else %}Пост @{{ post.author.user.username }} в AzzB{% endif %}{% endif %}{% endblock meta_description %}
@@ -27,12 +27,16 @@
 {% block head_title %}{% if post.is_reply %}Ответ{% else %}Пост{% endif %}{% endblock head_title %}
 {% block main_class %} main-col{% endblock main_class %}
 {% block content %}
+	{% if user.is_authenticated %}
 	<div class="page-head" data-post-page>
 		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
 			<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
 		</a>
 		<h1 class="page-title clip1">{% if post.is_reply %}Ответ{% else %}Пост{% endif %}</h1>
 	</div>
+	{% else %}
+	<h1 class="sr" data-post-page>{% if post.is_reply %}Ответ{% else %}Пост{% endif %}</h1>
+	{% endif %}
 
 	{% if thread_gap or ancestors %}
 		<div class="thread" aria-label="Выше по ветке">
@@ -56,16 +60,14 @@
 				{% avatar user.profile 'sm' %}
 				<button class="fake-input" type="button" data-reply data-reply-to="{{ post.id }}" data-reply-name="@{{ post.author.user.username }}">Ваш ответ</button>
 			</div>
-		{% else %}
-			<c-cta title="Чтобы ответить, войдите" text="Аккаунт создаётся за минуту">
-				<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
-				<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
-			</c-cta>
 		{% endif %}
 
 		<div class="feed" data-replies="{{ post.id }}">
 			{% if replies %}
 				{% include "post/_replies.html" with posts=replies %}
+				{% if replies_hidden %}
+					<a class="more more-row" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Ещё {{ replies_hidden }} {{ replies_hidden|plural_ru:"ответ,ответа,ответов" }}. Войдите, чтобы прочитать<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a>
+				{% endif %}
 			{% else %}
 				<c-empty icon="reply" data-feed-empty>
 					<h2>Ответов пока нет</h2>
@@ -75,3 +77,9 @@
 		</div>
 	</section>
 {% endblock content %}
+{% block dock_cta %}
+	<c-cta class="dock-cta" title="Присоединяйтесь к обсуждению" text="Отвечайте, ставьте лайки и подписывайтесь на авторов">
+		<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+		<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
+	</c-cta>
+{% endblock dock_cta %}

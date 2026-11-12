@@ -69,17 +69,29 @@ def offline(request):
 
 def index(request):
 	"""«Для вас» (docs/feed.md). Сортировку человек выбирает чипом, она хранится в профиле.
-	Гостю — «Популярное» без вкладок."""
+	Гостю — витрина (guest_home)."""
 	user = request.user
-	sort = user.profile.feed_sort if user.is_authenticated else FeedSort.POPULAR
+	if not user.is_authenticated:
+		return guest_home(request)
+	sort = user.profile.feed_sort
 	queryset = Post.objects.for_feed(user).top_level().without_muted(user)
 	# Свой новый пост из composer показываем сверху ленты.
-	context = {"feed": "for-you", "sort": sort, "sorts": FeedSort.choices, "prepend": user.is_authenticated}
+	context = {"feed": "for-you", "sort": sort, "sorts": FeedSort.choices, "prepend": True}
 	if sort == FeedSort.NEW:
 		posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
 		return render_posts(request, FEED_TEMPLATE, context, posts, cursor and {"cursor": cursor})
 	posts, next_page = number_page(queryset.for_you(user), request.GET.get("page"))
 	return render_posts(request, FEED_TEMPLATE, context, posts, next_page and {"page": next_page})
+
+
+GUEST_HOME_POSTS = 3
+
+
+def guest_home(request):
+	"""Витрина для гостя (R2-GuestHome): знак, фраза, «Создать аккаунт» и «Войти», три популярных
+	поста — живой контент и для поисковиков. Дальше — регистрация."""
+	posts = list(Post.objects.for_feed(None).top_level().hot()[:GUEST_HOME_POSTS])
+	return render(request, "azzb/guest_home.html", {"posts": posts})
 
 
 @login_required

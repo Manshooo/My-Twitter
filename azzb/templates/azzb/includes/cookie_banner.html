@@ -1,24 +1,25 @@
-{% comment %} Баннер cookie: виден, пока посетитель не выбрал; ссылка «Настройки cookie» в подвале открывает его снова.
-   Выбор сохраняет azzb.js в cookie cookie_consent (azzb/cookies.py). {% endcomment %}
-<section class="cookie-banner card" role="region" aria-labelledby="cookie-banner-title" data-cookie-banner{% if cookie_choice is not None %} hidden{% endif %}>
-	<h2 id="cookie-banner-title" class="section-title">Мы используем cookie</h2>
-	{# Названия сервисов — только в документах (политика cookie): здесь — что и зачем. #}
-	<p class="cookie-text">Необходимые cookie нужны, чтобы вы могли войти и сайт работал безопасно, — без них AzzB не работает. Аналитические показывают в целом, какими разделами пользуются и что улучшать; их мы включаем только с вашего разрешения.</p>
-	<p class="cookie-text">Когда вы в аккаунте, сайт учитывает ваши действия — лайки, подписки, ответы, просмотры и переходы, — чтобы подбирать ленту и рекомендации. Подробнее — в <a href="{% url 'cookies' %}">политике cookie</a> и <a href="{% url 'privacy' %}">политике конфиденциальности</a>.</p>
-	<form class="cookie-options" data-cookie-options hidden>
-		<label class="check">
-			<input type="checkbox" checked disabled>
-			<span><b>Необходимые</b><span class="hint">Всегда включены: вход в аккаунт, защита форм, выбранная тема, этот выбор.</span></span>
-		</label>
-		<label class="check">
-			<input type="checkbox" name="analytics"{% if 'analytics' in cookie_choice %} checked{% endif %} data-cookie-category="analytics">
-			<span><b>Аналитика</b><span class="hint">Обобщённая статистика посещений: сколько людей заходит, откуда и какие разделы смотрят. Без рекламы и без записи действий на экране.</span></span>
-		</label>
-	</form>
-	<div class="cookie-actions">
-		<button class="btn btn-sm" type="button" data-cookie-accept="all">Разрешить все</button>
-		<button class="btn btn-outline btn-sm" type="button" data-cookie-accept="necessary">Только необходимые</button>
-		<button class="btn btn-ghost btn-sm" type="button" data-cookie-customize>Настроить</button>
-		<button class="btn btn-sm" type="button" data-cookie-accept="custom" hidden>Сохранить выбор</button>
+{% comment %} Строка cookie (R2-B-Cta): видна, пока посетитель не выбрал; «Настройки cookie» в подвале открывают её снова.
+   Аналитика — только с согласия, поэтому строка с выбором, а не «Понятно». Выбор сохраняет azzb.js
+   в cookie cookie_consent (azzb/cookies.py). {% endcomment %}
+<section class="cookie" role="region" aria-label="Cookie" data-cookie-banner{% if cookie_choice is not None %} hidden{% endif %}>
+	<div class="cookie-inner">
+		{# Названия сервисов — только в документах (политика cookie): здесь — что и зачем. #}
+		<p class="cookie-text">Необходимые cookie нужны для входа и защиты форм, аналитические — только с вашего разрешения. В аккаунте сайт учитывает лайки, подписки, просмотры и переходы, чтобы подбирать ленту. <a href="{% url 'cookies' %}">Подробнее</a></p>
+		<div class="cookie-actions">
+			<button class="btn btn-sm" type="button" data-cookie-accept="all">Разрешить</button>
+			<button class="btn btn-outline btn-sm" type="button" data-cookie-accept="necessary">Только необходимые</button>
+			<button class="btn btn-ghost btn-sm" type="button" data-cookie-customize>Настроить</button>
+			<button class="btn btn-sm" type="button" data-cookie-accept="custom" hidden>Сохранить выбор</button>
+		</div>
+		<form class="cookie-options" data-cookie-options hidden>
+			<label class="check">
+				<input type="checkbox" checked disabled>
+				<span><b>Необходимые</b><span class="hint">Всегда включены: вход в аккаунт, защита форм, выбранная тема, этот выбор.</span></span>
+			</label>
+			<label class="check">
+				<input type="checkbox" name="analytics"{% if 'analytics' in cookie_choice %} checked{% endif %} data-cookie-category="analytics">
+				<span><b>Аналитика</b><span class="hint">Обобщённая статистика посещений: сколько людей заходит, откуда и какие разделы смотрят. Без рекламы и без записи действий на экране.</span></span>
+			</label>
+		</form>
 	</div>
 </section>

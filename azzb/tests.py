@@ -30,12 +30,15 @@ class FeedPagesTests(TestCase):
 		self.assertNotContains(response, 'fonts.googleapis.com')
 		self.assertContains(response, 'fonts/manrope-cyrillic')
 
-	def test_guest_sees_feed_and_signup_card(self):
+	def test_guest_home_is_showcase(self):
 		response = self.client.get('/')
-		self.assertEqual(response.status_code, 200)
-		self.assertContains(response, 'Впервые на AzzB?')
-		self.assertContains(response, 'Привет\nвторая строка')
+		self.assertTemplateUsed(response, 'azzb/guest_home.html')
+		self.assertContains(response, '<h1 class="land-heading">Присоединяйтесь к растущему сообществу!</h1>', html=True)
+		self.assertContains(response, 'Привет\nвторая строка')  # популярные посты — живой контент
+		self.assertContains(response, 'href="/auth/signup/"')
 		self.assertNotContains(response, 'id="composer"')
+		self.assertNotContains(response, 'class="tabbar"')
+		self.assertContains(response, 'WebSite')
 
 	def test_old_feed_addresses_redirect_permanently(self):
 		self.assertRedirects(self.client.get('/follows-updates/'), '/following/', status_code=301, fetch_redirect_response=False)
