@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
 from django.db.models import Exists, OuterRef
 from django.db.models.base import Model as Model
@@ -16,9 +17,11 @@ from azzb.ratelimit import rate_limit
 from dm import services as dm
 from post.models import Image, Like, Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
+from tracking import services as tracking
+from tracking.models import InteractionEvent
 
-from . import relations
-from .forms import UpdateUserForm
+from . import consent, relations
+from .forms import ConsentUpdateForm, UpdateUserForm
 from .models import AVATAR_SIZE, Block, FollowRequest, FollowThrough, Mute, Profile, Theme
 
 THEME_COOKIE_AGE = 365 * 24 * 60 * 60
@@ -213,6 +216,8 @@ class UserProfileDetailView(DetailView):
 			action = next((name for name in PROFILE_ACTIONS if name in request.POST), None)
 			if action:
 				result = PROFILE_ACTIONS[action](current_user_profile, profile)
+				if action == 'unsubscribe':
+					tracking.record(request, InteractionEvent.Kind.UNFOLLOW, target=profile.user)
 				toast = PROFILE_TOASTS.get(action)
 				if result == relations.REQUESTED:
 					toast = 'Заявка отправлена. @{username} увидит её и решит.'
@@ -255,4 +260,20 @@ def blocked_accounts(request):
 	return render(request, 'accounts/blocked.html', {
 		'blocked': Profile.objects.filter(blocked_by_set__blocker=me).select_related('user').order_by('-blocked_by_set__created_at'),
 		'muted': Profile.objects.filter(muted_by_set__muter=me).select_related('user').order_by('-muted_by_set__created_at'),
+		'not_interested': request.user.negative_feedback.select_related('post__author__user', 'author__user', 'tag'),
 	})
+
+
+@login_required
+def consent_update(request):
+	"""Экран новой редакции документов (accounts.middleware.ConsentMiddleware)."""
+	next_url = request.POST.get('next') or request.GET.get('next') or '/'
+	if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+		next_url = '/'
+	if consent.is_current(request.user):
+		return redirect(next_url)
+	form = ConsentUpdateForm(request.user, request.POST or None)
+	if request.method == 'POST' and form.is_valid():
+		form.save()
+		return redirect(next_url)
+	return render(request, 'accounts/consent_update.html', {'form': form, 'next': next_url, 'edition': consent.EDITION})

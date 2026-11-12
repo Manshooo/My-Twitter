@@ -1,7 +1,7 @@
 {% extends "azzb/azzb_base.html" %}
 {% load azzb_ui %}
-{% block title %}Блокировки и заглушённые{% endblock title %}
-{% block head_title %}Блокировки{% endblock head_title %}
+{% block title %}Блокировки, заглушённые, «Не интересно»{% endblock title %}
+{% block head_title %}Блокировки и скрытое{% endblock head_title %}
 {% block content %}
 	<section class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 20px">
 		<div style="display: flex; align-items: center; gap: 8px; margin-left: -10px">
@@ -26,6 +26,23 @@
 				{% include "accounts/includes/relation_row.html" with action="unmute" label="Вернуть" %}
 			{% empty %}
 				<p class="muted">Никого.</p>
+			{% endfor %}
+		</div>
+		<div class="people" id="not-interested">
+			<h2 class="section-title">Не интересно</h2>
+			<p class="hint">Отмеченное не показывается в «Свежем» и «Горячем». В подписках, профилях и на страницах тегов всё остаётся.</p>
+			{% for mark in not_interested %}
+				<form class="who-row" method="post" action="{% url 'not-interested-forget' mark.pk %}" style="justify-content: space-between">
+					{% csrf_token %}
+					<span class="clip1">
+						{% if mark.kind == 'post' %}Пост @{{ mark.post.author.user.username }}: <a href="{% url 'post' mark.post_id %}">{{ mark.post.text|default:"картинка"|truncatechars:60 }}</a>
+						{% elif mark.kind == 'author' %}Посты <a href="{% url 'profile' mark.author.user.username %}">@{{ mark.author.user.username }}</a>
+						{% else %}Тема <a href="{% url 'hashtag' mark.tag.name %}">#{{ mark.tag.name }}</a>{% endif %}
+					</span>
+					<button class="btn btn-ghost btn-sm" type="submit">Вернуть</button>
+				</form>
+			{% empty %}
+				<p class="muted">Ничего.</p>
 			{% endfor %}
 		</div>
 	</section>

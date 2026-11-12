@@ -1,0 +1,25 @@
+{% extends "azzb/card_base.html" %}
+{# Новая редакция документов (accounts.middleware.ConsentMiddleware). #}
+{% block title %}Обновлённые документы{% endblock title %}
+{% block content %}
+	<h1>Мы обновили документы</h1>
+	<p class="lead">Редакция от {{ edition|date:"j E Y" }}. Что изменилось:</p>
+	<ul class="lead" style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px">
+		<li>Чтобы подбирать ленту по интересам, AzzB учитывает, какие посты вам показаны, что вы открыли и сколько смотрели, по каким профилям, тегам и ссылкам перешли, что отметили «Не интересно». Только пока вы в аккаунте; личные сообщения для этого не используются.</li>
+		<li>Поисковые запросы теперь хранятся до шести месяцев — для подбора и улучшения поиска.</li>
+	</ul>
+	<p class="hint">Подробно — в <a href="{% url 'privacy' %}" target="_blank">политике конфиденциальности</a>. Если не согласны, можно <a href="{% url 'account-settings' %}">скачать свои данные или удалить аккаунт</a>.</p>
+	<form method="post" style="display: flex; flex-direction: column; gap: 12px">
+		{% csrf_token %}
+		<input type="hidden" name="next" value="{{ next }}">
+		{% for field in form %}
+			<label class="check" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
+			{% if field.errors %}{{ field.errors }}{% endif %}
+		{% endfor %}
+		<button class="btn btn-lg btn-block" type="submit">Принимаю</button>
+	</form>
+	<form method="post" action="{% url 'account_logout' %}">
+		{% csrf_token %}
+		<button class="btn btn-outline btn-block" type="submit">Выйти</button>
+	</form>
+{% endblock content %}

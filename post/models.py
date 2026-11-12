@@ -68,6 +68,23 @@ class PostQuerySet(models.QuerySet['Post']):
 		muted = Mute.objects.filter(muter__user_id=user.pk).values('muted__user_id')
 		return self.exclude(author_id__in=muted).exclude(repost_of__author_id__in=muted)
 
+	def without_not_interested(self, user):
+		"""Для «Свежего», «Горячего» и «Для вас»: без того, что человек отметил «Не интересно»
+		(tracking.NegativeFeedback). Подписки, профиль, тег и ветка показывают всё."""
+		if user is None or not user.is_authenticated:
+			return self
+		from tracking.models import NegativeFeedback
+
+		marks = NegativeFeedback.objects.filter(user_id=user.pk)
+		posts = marks.filter(kind=NegativeFeedback.Kind.POST).values('post_id')
+		authors = marks.filter(kind=NegativeFeedback.Kind.AUTHOR).values('author_id')
+		tags = marks.filter(kind=NegativeFeedback.Kind.TAG).values('tag_id')
+		return (
+			self.exclude(pk__in=posts).exclude(repost_of_id__in=posts)
+			.exclude(author_id__in=authors).exclude(repost_of__author_id__in=authors)
+			.exclude(hashtags__in=tags).exclude(repost_of__hashtags__in=tags)
+		)
+
 	def top_level(self):
 		"""Без ответов: ленты показывают только начала обсуждений, ответы живут на странице поста."""
 		return self.filter(is_reply=False)
@@ -98,6 +115,8 @@ class PostQuerySet(models.QuerySet['Post']):
 			.select_related('poll', 'repost_of__poll')
 			.prefetch_related(
 				'images', 'quote_of__images', 'repost_of__images', 'repost_of__quote_of__images',
+				# Тег для «Не интересно: тема» в меню карточки.
+				'hashtags', 'repost_of__hashtags',
 				*poll_prefetches(user),
 			)
 			.annotate(shown_id=Coalesce('repost_of_id', 'id'), shown_quote_id=Coalesce('repost_of__quote_of_id', 'quote_of_id'))

@@ -8,9 +8,11 @@ from django.views.generic import RedirectView
 
 from accounts.account import account_settings, delete_account, end_sessions, export_data
 from accounts.views import (
-	ChangeProfileView, UserProfileDetailView, answer_follow_request, blocked_accounts, follow_requests, set_theme,
+	ChangeProfileView, UserProfileDetailView, answer_follow_request, blocked_accounts, consent_update, follow_requests,
+	set_theme,
 )
 from moderation.views import report_post, report_profile
+from tracking import views as tracking_views
 from post.views import (
 	bookmark_post, bookmarks, compose, delete_post, hashtag, like_post, pin_post, post_conversation, post_detail,
 	repost_post, vote_poll,
@@ -69,8 +71,12 @@ urlpatterns = [
 	# Правила и документы (C5, E6) — открыты всем, в том числе забаненным.
 	path("rules/", legal_page("legal/rules.html"), name="rules"),
 	path("privacy/", legal_page("legal/privacy.html"), name="privacy"),
+	path("consent/", consent_update, name="consent-update"),
 	path("privacy/consent/", legal_page("legal/consent.html"), name="pd-consent"),
 	path("cookies/", legal_page("legal/cookies.html"), name="cookies"),
+	path('api/events/', tracking_views.events, name='api-events'),
+	path('p/<uuid:pk>/not-interested/', tracking_views.not_interested, name='post-not-interested'),
+	path('settings/not-interested/<int:pk>/delete/', tracking_views.forget_not_interested, name='not-interested-forget'),
 	path('api/', include('api.urls')),
 	path('following/', following, name='following'),
 	path('follows-updates/', RedirectView.as_view(pattern_name='following', permanent=True)),
