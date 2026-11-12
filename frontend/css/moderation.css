@@ -16,7 +16,6 @@
 	background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px;
 }
 .mod-inline input[type="text"] { width: 220px; max-width: 100%; }
-.mod-badge { min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800; text-align: center; line-height: 20px; }
-.nav-item .mod-badge { margin-left: auto; }
+.mod-badge { min-width: 18px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--badge); color: var(--on-badge); font-size: 11px; font-weight: 800; text-align: center; line-height: 14px; }
 .tab-item { position: relative; }
 .tab-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 18px; padding: 0 5px; font-size: 11px; line-height: 18px; }

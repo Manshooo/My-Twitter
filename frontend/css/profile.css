@@ -38,7 +38,7 @@
 .crop-zoom input { flex: 1; accent-color: var(--accent); min-height: 44px; }
 .profile-card { border-bottom: 1px solid var(--border); }
 .profile-info { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
-.profile-top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-3); margin-top: -48px; }
+.profile-top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-3); min-width: 0; margin-top: -48px; }
 .profile-top .avatar-xl { position: relative; width: 96px; height: 96px; font-size: 36px; border-width: 4px; }
 .profile-buttons { position: relative; display: flex; gap: var(--space-2); padding-bottom: var(--space-1); }
 .icon-btn-outline { border: 1.5px solid var(--border-strong); color: var(--text); }
@@ -59,5 +59,6 @@
 	.profile-top { margin-top: -40px; }
 	.profile-top .avatar-xl { width: 80px; height: 80px; font-size: 30px; }
 	.hide-m { display: none; }
+	.cover-add { top: var(--space-3); bottom: auto; }
 }
 .people { display: flex; flex-direction: column; gap: 14px; }

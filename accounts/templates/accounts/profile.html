@@ -2,6 +2,7 @@
 {% load azzb_ui %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
 {% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
+{% block head_title %}{{ profile.username }}{% endblock head_title %}
 {% block main_class %} main-col{% endblock main_class %}
 {% block content %}
 	{% url 'profile' profile.user.username as profile_url %}
@@ -24,7 +25,10 @@
 				{% avatar profile 'xl' %}
 				<div class="profile-buttons">
 					{% if is_own %}
-						<a class="btn btn-outline" href="{% url 'edit-profile' %}">Редактировать профиль</a>
+						{# На телефоне закладки и настройки живут здесь, на десктопе — в левом меню. #}
+						<a class="icon-btn icon-btn-outline show-m" href="{% url 'bookmarks' %}" aria-label="Закладки"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg></a>
+						<a class="icon-btn icon-btn-outline show-m" href="{% url 'edit-profile' %}" aria-label="Настройки"><svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg></a>
+						<a class="btn btn-outline" href="{% url 'edit-profile' %}">Редактировать<span class="hide-m">&nbsp;профиль</span></a>
 					{% else %}
 						<div class="menu-wrap">
 							<button class="icon-btn icon-btn-outline" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu" aria-label="Ещё действия с профилем" data-menu-toggle>

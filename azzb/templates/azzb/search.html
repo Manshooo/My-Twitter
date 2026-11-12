@@ -1,6 +1,7 @@
 {% extends "azzb/azzb_base.html" %}
 {% load azzb_ui %}
 {% block title %}{% if query %}{{ query }} — поиск{% else %}Поиск{% endif %}{% endblock title %}
+{% block head_title %}Поиск{% endblock head_title %}
 {% block metatags %}<meta name="robots" content="noindex">{% endblock metatags %}
 {% block main_class %} main-col{% endblock main_class %}
 {% block content %}

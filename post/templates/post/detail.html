@@ -24,6 +24,7 @@
 		<meta name="twitter:card" content="summary_large_image">
 	{% else %}{{ block.super }}{% endif %}{% endwith %}
 {% endblock og_image %}
+{% block head_title %}{% if post.is_reply %}Ответ{% else %}Пост{% endif %}{% endblock head_title %}
 {% block main_class %} main-col{% endblock main_class %}
 {% block content %}
 	<div class="page-head" data-post-page>
