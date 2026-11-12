@@ -85,6 +85,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci --no-audit --no-fund
+      # Как pip-audit для Python: известная уязвимость в закреплённой версии делает CI красным.
+      - run: npm audit --audit-level=moderate
       - run: npm run lint
       - run: npm run build
 
