@@ -12,6 +12,9 @@ class ProgressiveWebAppTests(TestCase):
 		body = response.content.decode()
 		self.assertIn("const OFFLINE_URL = '/offline/';", body)
 		self.assertIn('"/static/css/azzb.css"', body)
+		# Страница не ждёт запуска воркера: запрос идёт параллельно (navigation preload).
+		self.assertIn('navigationPreload.enable()', body)
+		self.assertIn('event.preloadResponse', body)
 
 	def test_pages_register_worker(self):
 		self.assertContains(self.client.get('/'), '<meta name="azzb-sw" content="/sw.js">', html=True)
