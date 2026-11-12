@@ -29,9 +29,8 @@
 }
 .search-box:focus-within { border-color: var(--accent); }
 .search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; }
-.search-trends { display: none; margin-top: 14px; }
+.search-trends { display: none; }
 @media (max-width: 1180px) { .search-trends { display: block; } }
-.main > .search-box { margin-bottom: 14px; }
 .trends { display: flex; flex-direction: column; gap: 12px; }
 .tag-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--text); }
 .tag-row b { overflow-wrap: anywhere; }
@@ -73,7 +72,7 @@
    соседей; справа Закладка и Поделиться без счётчиков. */
 .actions { display: flex; align-items: center; height: var(--h-control); margin: 0 -10px; }
 .action {
-	flex: 0 1 96px; display: inline-flex; align-items: center; gap: var(--space-1); min-width: var(--h-control); height: var(--h-control);
+	flex: 0 1 96px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-width: var(--h-control); height: var(--h-control);
 	padding: 0 10px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-2);
 	font-weight: 700; font-size: 13px; cursor: pointer;
 }
@@ -116,47 +115,36 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .reply-to { font-size: 14px; margin-top: -4px; }
 .composer-form .reply-to { margin: -4px 0 0; }
 
-/* Ветка: посты выше по ветке соединены линией с главным постом */
-.thread { display: flex; flex-direction: column; gap: 14px; }
-.post-parent { overflow: visible; }
-.post-parent::after {
-	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2 - 1px); top: 100%; bottom: -15px; width: 2px;
-	background: var(--border-strong); border-radius: 2px;
+/* Посты выше по ветке — обычные строки: тело во всю ширину, рельсу вдоль аватара места нет,
+   а связь видна по строке «В ответ». */
+.thread-gap { display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4); font-size: 15px; border-bottom: 1px solid var(--border); }
+
+/* Главный пост (R2-Post): текст 19, полная дата под текстом, ряд действий между линиями.
+   Отдельной строки счётчиков нет: она повторяла числа ряда действий. */
+.post-main .post-text { font-size: 19px; }
+.post-fulldate { font-size: 14px; }
+.post-main .actions { border-top: 1px solid var(--border); margin-top: calc(var(--space-2) * -1); }
+/* Открытый пост из середины ветки прокручивается к верху экрана (azzb.js) — не под мобильную шапку. */
+.post-main { scroll-margin-top: 0; }
+@media (max-width: 760px) { .post-main { scroll-margin-top: var(--h-header-m); } }
+
+/* Ветка под ответом (вариант B, R2-B-Thread): рельс от центра аватара ответа, сообщения
+   сдвинуты на половину аватара — тело остаётся почти во всю ширину. Глубже не уходим. */
+.main-col .card.post:has(+ .branch-wrap) { border-bottom: 0; }
+.branch-wrap { border-bottom: 1px solid var(--border); }
+.branch { margin-left: calc(var(--space-4) + var(--avatar) / 2 - 1px); border-left: 2px solid var(--border-strong); }
+.branch > .post { padding-left: var(--space-3); }
+.main-col .branch > .card:last-child { border-bottom: 0; }
+.more {
+	display: flex; align-items: center; gap: var(--space-2); min-height: var(--h-control); padding: 0 var(--space-3);
+	font-size: 14px; font-weight: 800;
 }
-.thread-gap { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 15px; }
-.post-main { border-color: var(--border-strong); }
+.more.htmx-request, .more[disabled] { opacity: .6; cursor: progress; }
+
 /* Заглушка вместо недоступного поста (post/_gone.html): строка 56 px, не притворяется постом. */
 .post-stub {
 	position: relative; display: flex; align-items: center; gap: var(--space-3); min-height: 56px;
 	padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface-2); color: var(--text-2); font-size: 14px;
 }
 .post-stub-text { flex: 1; min-width: 0; }
-.post-main .post-text { font-size: 18px; }
-.replies { display: flex; flex-direction: column; gap: 14px; }
-/* Открытый пост из середины ветки прокручивается к верху экрана (azzb.js) — не под мобильную шапку. */
-.post-main { scroll-margin-top: 16px; }
-@media (max-width: 760px) { .post-main { scroll-margin-top: 72px; } }
 
-/* Разговор под ответом одной линией (post/_conversation.html): карточки и ссылки «Ещё N ответов»
-   соединены той же линией, что и посты выше по ветке. Линия идёт от ответа к первому сообщению
-   разговора, между сообщениями и через ссылки — но не в кнопку и не после последнего. */
-.chain { display: flex; flex-direction: column; gap: 14px; }
-.post:has(+ .chain > :is(.post, .chain-aside):first-child),
-.chain > .post:has(+ :is(.post, .chain-aside)) { overflow: visible; }
-.post:has(+ .chain > :is(.post, .chain-aside):first-child)::after,
-.chain > .post:has(+ :is(.post, .chain-aside))::after {
-	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2 - 1px); top: 100%; bottom: -15px; width: 2px;
-	background: var(--border-strong); border-radius: 2px;
-}
-.chain > .chain-aside:has(+ .post)::before {
-	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2); top: 0; bottom: -15px; width: 2px;
-	background: var(--border-strong); border-radius: 2px;
-}
-/* Ссылки между карточками — правее линии ветки. */
-.chain-link {
-	position: relative; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
-	min-height: 32px; padding-left: 56px; color: var(--text-2); font-size: 14px; font-weight: 700;
-}
-.chain-link:hover { color: var(--text); }
-.chain-link[disabled], .chain-link.htmx-request { opacity: .6; cursor: progress; }
-.chain-more { display: flex; }

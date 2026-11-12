@@ -1,0 +1,60 @@
+/* ---------- Гостевая зона (R2-GuestHome, R2-GuestPost, R2-Login) ----------
+   Одна гостевая шапка и подвал; снизу .dock — строка cookie и плашка «Присоединяйтесь». */
+.ghead {
+	position: sticky; top: 0; z-index: 20; height: var(--h-header-m); border-bottom: 1px solid var(--border);
+	background: var(--surface-glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.ghead-in { height: 100%; max-width: 1080px; margin: 0 auto; padding: 0 var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
+.ghead .logo { font-size: 22px; }
+.ghead .logo-mark { width: 32px; height: 32px; }
+.ghead-gap { flex: 1; }
+.gmain { flex: 1 0 auto; width: 100%; }
+/* Пост и профиль гостя — узкая колонка без меню и правой колонки. */
+.gmain.main-col { max-width: 600px; margin: 0 auto; min-height: 60vh; }
+.gfoot { border-top: 1px solid var(--border); padding: var(--space-6) var(--space-4) 160px; }
+.gfoot-in { max-width: 1080px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: 14px; color: var(--text-2); }
+.gfoot a { color: var(--text-2); }
+
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; flex-direction: column; }
+.dock-cta { justify-content: center; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 0; box-shadow: var(--shadow); }
+.dock-cta > * { max-width: 520px; }
+
+/* Витрина: слева знак и фраза, справа кнопки или форма. */
+.land {
+	max-width: 1080px; margin: 0 auto; padding: 72px var(--space-6) var(--space-8);
+	display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 64px; align-items: center;
+}
+.land-mark { width: 120px; height: 120px; display: block; }
+.land-heading { margin: 28px 0 12px; font: 500 44px/1.15 var(--font-display); letter-spacing: -.01em; }
+.land-text { font-size: 18px; line-height: 1.55; color: var(--text-2); max-width: 460px; }
+.land-side { display: flex; justify-content: center; }
+.land-auth, .land .auth-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 380px; }
+.land .auth-card { padding: 0; border: 0; background: none; }
+.land .auth-card h1 { font: 500 26px/1.2 var(--font-display); margin-bottom: var(--space-2); }
+.auth-forgot { align-self: flex-start; min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; }
+.or { display: flex; align-items: center; gap: var(--space-3); font-size: 13px; color: var(--text-2); }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.legal { font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.legal a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* «Сейчас обсуждают» — три популярных поста под витриной. */
+.trend { max-width: 600px; margin: 0 auto var(--space-8); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.trend-title { padding: var(--space-4); font-size: 17px; font-weight: 800; border-bottom: 1px solid var(--border); }
+.trend .card { border-width: 0 0 1px; border-radius: 0; }
+.more-row { padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.trend .more-row { border-bottom: 0; }
+
+@media (max-width: 760px) {
+	.land { grid-template-columns: 1fr; gap: var(--space-8); padding: var(--space-8) var(--space-4) var(--space-6); }
+	.land-mark { width: 72px; height: 72px; }
+	.land-heading { font-size: 30px; margin-top: 20px; }
+	.land-text { font-size: 16px; }
+	.land-auth, .land .auth-card { max-width: none; }
+	.trend { border-radius: 0; border-inline: 0; }
+	.gmain.main-col { padding-bottom: 0; }
+	.dock-cta .cta-btns > * { flex: 1; }
+	.dock-cta .cta-btns { flex: 1 1 100%; }
+	.ghead .btn-ghost { display: none; }
+	/* Под липкой плашкой и строкой cookie — чтобы подвал и последний ответ не прятались. */
+	.gfoot { padding-bottom: 320px; }
+}

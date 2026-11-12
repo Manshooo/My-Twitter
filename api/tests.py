@@ -142,7 +142,7 @@ class FeedPermissionsTests(TestCase):
 		Post.objects.create(author=followed.profile, text='От подписки')
 		Post.objects.create(author=stranger.profile, text='От незнакомца')
 		self.client.force_login(reader)
-		response = self.client.get('/follows-updates/')
+		response = self.client.get('/following/')
 		self.assertContains(response, 'От подписки')
 		self.assertNotContains(response, 'От незнакомца')
 

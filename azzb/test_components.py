@@ -16,8 +16,11 @@ class EmptyComponentTests(TestCase):
 	"""<c-empty> собирает cotton-загрузчик: проверяем на настоящей странице, а не на Template из строки."""
 
 	def test_feed_empty_state(self):
-		html = self.client.get('/').content.decode()
-		self.assertIn('class="empty card"', html)
+		from accounts.models import CustomUser
+		from azzb.testing import ACTIVE
+		self.client.force_login(CustomUser.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE))
+		html = self.client.get('/following/').content.decode()
+		self.assertIn('class="empty"', html)
 		self.assertIn('class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people">', html)
 		self.assertIn('data-feed-empty', html)
-		self.assertIn('<h2>Постов пока нет</h2>', html)
+		self.assertIn('<h2>Здесь пока тихо</h2>', html)

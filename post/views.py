@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ValidationError
 from django.db.models import OuterRef, Subquery
 from django.http import Http404, HttpResponse
@@ -294,39 +295,75 @@ def follow_conversation(start, user, limit=CONVERSATION_PAGE):
 	}
 
 
+# Сколько сообщений ветки под ответом видно сразу; дальше — «Показать продолжение».
+BRANCH_PREVIEW = 2
+
+
+def attach_branches(replies, user, open_single=False):
+	"""Ветка под каждым ответом с ответами (вариант B ревизии R2): начало разговора одной линией,
+	без вложенности глубже одного уровня. Единственный ответ на странице раскрыт целиком —
+	это переписка. Запросы — только для ответов, у которых есть свои ответы."""
+	limit = CONVERSATION_PAGE if open_single and len(replies) == 1 else BRANCH_PREVIEW
+	for reply in replies:
+		reply.branch = follow_conversation(reply, user, limit) if reply.replies_count else None
+
+
 def post_detail(request, pk):
 	"""Страница одного поста /p/<uuid>/: ветка выше, сам пост и ответы на него по времени.
 	Открыта и гостям: ссылкой на пост делятся. Недоступный пост (удалён, скрыт, автор
 	забанен или в блокировке) показывается заглушкой — ради ответов под ним.
-	Если ответ всего один, разговор под ним сразу раскрыт одной линией: это переписка,
-	и ходить по ней постом за постом неудобно."""
+	Под каждым ответом — его ветка (attach_branches)."""
 	post = get_object_or_404(Post.objects.in_thread(request.user), pk=pk)
 	if post.is_repost:
 		# У репоста нет своей страницы: ни текста, ни ответов.
 		if post.repost_of_id is None:
 			raise Http404
 		return redirect('post', pk=post.repost_of_id)
+	if not request.user.is_authenticated:
+		return guest_post_detail(request, post)
 	cursor_in = request.GET.get("cursor")
 	replies, cursor = cursor_page(
 		Post.objects.in_thread(request.user).filter(reply_to=post), cursor_in, ascending=True,
 	)
 	next_url = page_url(request, cursor=cursor) if cursor else None
+	attach_branches(replies, request.user, open_single=not cursor_in)
 	if is_load_more(request):
 		return render(request, REPLIES_TEMPLATE, {"posts": replies, "next_url": next_url})
 	if post.available:
 		tracking.record(request, InteractionEvent.Kind.OPEN, post=post, surface=tracking.surface_from_referer(request))
-	conversation = None
-	if not cursor_in and len(replies) == 1 and replies[0].replies_count:
-		conversation = follow_conversation(replies[0], request.user)
 	ancestors, gap = thread_ancestors(post, request.user)
+	return render_detail(request, post, ancestors, gap, {"replies": replies, "next_url": next_url})
+
+
+# Гостю под постом — два первых ответа, остальные после входа (R2-GuestPost).
+GUEST_REPLIES = 2
+
+
+def guest_post_detail(request, post):
+	"""Пост для гостя: гостевая шапка без меню приложения, два ответа и «Ещё N ответов» ко входу.
+	Подгрузка ответов — тоже после входа."""
+	if request.GET.get("cursor") or is_load_more(request):
+		return redirect_to_login(request.get_full_path())
+	direct = Post.objects.in_thread(None).filter(reply_to=post).order_by('created_at', 'id')
+	replies = list(direct[:GUEST_REPLIES])
+	if post.available:
+		tracking.record(request, InteractionEvent.Kind.OPEN, post=post, surface=tracking.surface_from_referer(request))
+	ancestors, gap = thread_ancestors(post, request.user)
+	return render_detail(request, post, ancestors, gap, {
+		"replies": replies,
+		"replies_hidden": direct.count() - len(replies) if len(replies) == GUEST_REPLIES else 0,
+		"base_template": "azzb/guest_base.html",
+	})
+
+
+def render_detail(request, post, ancestors, gap, context):
 	# Заглушку недоступного поста показываем ради ответов, но со статусом 404 — для поисковиков это не страница.
 	return render(request, "post/detail.html", {
 		"post": post,
 		"ancestors": ancestors,
 		"thread_gap": gap,
-		"replies": replies,
-		"conversation": conversation,
-		"next_url": next_url,
+		"base_template": "azzb/azzb_base.html",
+		**context,
 	}, status=200 if post.available else 404)
 
 

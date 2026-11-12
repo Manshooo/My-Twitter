@@ -11,6 +11,7 @@ SHOWN_ANNOTATIONS = ('likes_n', 'is_liked', 'is_reposted', 'is_bookmarked', 'quo
 @register.inclusion_tag(filename='post/post.html', name="show_posts", takes_context=True)
 def show_posts(context, variant=""):
 	"""Карточка поста. variant: "" — в ленте, "main" — главный пост на своей странице,
+	"reply" — ответ на главный пост (без строки «В ответ»),
 	"parent" — пост выше по ветке (с линией к следующему), "chain" — сообщение разговора
 	под ответом (post/_conversation.html).
 	Пост из ветки, который пользователь не видит (available=False, см. Post.objects.in_thread),

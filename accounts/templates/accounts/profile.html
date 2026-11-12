@@ -2,95 +2,109 @@
 {% load azzb_ui %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
 {% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
+{% block head_title %}{{ profile.username }}{% endblock head_title %}
+{% block main_class %} main-col{% endblock main_class %}
 {% block content %}
 	{% url 'profile' profile.user.username as profile_url %}
-	<section class="card profile-card" aria-label="Профиль">
-		{% if profile.banner %}<img class="cover" src="{{ profile.banner.url }}" alt="">{% else %}<div class="cover ph" aria-hidden="true"></div>{% endif %}
+	<div class="page-head">
+		<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
+			<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+		</a>
+		<p class="page-title clip1">{{ profile.username }}</p>
+	</div>
+	<section class="profile-card" aria-label="Профиль">
+		{# Обложка без полосок: своя картинка или ровный --brand-soft. #}
+		<div class="cover">
+			{% if profile.banner %}<img src="{{ profile.banner.url }}" alt="">{% endif %}
+			{% if is_own and not profile.banner %}
+				<a class="btn btn-outline cover-add" href="{% url 'edit-profile' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"></use></svg>Добавить обложку</a>
+			{% endif %}
+		</div>
 		<div class="profile-info">
 			<div class="profile-top">
 				{% avatar profile 'xl' %}
 				<div class="profile-buttons">
-					<div class="menu-wrap">
-						<button class="icon-btn" type="button" style="border: 1.5px solid var(--border-strong)" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu" aria-label="Ещё действия с профилем" data-menu-toggle>
-							<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
-						</button>
-						<div class="menu menu-start" id="profile-menu" role="menu" hidden>
-							<button class="menu-item" type="button" role="menuitem" data-copy="{{ profile_url }}">
-								<svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"></use></svg>Скопировать ссылку
-							</button>
-							{% if user.is_authenticated and not is_own %}
-								<form method="post" action="{{ profile_url }}">
-									{% csrf_token %}
-									<button class="menu-item" type="submit" role="menuitem" name="{% if i_muted %}unmute{% else %}mute{% endif %}">
-										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-mute"></use></svg>{% if i_muted %}Вернуть в ленты{% else %}Заглушить @{{ profile.user.username }}{% endif %}
-									</button>
-								</form>
-								<a class="menu-item" role="menuitem" href="{% url 'profile-report' profile.user.username %}">
-									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
-								</a>
-								<form method="post" action="{{ profile_url }}"{% if not i_blocked %} data-confirm="Заблокировать @{{ profile.user.username }}? Вы перестанете видеть посты друг друга, подписки в обе стороны снимутся."{% endif %}>
-									{% csrf_token %}
-									<button class="menu-item danger" type="submit" role="menuitem" name="{% if i_blocked %}unblock{% else %}block{% endif %}">
-										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-block"></use></svg>{% if i_blocked %}Разблокировать{% else %}Заблокировать @{{ profile.user.username }}{% endif %}
-									</button>
-								</form>
-							{% endif %}
-							{% if can_moderate and not is_own and profile.user.is_banned %}
-								<form method="post" action="{% url 'moderation-unban' profile.user.username %}" data-confirm="Снять бан с @{{ profile.user.username }}?">
-									{% csrf_token %}
-									<button class="menu-item" type="submit" role="menuitem">
-										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>Снять бан
-									</button>
-								</form>
-							{% endif %}
-						</div>
-					</div>
-					{% if is_own and pending_requests %}
-						<a class="btn btn-outline" href="{% url 'follow-requests' %}">Заявки <span class="mod-badge">{{ pending_requests }}</span></a>
-					{% endif %}
 					{% if is_own %}
-						<a class="btn btn-outline" href="{% url 'edit-profile' %}">
-							<svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg>Редактировать профиль
-						</a>
-					{% elif i_blocked %}
-						<form method="post" action="{{ profile_url }}">
-							{% csrf_token %}
-							<button class="btn btn-outline btn-danger" type="submit" name="unblock">Разблокировать</button>
-						</form>
-					{% elif not blocked_me %}
-						{% if can_message %}
-							<a class="icon-btn" style="border: 1.5px solid var(--border-strong)" href="{% url 'dm-start' profile.user.username %}" aria-label="Написать @{{ profile.user.username }}" title="Написать">
-								<svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>
-							</a>
-						{% endif %}
-						<form method="post" action="{{ profile_url }}">
-							{% csrf_token %}
-							{% if is_subscribed %}
-								<button class="btn btn-outline" type="submit" name="unsubscribe" aria-pressed="true" title="Отписаться">Вы подписаны</button>
-							{% elif request_sent %}
-								<button class="btn btn-outline" type="submit" name="cancel_request" aria-pressed="true" title="Отозвать заявку">Заявка отправлена</button>
-							{% elif profile.is_private %}
-								<button class="btn" type="submit" name="subscribe" aria-pressed="false">Отправить заявку</button>
-							{% else %}
-								<button class="btn" type="submit" name="subscribe" aria-pressed="false">Подписаться</button>
+						{# На телефоне закладки и настройки живут здесь, на десктопе — в левом меню. #}
+						<a class="icon-btn icon-btn-outline show-m" href="{% url 'bookmarks' %}" aria-label="Закладки"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg></a>
+						<a class="icon-btn icon-btn-outline show-m" href="{% url 'edit-profile' %}" aria-label="Настройки"><svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg></a>
+						<a class="btn btn-outline" href="{% url 'edit-profile' %}">Редактировать<span class="hide-m">&nbsp;профиль</span></a>
+					{% else %}
+						<div class="menu-wrap">
+							<button class="icon-btn icon-btn-outline" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu" aria-label="Ещё действия с профилем" data-menu-toggle>
+								<svg class="icon" aria-hidden="true"><use href="#i-dots"></use></svg>
+							</button>
+							<div class="menu menu-start" id="profile-menu" role="menu" hidden>
+								<button class="menu-item" type="button" role="menuitem" data-copy="{{ profile_url }}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"></use></svg>Скопировать ссылку
+								</button>
+								{% if user.is_authenticated and not is_own %}
+									<form method="post" action="{{ profile_url }}">
+										{% csrf_token %}
+										<button class="menu-item" type="submit" role="menuitem" name="{% if i_muted %}unmute{% else %}mute{% endif %}">
+											<svg class="icon icon-sm" aria-hidden="true"><use href="#i-mute"></use></svg>{% if i_muted %}Вернуть в ленты{% else %}Заглушить @{{ profile.user.username }}{% endif %}
+										</button>
+									</form>
+									<a class="menu-item" role="menuitem" href="{% url 'profile-report' profile.user.username %}">
+										<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
+									</a>
+									<form method="post" action="{{ profile_url }}"{% if not i_blocked %} data-confirm="Заблокировать @{{ profile.user.username }}? Вы перестанете видеть посты друг друга, подписки в обе стороны снимутся."{% endif %}>
+										{% csrf_token %}
+										<button class="menu-item danger" type="submit" role="menuitem" name="{% if i_blocked %}unblock{% else %}block{% endif %}">
+											<svg class="icon icon-sm" aria-hidden="true"><use href="#i-block"></use></svg>{% if i_blocked %}Разблокировать{% else %}Заблокировать @{{ profile.user.username }}{% endif %}
+										</button>
+									</form>
+								{% endif %}
+								{% if can_moderate and not is_own and profile.user.is_banned %}
+									<form method="post" action="{% url 'moderation-unban' profile.user.username %}" data-confirm="Снять бан с @{{ profile.user.username }}?">
+										{% csrf_token %}
+										<button class="menu-item" type="submit" role="menuitem">
+											<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>Снять бан
+										</button>
+									</form>
+								{% endif %}
+							</div>
+						</div>
+						{% if i_blocked %}
+							<form method="post" action="{{ profile_url }}">
+								{% csrf_token %}
+								<button class="btn btn-outline btn-danger" type="submit" name="unblock">Разблокировать</button>
+							</form>
+						{% elif not blocked_me %}
+							{% if can_message %}
+								<a class="btn btn-outline" href="{% url 'dm-start' profile.user.username %}" aria-label="Написать @{{ profile.user.username }}">
+									<svg class="icon icon-sm" aria-hidden="true"><use href="#i-mail"></use></svg><span class="hide-m">Написать</span>
+								</a>
 							{% endif %}
-						</form>
+							<form method="post" action="{{ profile_url }}">
+								{% csrf_token %}
+								{% if is_subscribed %}
+									<button class="btn btn-outline" type="submit" name="unsubscribe" aria-pressed="true" title="Отписаться">Вы подписаны</button>
+								{% elif request_sent %}
+									<button class="btn btn-outline" type="submit" name="cancel_request" aria-pressed="true" title="Отозвать заявку">Заявка отправлена</button>
+								{% elif profile.is_private %}
+									<button class="btn" type="submit" name="subscribe" aria-pressed="false">Отправить заявку</button>
+								{% else %}
+									<button class="btn" type="submit" name="subscribe" aria-pressed="false">Подписаться</button>
+								{% endif %}
+							</form>
+						{% endif %}
 					{% endif %}
 				</div>
 			</div>
 
-			<div style="display: flex; flex-direction: column; gap: 2px">
+			<div class="profile-title">
 				<div class="profile-name">
 					<h1>{{ profile.username }}</h1>{% badges profile %}
 					{% if profile.is_private %}<svg class="icon icon-sm" role="img" aria-label="Закрытый аккаунт"><title>Закрытый аккаунт</title><use href="#i-lock"></use></svg>{% endif %}
 				</div>
-				<span class="muted" style="font-size: 15px">@{{ profile.user.username }}</span>
+				<span class="muted">@{{ profile.user.username }}</span>
 				{% if profile.user.first_name or profile.user.last_name %}
-					<span style="font-size: 15px">{{ profile.user.first_name }} {{ profile.user.last_name }}</span>
+					<span>{{ profile.user.first_name }} {{ profile.user.last_name }}</span>
 				{% endif %}
 			</div>
 
-			{% if profile.bio %}<p class="post-text">{{ profile.bio }}</p>{% endif %}
+			{% if profile.bio %}<p class="post-text profile-bio">{{ profile.bio }}</p>{% endif %}
 
 			<div class="profile-meta">
 				<span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"></use></svg>На AzzB с {{ profile.user.date_joined|date:"E Y" }}</span>
@@ -101,27 +115,27 @@
 
 			<div class="profile-counts">
 				{% if can_see %}
-					<a href="{{ profile_url }}?tab=following"><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</a>
 					<a href="{{ profile_url }}?tab=followers"><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</a>
+					<a href="{{ profile_url }}?tab=following"><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</a>
 				{% else %}
-					<span><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</span>
 					<span><b>{{ followers_count }}</b> {{ followers_count|plural_ru:"подписчик,подписчика,подписчиков" }}</span>
+					<span><b>{{ following_count }}</b> {{ following_count|plural_ru:"подписка,подписки,подписок" }}</span>
 				{% endif %}
 			</div>
 		</div>
 	</section>
 
-	<nav class="tabs" aria-label="Публикации">
-		<a class="tab" href="{{ profile_url }}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
-		<a class="tab" href="{{ profile_url }}?tab=replies"{% if tab == 'replies' %} aria-current="page"{% endif %}>Ответы</a>
-		<a class="tab" href="{{ profile_url }}?tab=media"{% if tab == 'media' %} aria-current="page"{% endif %}>Медиа</a>
+	<c-tabs label="Публикации" class="tabs-under-head">
+		<c-tabs.item href="{{ profile_url }}" current="{% if tab == 'posts' %}1{% endif %}">Посты</c-tabs.item>
+		<c-tabs.item href="{{ profile_url }}?tab=replies" current="{% if tab == 'replies' %}1{% endif %}">Ответы</c-tabs.item>
+		<c-tabs.item href="{{ profile_url }}?tab=media" current="{% if tab == 'media' %}1{% endif %}">Медиа</c-tabs.item>
 		{% if likes_visible %}
-			<a class="tab" href="{{ profile_url }}?tab=likes"{% if tab == 'likes' %} aria-current="page"{% endif %}>Лайки</a>
+			<c-tabs.item href="{{ profile_url }}?tab=likes" current="{% if tab == 'likes' %}1{% endif %}">Лайки</c-tabs.item>
 		{% endif %}
-	</nav>
+	</c-tabs>
 
 	{% if people is not None %}
-		<section class="card card-pad people" aria-labelledby="people-title">
+		<section class="card-pad people" aria-labelledby="people-title">
 			<h2 id="people-title" class="section-title">{% if tab == 'following' %}Подписки{% else %}Подписчики{% endif %}</h2>
 			{% for person in people %}
 				<div class="who-row">
@@ -145,12 +159,12 @@
 			{% endfor %}
 		</section>
 	{% else %}
-		<div id="feed" style="display: flex; flex-direction: column; gap: 14px"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
+		<div class="feed" id="feed"{% if is_own and tab == 'posts' %} data-feed-prepend{% endif %}>
 			{% if pinned %}{% with post=pinned %}{% load show_posts %}{% show_posts "pinned" %}{% endwith %}{% endif %}
 			{% if posts %}
 				{% include "azzb/includes/post_page.html" %}
 			{% elif not pinned %}
-				<c-empty class="card" data-feed-empty
+				<c-empty data-feed-empty
 					icon="{% if profile.user.is_banned %}shield{% elif i_blocked or blocked_me %}block{% elif not can_see or tab == 'likes' and not likes_visible %}lock{% elif tab == 'media' %}image{% elif tab == 'likes' %}heart{% elif tab == 'replies' %}reply{% else %}edit{% endif %}"
 					tone="{% if profile.user.is_banned or i_blocked or blocked_me %}danger{% endif %}">
 					{% if profile.user.is_banned %}

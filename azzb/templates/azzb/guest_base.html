@@ -1,0 +1,15 @@
+{% extends "azzb/azzb_base.html" %}
+{% comment %} Гостевые страницы (R2): узкая гостевая шапка и подвал вместо меню приложения, правой колонки
+   и таб-бара; снизу — липкая плашка «Присоединяйтесь» (блок dock_cta) и строка cookie над ней. {% endcomment %}
+{% block body_class %} class="guest no-tabbar"{% endblock body_class %}
+{% block page %}
+	{% include "azzb/includes/guest_head.html" %}
+	<main class="gmain{% block main_class %}{% endblock main_class %}" id="main">{% block content %}{% endblock content %}</main>
+	{% include "azzb/includes/guest_foot.html" %}
+{% endblock page %}
+{% block dock %}
+	<div class="dock">
+		{% include "azzb/includes/cookie_banner.html" %}
+		{% block dock_cta %}{% endblock dock_cta %}
+	</div>
+{% endblock dock %}

@@ -1,0 +1,10 @@
+<footer class="gfoot">
+	<nav class="gfoot-in" aria-label="О сайте">
+		<a href="{% url 'rules' %}">Правила</a>
+		<a href="{% url 'privacy' %}">Конфиденциальность</a>
+		<a href="{% url 'pd-consent' %}">Согласие на обработку данных</a>
+		<a href="{% url 'cookies' %}">Cookie</a>
+		<button class="link-btn" type="button" data-cookie-settings>Настройки cookie</button>
+		<span>© {% now "Y" %} AzzB</span>
+	</nav>
+</footer>

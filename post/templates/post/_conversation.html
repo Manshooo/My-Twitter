@@ -1,23 +1,21 @@
-{% load show_posts azzb_ui %}{% comment %} Разговор под постом conversation.start одной линией (post.views.follow_conversation).
-   Карточки соединены линией; где на пост есть ответы помимо продолжения — ссылка на них.
+{% load show_posts azzb_ui %}{% comment %} Разговор под постом conversation.start одной линией (post.views.follow_conversation)
+   внутри ветки .branch. Где на сообщение есть ответы помимо продолжения — ссылка на них.
    Если линия длиннее порции — «Показать продолжение» дописывает её на место кнопки. {% endcomment %}
-{% with start=conversation.start %}
-	{% if conversation.lead_aside %}
-		<a class="chain-link chain-aside" href="{% url 'post' start.id %}">Ещё {{ conversation.lead_aside }} {{ conversation.lead_aside|plural_ru:"ответ,ответа,ответов" }} на этот пост</a>
-	{% endif %}
-{% endwith %}
 {% for post, aside in conversation.rows %}
 	{% show_posts "chain" %}
 	{% if aside %}
-		<a class="chain-link chain-aside" href="{% url 'post' post.id %}">Ещё {{ aside }} {{ aside|plural_ru:"ответ,ответа,ответов" }} на этот пост</a>
+		<a class="more" href="{% url 'post' post.id %}">Ещё {{ aside }} {{ aside|plural_ru:"ответ,ответа,ответов" }} на этот пост</a>
 	{% endif %}
 {% endfor %}
 {% if conversation.continue_from %}
-	<div class="chain-more">
-		<a class="chain-link" href="{% url 'post' conversation.continue_from %}"
-			hx-get="{% url 'post-conversation' conversation.continue_from %}?more=1" hx-target="closest .chain-more" hx-swap="outerHTML"
-			hx-disabled-elt="this" data-error="Не удалось загрузить ветку">
-			<svg class="icon icon-sm" aria-hidden="true"><use href="#i-reply"></use></svg>Показать продолжение
-		</a>
-	</div>
+	<a class="more" href="{% url 'post' conversation.continue_from %}"
+		hx-get="{% url 'post-conversation' conversation.continue_from %}?more=1" hx-swap="outerHTML"
+		hx-disabled-elt="this" data-error="Не удалось загрузить ветку">
+		<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"></use></svg>Показать продолжение
+	</a>
 {% endif %}
+{% with start=conversation.start %}
+	{% if conversation.lead_aside %}
+		<a class="more" href="{% url 'post' start.id %}">Ещё {{ conversation.lead_aside }} {{ conversation.lead_aside|plural_ru:"ответ,ответа,ответов" }} в ветке</a>
+	{% endif %}
+{% endwith %}

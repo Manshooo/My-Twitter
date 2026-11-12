@@ -163,6 +163,8 @@ class RepliesTests(TestCase):
 		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.root = Post.objects.create(author=self.alice.profile, text='Корень ветки')
+		# Ветку целиком видит вошедший; гостю — два ответа (GuestPostTests).
+		self.client.force_login(self.bob)
 
 	def reply(self, user, parent, text):
 		self.client.force_login(user)
@@ -175,8 +177,9 @@ class RepliesTests(TestCase):
 		reply = Post.objects.get(text='Ответ Боба')
 		self.assertTrue(reply.is_reply)
 		self.assertEqual(reply.reply_to, self.root)
-		for url in ('/', '/hot/'):
-			self.assertNotContains(self.client.get(url), 'Ответ Боба')
+		for sort in ('popular', 'new'):
+			self.client.post('/settings/feed-sort/', {'sort': sort})
+			self.assertNotContains(self.client.get('/'), 'Ответ Боба', msg_prefix=sort)
 		self.assertNotContains(self.client.get('/users/bob/'), 'Ответ Боба')
 		self.assertContains(self.client.get('/users/bob/?tab=replies'), 'Ответ Боба')
 
@@ -188,8 +191,10 @@ class RepliesTests(TestCase):
 
 		page = self.client.get(f'/p/{self.root.pk}/').content.decode()
 		page = page[page.index('<main'):]
-		self.assertLess(page.index('Первый ответ'), page.index('Второй ответ'))
-		self.assertNotIn('Ответ на ответ', page)  # только прямые ответы
+		# Ответ на ответ — в ветке под своим ответом (вариант B ревизии R2), до следующего прямого ответа.
+		self.assertLess(page.index('Первый ответ'), page.index('class="branch"'))
+		self.assertLess(page.index('class="branch"'), page.index('Ответ на ответ'))
+		self.assertLess(page.index('Ответ на ответ'), page.index('Второй ответ'))
 		self.assertIn('data-reply-count data-n="3">3<', page)  # счётчик — вся ветка, с ответом на ответ
 
 		nested = Post.objects.get(text='Ответ на ответ')
@@ -331,15 +336,17 @@ class RepliesTests(TestCase):
 		self.assertNotIn('Боб отвечает Алисе', page)
 		self.assertIn('Ещё 2 ответа на этот пост', page)
 
-	def test_several_replies_get_a_button_instead_of_unfolding(self):
-		first, _ = self.chat(self.root, [self.bob, self.alice])
+	def test_several_replies_show_branch_preview(self):
+		from .views import BRANCH_PREVIEW
+		posts = self.chat(self.root, [self.bob, self.alice] * 3)
 		Post.objects.create(author=self.alice.profile, text='Другой ответ', reply_to=self.root, is_reply=True)
 		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
-		self.assertNotIn('реплика 1<', page)
-		self.assertIn(f'/p/{first.pk}/conversation/', page)
-		self.assertIn('Показать ветку · 1 ответ', page)
-		part = self.client.get(f'/p/{first.pk}/conversation/', headers={'HX-Request': 'true'})
-		self.assertContains(part, 'реплика 1<', html=False)
+		self.assertIn('class="branch"', page)
+		self.assertIn(f'реплика {BRANCH_PREVIEW}<', page)
+		self.assertNotIn(f'реплика {BRANCH_PREVIEW + 1}<', page)
+		self.assertIn(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', page)
+		part = self.client.get(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', headers={'HX-Request': 'true'})
+		self.assertContains(part, f'реплика {BRANCH_PREVIEW + 1}<', html=False)
 
 	def test_conversation_shows_unavailable_posts_as_placeholders(self):
 		self.chat(self.root, [self.bob, self.alice, self.bob])
@@ -514,6 +521,7 @@ class HtmxActionsTests(TestCase):
 		from .pagination import PAGE_SIZE
 		for i in range(PAGE_SIZE + 1):
 			Post.objects.create(author=self.alice.profile, text=f'пост {i}')
+		self.client.force_login(self.bob)
 		page = self.client.get('/')
 		self.assertContains(page, '<html')
 		self.assertIn('HX-Request', page['Vary'])
@@ -555,6 +563,7 @@ class PageChromeTests(TestCase):
 		from .pagination import PAGE_SIZE
 		for i in range(PAGE_SIZE + 1):
 			Post.objects.create(author=self.alice.profile, text=f'Пост {i}')
+		self.client.force_login(self.alice)
 		response = self.client.get('/')
 		self.assertContains(response, 'class="skel-cards"', count=1)
 		self.assertContains(response, 'hx-target="closest .load-more"')
@@ -574,3 +583,23 @@ class PageChromeTests(TestCase):
 			if re.search(r'\{#(?:(?!#\}).)*\n', path.read_text(encoding='utf-8'), flags=re.S)
 		]
 		self.assertEqual(bad, [])
+
+
+class GuestPostTests(TestCase):
+	"""Пост для гостя (R2-GuestPost): гостевая шапка, два ответа, остальное — после входа."""
+
+	def setUp(self):
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.root = Post.objects.create(author=self.alice.profile, text='Корень')
+		for i in range(5):
+			Post.objects.create(author=self.alice.profile, text=f'ответ {i}', reply_to=self.root, is_reply=True)
+
+	def test_two_replies_then_login(self):
+		response = self.client.get(f'/p/{self.root.pk}/')
+		self.assertContains(response, 'ответ 1<')
+		self.assertNotContains(response, 'ответ 2<')
+		self.assertContains(response, 'Ещё 3 ответа. Войдите, чтобы прочитать')
+		self.assertContains(response, 'class="ghead"')
+		self.assertNotContains(response, 'class="tabbar"')
+		self.assertContains(response, '"SocialMediaPosting"')
+		self.assertRedirects(self.client.get(f'/p/{self.root.pk}/?cursor=x'), f'/auth/login/?next=/p/{self.root.pk}/%3Fcursor%3Dx', fetch_redirect_response=False)

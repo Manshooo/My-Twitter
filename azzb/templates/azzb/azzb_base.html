@@ -1,5 +1,7 @@
 {% load azzb_ui seo %}<!DOCTYPE html>
 {% capture as page_title %}{% block title %}AzzB{% endblock title %}{% endcapture %}
+{# Заголовок внутренней страницы в шапке телефона; пусто — логотип, как на Главной. #}
+{% capture as head_title %}{% block head_title %}{% endblock head_title %}{% endcapture %}
 {% capture as page_description %}{% block meta_description %}AzzB — социальная сеть коротких постов. Делитесь мыслями, фото и опросами, читайте интересных людей и обсуждайте то, что происходит сейчас.{% endblock meta_description %}{% endcapture %}
 <html lang="ru"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 	<head>
@@ -18,27 +20,29 @@
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}{% if tracking_surface %} data-events-url="{% url 'api-events' %}" data-surface="{{ tracking_surface }}"{% endif %}>
+	<body{% block body_class %}{% endblock body_class %} hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}{% if tracking_surface %} data-events-url="{% url 'api-events' %}" data-surface="{{ tracking_surface }}"{% endif %}>
 		{% include "azzb/includes/icons.html" %}
+		{# Оболочка приложения; гостевые страницы (azzb/guest_base.html) подменяют её своей. #}
+		{% block page %}
 		{% with url_name=request.resolver_match.url_name %}
+		{# Шапка телефона (R2-B-Nav): на Главной — только логотип, на внутренних страницах — «Назад» и заголовок. #}
 		<header class="topbar">
-			{% include "azzb/includes/logo.html" %}
-			<div class="topbar-actions">
-				<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
-					<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
-				</button>
-				<a class="icon-btn" href="{% url 'search' %}" aria-label="Поиск"{% if request.resolver_match.url_name == 'search' %} aria-current="page"{% endif %}>
-					<svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+			{% if head_title %}
+				<a class="icon-btn" href="{% url 'index' %}" aria-label="Назад" data-back>
+					<svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
 				</a>
-				{% if user.is_authenticated %}
-					<a class="icon-btn" href="{% url 'bookmarks' %}" aria-label="Закладки"{% if request.resolver_match.url_name == 'bookmarks' %} aria-current="page"{% endif %}>
-						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>
-					</a>
-					<a class="nu" href="{% url 'profile' user.username %}" aria-label="Мой профиль">{% avatar user.profile 'xs' %}</a>
-				{% else %}
-					<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+				<span class="topbar-title clip1">{{ head_title }}</span>
+			{% else %}
+				{% include "azzb/includes/logo.html" %}
+				{% if not user.is_authenticated %}
+					<div class="topbar-actions">
+						<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
+							<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
+						</button>
+						<a class="btn btn-sm" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+					</div>
 				{% endif %}
-			</div>
+			{% endif %}
 		</header>
 
 		<div class="shell{% block shell_class %}{% endblock shell_class %}">
@@ -46,7 +50,7 @@
 				<div class="side-logo">
 					{% include "azzb/includes/logo.html" %}
 				</div>
-				<a class="nav-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'hot-news' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
+				<a class="nav-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'following' %} aria-current="page"{% endif %}>
 					<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
 				</a>
 				<a class="nav-item" href="{% url 'search' %}"{% if url_name == 'search' %} aria-current="page"{% endif %}>
@@ -54,12 +58,10 @@
 				</a>
 				{% if user.is_authenticated %}
 					<a class="nav-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
-						<svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>Уведомления
-						{% include "notifications/_badge.html" with badge_id="notif-badge-side" %}
+						<span class="nav-ic"><svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>{% include "notifications/_badge.html" with badge_id="notif-badge-side" badge_class="nav-badge" %}</span>Уведомления
 					</a>
 					<a class="nav-item" href="{% url 'dm-inbox' %}"{% if url_name|slice:":3" == "dm-" %} aria-current="page"{% endif %}>
-						<svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>Сообщения
-						{% include "dm/_badge.html" with badge_id="dm-badge-side" %}
+						<span class="nav-ic"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>{% include "dm/_badge.html" with badge_id="dm-badge-side" badge_class="nav-badge" %}</span>Сообщения
 					</a>
 					<a class="nav-item" href="{% url 'bookmarks' %}"{% if url_name == 'bookmarks' %} aria-current="page"{% endif %}>
 						<svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>Закладки
@@ -125,7 +127,7 @@
 				{% endif %}
 			</nav>
 
-			<main class="main" id="main">
+			<main class="main{% block main_class %}{% endblock main_class %}" id="main">
 				{% block content %}{% endblock content %}
 				{# Без правой колонки (узкий экран) документы и «Настройки cookie» — под лентой. #}
 				<div class="main-footer">{% include "azzb/includes/footer_links.html" %}</div>
@@ -138,11 +140,11 @@
 		</div>
 
 		<nav class="tabbar" aria-label="Основное меню">
-			<a class="tab-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'follows-updates' %} aria-current="page"{% endif %}>
+			<a class="tab-item" href="{% url 'index' %}"{% if url_name == 'index' or url_name == 'following' %} aria-current="page"{% endif %}>
 				<svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>Главная
 			</a>
-			<a class="tab-item" href="{% url 'hot-news' %}"{% if url_name == 'hot-news' %} aria-current="page"{% endif %}>
-				<svg class="icon" aria-hidden="true"><use href="#i-flame"></use></svg>Горячее
+			<a class="tab-item" href="{% url 'search' %}"{% if url_name == 'search' %} aria-current="page"{% endif %}>
+				<svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>Поиск
 			</a>
 			{% if user.is_authenticated %}
 				<a class="tab-item" href="{% url 'notifications' %}"{% if url_name == 'notifications' %} aria-current="page"{% endif %}>
@@ -163,11 +165,13 @@
 			{% endif %}
 		</nav>
 		{% endwith %}
+		{% endblock page %}
 
 		{% if user.is_authenticated %}
 			{# Счётчики: по сигналу из сокета (azzb:refresh-badges, F1), а без сокета — опрос раз в 30 с, пока вкладка на экране. #}
 			<div hidden data-silent data-badges hx-get="{% url 'notifications-unread' %}" hx-trigger="azzb:poll-30 from:document, azzb:refresh-badges" hx-swap="none"></div>
-			{% if request.resolver_match.url_name != 'edit-profile' and request.resolver_match.url_name|slice:":3" != 'dm-' %}
+			{# «Новый пост» на телефоне — на Главной и в своём профиле (R2-B-Nav). #}
+			{% if request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'following' or request.resolver_match.url_name == 'profile' and profile.pk == user.profile.pk %}
 				<button class="fab" type="button" aria-label="Новый пост" data-composer-open>
 					<svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
 				</button>
@@ -190,7 +194,7 @@
 			</button>
 			<span class="lb-count" data-lightbox-count aria-live="polite"></span>
 		</div>
-		{% include "azzb/includes/cookie_banner.html" %}
+		{% block dock %}{% include "azzb/includes/cookie_banner.html" %}{% endblock dock %}
 		<div class="toast" id="toast" role="status" aria-live="polite"{% if messages %} data-flash="{% for message in messages %}{{ message }}{% if not forloop.last %} {% endif %}{% endfor %}"{% endif %} hidden></div>
 	</body>
 </html>

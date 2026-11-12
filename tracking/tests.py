@@ -69,7 +69,7 @@ class EventsApiTests(TestCase):
 		self.assertFalse(Impression.objects.exists())
 
 	def test_tracker_url_only_for_collecting_users(self):
-		self.assertContains(self.client.get('/'), 'data-surface="latest"')
+		self.assertContains(self.client.get('/'), 'data-surface="for_you"')
 		self.client.logout()
 		self.assertNotContains(self.client.get('/'), 'data-events-url')
 
@@ -85,7 +85,7 @@ class ServerEventsTests(TestCase):
 		return list(InteractionEvent.objects.order_by('id').values_list('kind', 'surface'))
 
 	def test_open_unlike_unfollow_search(self):
-		self.client.get(reverse('post', args=[self.post.pk]), headers={'Referer': 'http://testserver/hot/'})
+		self.client.get(reverse('post', args=[self.post.pk]), headers={'Referer': 'http://testserver/'})
 		like = reverse('post-like', args=[self.post.pk])
 		self.client.post(like)
 		self.client.post(like)
@@ -94,7 +94,7 @@ class ServerEventsTests(TestCase):
 		self.client.get(reverse('search'), {'q': 'котики'})
 		self.client.get(reverse('search'), {'q': 'котики', 'page': 2})
 		self.assertEqual(self.kinds(), [
-			('open', 'hot'), ('unlike', 'other'), ('unfollow', 'other'), ('search', 'search'),
+			('open', 'for_you'), ('unlike', 'other'), ('unfollow', 'other'), ('search', 'search'),
 		])
 		self.assertEqual(InteractionEvent.objects.get(kind='search').data, {'query': 'котики', 'tab': 'posts'})
 
@@ -127,12 +127,14 @@ class NotInterestedTests(TestCase):
 		self.assertEqual(self.feed(reverse('hashtag', args=['погода'])), [str(self.other.pk), str(self.first.pk)])
 		self.assertEqual(InteractionEvent.objects.filter(kind='not_interested').count(), 2)
 
-	def test_author_hidden_from_latest_and_hot_but_not_following(self):
+	def test_author_hidden_from_for_you_but_not_following(self):
 		self.mark(self.first, 'author')
 		self.assertEqual(self.feed(), [str(self.other.pk)])
-		self.assertNotIn(str(self.first.pk), self.feed(reverse('hot-news')))
+		self.ann.profile.feed_sort = 'new'
+		self.ann.profile.save()
+		self.assertNotIn(str(self.first.pk), self.feed())
 		relations.follow(self.ann.profile, self.bob.profile)
-		self.assertEqual(len(self.feed(reverse('follows-updates'))), 2)
+		self.assertEqual(len(self.feed(reverse('following'))), 2)
 
 	def test_own_post_and_unknown_tag_rejected(self):
 		self.client.force_login(self.bob)
@@ -155,19 +157,19 @@ class ConsentTests(TestCase):
 		self.client.force_login(self.legacy)
 
 	def test_gate_and_accept(self):
-		response = self.client.get('/hot/')
-		self.assertRedirects(response, reverse('consent-update') + '?next=%2Fhot%2F', fetch_redirect_response=False)
+		response = self.client.get('/following/')
+		self.assertRedirects(response, reverse('consent-update') + '?next=%2Ffollowing%2F', fetch_redirect_response=False)
 		self.assertEqual(self.client.get('/rules/').status_code, 200)
 		htmx = self.client.post(reverse('post-like', args=['00000000-0000-4000-8000-000000000000']), headers={'HX-Request': 'true'})
 		self.assertEqual(htmx['HX-Redirect'], reverse('consent-update'))
 		page = self.client.get(reverse('consent-update'))
 		self.assertContains(page, 'правила сообщества')
-		self.assertEqual(self.client.post(reverse('consent-update'), {'pd_consent': 'on', 'next': '/hot/'}).status_code, 200)
-		response = self.client.post(reverse('consent-update'), {'pd_consent': 'on', 'accept_rules': 'on', 'next': '/hot/'})
-		self.assertRedirects(response, '/hot/', fetch_redirect_response=False)
+		self.assertEqual(self.client.post(reverse('consent-update'), {'pd_consent': 'on', 'next': '/following/'}).status_code, 200)
+		response = self.client.post(reverse('consent-update'), {'pd_consent': 'on', 'accept_rules': 'on', 'next': '/following/'})
+		self.assertRedirects(response, '/following/', fetch_redirect_response=False)
 		self.legacy.refresh_from_db()
 		self.assertIsNotNone(self.legacy.terms_accepted_at)
-		self.assertEqual(self.client.get('/hot/').status_code, 200)
+		self.assertEqual(self.client.get('/following/').status_code, 200)
 
 
 class RetentionTests(TestCase):

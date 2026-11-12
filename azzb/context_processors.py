@@ -28,7 +28,8 @@ def current_theme(request):
 
 # Поверхность для поведенческих событий (tracking): где показан пост — по имени маршрута страницы.
 SURFACES = {
-	'index': 'latest', 'hot-news': 'hot', 'follows-updates': 'following', 'profile': 'profile',
+	# «Горячее» и «Свежее» (hot, latest) остались в истории событий: с ревизии R2 это «Для вас» (docs/feed.md).
+	'index': 'for_you', 'following': 'following', 'profile': 'profile',
 	'post': 'thread', 'hashtag': 'tag', 'search': 'search', 'notifications': 'notifications', 'bookmarks': 'bookmarks',
 }
 

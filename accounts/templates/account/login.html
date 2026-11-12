@@ -16,8 +16,7 @@
 			<button class="btn btn-lg btn-block" type="submit">Войти</button>
 		{% endslot %}
 	{% endelement %}
-	<div class="auth-links">
-		<a href="{% url 'account_reset_password' %}">Забыли пароль?</a>
-		<a href="{{ signup_url }}">Зарегистрироваться</a>
-	</div>
+	<a class="auth-forgot" href="{% url 'account_reset_password' %}">Забыли пароль?</a>
+	<div class="or">или</div>
+	<a class="btn btn-outline btn-lg btn-block" href="{{ signup_url }}">Создать аккаунт</a>
 {% endblock content %}

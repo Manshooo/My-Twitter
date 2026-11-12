@@ -1,16 +1,30 @@
 {% extends "azzb/azzb_base.html" %}
 {% block title %}Уведомления{% endblock title %}
+{% block head_title %}Уведомления{% endblock head_title %}
+{% block main_class %} main-col{% endblock main_class %}
 {% block content %}
-	<h1 class="display" style="font-size: 22px; padding: 4px 6px">Уведомления</h1>
+	<div class="page-head"><h1 class="page-title">Уведомления</h1></div>
+	<c-tabs label="Уведомления" class="tabs-under-head">
+		<c-tabs.item href="{% url 'notifications' %}" current="{% if tab == 'all' %}1{% endif %}">Все</c-tabs.item>
+		<c-tabs.item href="{% url 'notifications' %}?tab=mentions" current="{% if tab == 'mentions' %}1{% endif %}">Упоминания</c-tabs.item>
+		{% if show_requests %}
+			<c-tabs.item href="{% url 'follow-requests' %}" count="{% if requests %}{{ requests }}{% endif %}">Заявки</c-tabs.item>
+		{% endif %}
+	</c-tabs>
 	{# Пришло новое, пока страница открыта (сигнал из сокета, F3), — показываем по нажатию, а не сдвигаем список. #}
 	<a class="btn btn-sm new-pill" href="{% url 'notifications' %}" data-new-notifications hidden>Новые уведомления</a>
-	<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+	<div class="feed">
 		{% if groups %}
 			{% include "notifications/_page.html" %}
 		{% else %}
-			<c-empty icon="bell" class="card">
-				<h2>Пока ничего</h2>
-				<p>Здесь появятся лайки, ответы и новые подписчики.</p>
+			<c-empty icon="bell">
+				{% if tab == 'mentions' %}
+					<h2>Упоминаний пока нет</h2>
+					<p>Здесь появятся ответы, цитаты и посты, где вас отметили.</p>
+				{% else %}
+					<h2>Пока ничего</h2>
+					<p>Здесь появятся лайки, ответы и новые подписчики.</p>
+				{% endif %}
 			</c-empty>
 		{% endif %}
 	</div>

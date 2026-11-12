@@ -33,7 +33,7 @@
 				<span>Скрыт модератором{% if post.hidden_reason %}: {{ post.hidden_reason }}{% endif %}. Пост видите только вы.</span>
 			</div>
 		{% endif %}
-		{% if post.is_reply %}
+		{% if post.is_reply and variant != "reply" %}
 			<p class="reply-to muted">
 				{% if post.reply_to and post.reply_to.author.user.is_active %}
 					В ответ <a href="{% url 'post' post.reply_to_id %}">@{{ post.reply_to.author.user.username }}</a>
@@ -63,6 +63,9 @@
 		{% endif %}
 		{% if post.poll %}{% load show_posts %}{% poll_block post %}{% endif %}
 		{% if quote %}{% include "post/_quote.html" %}{% endif %}
+		{% if variant == "main" %}
+			<p class="post-fulldate muted"><time datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"H:i · j E Y" }}</time>{% if post.edited_at %} · изменено{% endif %}</p>
+		{% endif %}
 		<div class="actions" role="group" aria-label="Действия с постом">
 			{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
 			   поста (variant "main") она открывает composer — ответить этому посту. {% endcomment %}

@@ -1,6 +1,7 @@
-{% extends "azzb/azzb_base.html" %}
-{% load azzb_ui seo %}
-{# Профиль для гостя — только карточка: посты, подписки и действия — после входа. У закрытого аккаунта — без «О себе» и баннера. #}
+{% extends "azzb/guest_base.html" %}
+{% load azzb_ui seo show_posts %}
+{% comment %} Профиль для гостя (R2-GuestProfile): шапка и три последних поста, если автор разрешил поисковики;
+   подписки и действия — после входа. У закрытого аккаунта — без «О себе», баннера и постов. {% endcomment %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
 {% block meta_description %}{% if profile.is_private %}Закрытый аккаунт в AzzB{% elif profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
 {% block og_type %}profile{% endblock og_type %}
@@ -17,25 +18,49 @@
 		<meta name="twitter:card" content="summary">
 	{% else %}{{ block.super }}{% endif %}
 {% endblock og_image %}
+{% block main_class %} main-col{% endblock main_class %}
 {% block content %}
-	<section class="card profile-card" aria-label="Профиль">
-		{% if profile.banner and not profile.is_private %}<img class="cover" src="{{ profile.banner.url }}" alt="">{% else %}<div class="cover ph" aria-hidden="true"></div>{% endif %}
+	<section class="profile-card" aria-label="Профиль">
+		<div class="cover">{% if profile.banner and not profile.is_private %}<img src="{{ profile.banner.url }}" alt="">{% endif %}</div>
 		<div class="profile-info">
-			<div class="profile-top">{% avatar profile 'xl' %}</div>
-			<div style="display: flex; flex-direction: column; gap: 2px">
+			<div class="profile-top">
+				{% avatar profile 'xl' %}
+				<div class="profile-buttons">
+					<a class="btn" href="{% url 'account_signup' %}">{% if profile.is_private %}Отправить заявку{% else %}Подписаться{% endif %}</a>
+				</div>
+			</div>
+			<div class="profile-title">
 				<div class="profile-name">
 					<h1>{{ profile.username }}</h1>{% badges profile %}
 					{% if profile.is_private %}<svg class="icon icon-sm" role="img" aria-label="Закрытый аккаунт"><title>Закрытый аккаунт</title><use href="#i-lock"></use></svg>{% endif %}
 				</div>
-				<span class="muted" style="font-size: 15px">@{{ profile.user.username }}</span>
+				<span class="muted">@{{ profile.user.username }}</span>
 			</div>
-			{% if profile.bio and not profile.is_private %}<p class="post-text">{{ profile.bio }}</p>{% endif %}
+			{% if profile.bio and not profile.is_private %}<p class="post-text profile-bio">{{ profile.bio }}</p>{% endif %}
+			<div class="profile-meta">
+				<span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"></use></svg>На AzzB с {{ profile.user.date_joined|date:"E Y" }}</span>
+			</div>
 		</div>
 	</section>
-	<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 18px; border-radius: 20px; background: var(--brand); color: var(--brand-ink)">
-		<p style="flex: 1 1 280px; font-size: 15px; line-height: 1.5">
-			{% if profile.is_private %}Это закрытый аккаунт: посты видят только подписчики, которых одобрил(а) @{{ profile.user.username }}.{% else %}Войдите, чтобы читать посты @{{ profile.user.username }}, подписаться и написать сообщение.{% endif %}
-		</p>
-		<a class="btn" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" style="border: 0; background: var(--brand-ink); color: var(--brand)">Войти</a>
-	</div>
+	{% if profile.is_private %}
+		<c-empty icon="lock">
+			<h2>Это закрытый аккаунт</h2>
+			<p>Посты видят только подписчики, которых одобрил(а) @{{ profile.user.username }}.</p>
+		</c-empty>
+	{% elif posts %}
+		<h2 class="group-h">Последние посты</h2>
+		<div class="feed">{% for post in posts %}{% show_posts %}{% endfor %}</div>
+		<a class="more more-row" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Все посты @{{ profile.user.username }} — после входа<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a>
+	{% else %}
+		<c-empty icon="user">
+			<h2>Посты — после входа</h2>
+			<p>Войдите, чтобы читать @{{ profile.user.username }}, подписаться и написать сообщение.</p>
+		</c-empty>
+	{% endif %}
 {% endblock content %}
+{% block dock_cta %}
+	<c-cta class="dock-cta" title="Присоединяйтесь к обсуждению" text="Отвечайте, ставьте лайки и подписывайтесь на авторов">
+		<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+		<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
+	</c-cta>
+{% endblock dock_cta %}

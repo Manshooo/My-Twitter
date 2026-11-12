@@ -1,21 +1,34 @@
-/* ---------- Вкладки ---------- */
-.seg { display: flex; gap: 6px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
-.seg-item {
-	flex: 1; min-height: 44px; border-radius: 12px; color: var(--text-2); font-weight: 800; font-size: 15px;
-	display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; white-space: nowrap;
+/* ---------- Вкладки (<c-tabs>, R2-B-Tabs): один компонент на весь сайт ---------- */
+/* 2–4 пункта делят ширину поровну; хвост справа — под чип или кнопку. Липнут к верху. */
+.tabs {
+	position: sticky; top: 0; z-index: 15; display: flex; align-items: stretch; height: var(--h-tab);
+	background: var(--surface-glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+	border-bottom: 1px solid var(--border);
 }
-.seg-item:hover { background: var(--surface-3); text-decoration: none; }
-.seg-item[aria-current="page"] { background: var(--brand); color: var(--brand-ink); }
-/* На телефоне три вкладки ленты не помещались в ширину: ужимаем отступы, а на самых узких — без иконок. */
-@media (max-width: 560px) {
-	.seg { gap: 4px; padding: 4px; }
-	.seg-item { gap: 6px; padding: 0 8px; font-size: 14px; }
-}
-@media (max-width: 380px) { .seg-item .icon { display: none; } }
-.tabs { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .tab {
-	flex: 1; min-height: 52px; display: grid; place-items: center; color: var(--text-2);
-	font-weight: 800; font-size: 15px; box-shadow: inset 0 -3px 0 transparent;
+	flex: 1; position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;
+	min-width: var(--h-control); padding: 0 var(--space-4); color: var(--text-2); font-weight: 700; font-size: 15px; white-space: nowrap;
 }
-.tab:hover { background: var(--surface-3); text-decoration: none; }
-.tab[aria-current="page"] { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+.tab:hover { background: var(--surface-3); color: var(--text); text-decoration: none; }
+.tab[aria-current="page"] { color: var(--text); font-weight: 800; }
+.tab[aria-current="page"]::after {
+	content: ''; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+	width: min(56px, 70%); height: 3px; border-radius: 3px 3px 0 0; background: var(--accent);
+}
+.tab-count {
+	min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--badge); color: var(--on-badge);
+	font-size: 12px; font-weight: 800; line-height: 20px; text-align: center;
+}
+.tabs-tail { display: flex; align-items: center; padding: 0 var(--space-3) 0 var(--space-1); }
+/* На телефоне — под липкой шапкой. */
+@media (max-width: 760px) { .tabs-under-head { top: var(--h-header-m); } }
+
+/* Чип сортировки: 32 px, а зона нажатия — до 44 по высоте. */
+.chip {
+	position: relative; display: inline-flex; align-items: center; gap: var(--space-1); height: 32px; padding: 0 var(--space-2) 0 var(--space-3);
+	border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text);
+	font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.chip::before { content: ''; position: absolute; inset: -6px -2px; }
+.chip:hover { background: var(--surface-3); }
+.menu-check { margin-left: auto; color: var(--accent); }

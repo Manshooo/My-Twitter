@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts import relations
+from accounts.models import FeedSort
 from notifications.models import Notification
 
 from .models import Post
@@ -50,6 +51,8 @@ class RepostTests(TestCase):
 		toggle_like(self.post, self.cat.profile)
 		toggle_repost(self.post, self.bob.profile)
 		self.client.force_login(self.cat)
+		self.cat.profile.feed_sort = FeedSort.NEW
+		self.cat.profile.save()
 		response = self.client.get(reverse('index'))
 		self.assertContains(response, 'сделал(а) репост')
 		self.assertContains(response, 'исходный пост', count=2)
@@ -58,8 +61,10 @@ class RepostTests(TestCase):
 		self.assertEqual(cards[row.pk].likes_n, 1)
 		self.assertTrue(cards[row.pk].is_liked)
 		self.assertFalse(cards[row.pk].is_reposted)
-		# «Горячее» без репостов: пост там один раз.
-		self.assertEqual([post.pk for post in self.client.get(reverse('hot-news')).context['posts']], [self.post.pk])
+		# «Популярное» без репостов: пост там один раз.
+		self.cat.profile.feed_sort = FeedSort.POPULAR
+		self.cat.profile.save()
+		self.assertEqual([post.pk for post in self.client.get(reverse('index')).context['posts']], [self.post.pk])
 
 	def test_repost_hidden_with_original(self):
 		toggle_repost(self.post, self.bob.profile)

@@ -1,0 +1,14 @@
+{# Гостевая шапка — одна на все гостевые страницы (R2-GuestHome, R2-GuestPost, вход). #}
+<header class="ghead">
+	<div class="ghead-in">
+		{% include "azzb/includes/logo.html" %}
+		<span class="ghead-gap"></span>
+		<button class="icon-btn" type="button" role="switch" aria-checked="false" aria-label="Тёмная тема" data-theme-toggle>
+			<svg class="icon" aria-hidden="true"><use href="#i-moon"></use></svg>
+		</button>
+		{% if not hide_auth_links %}
+			<a class="btn btn-ghost" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+			<a class="btn" href="{% url 'account_signup' %}">Регистрация</a>
+		{% endif %}
+	</div>
+</header>

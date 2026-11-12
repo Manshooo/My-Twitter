@@ -15,7 +15,7 @@ def _indexable_posts():
 
 class PagesSitemap(Sitemap):
 	def items(self):
-		return ['index', 'hot-news', 'rules', 'privacy', 'cookies']
+		return ['index', 'rules', 'privacy', 'cookies']
 
 	def location(self, item):
 		return reverse(item)

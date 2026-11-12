@@ -86,12 +86,14 @@ def parse_before(raw):
 	return value if timezone.is_aware(value) else None
 
 
-def grouped_page(user, before=None, size=PAGE_SIZE):
+def grouped_page(user, before=None, size=PAGE_SIZE, verbs=None):
 	"""Страница уведомлений, сгруппированных по (что, пост, день): лайки одного поста за день —
 	одна строка «Аня и ещё 5», подписки за день — тоже. Ответ у каждого свой пост, поэтому
-	всегда отдельно. Возвращает (группы, before для следующей страницы)."""
+	всегда отдельно. verbs — только эти события (вкладка «Упоминания»).
+	Возвращает (группы, before для следующей страницы)."""
+	events = visible_for(user) if verbs is None else visible_for(user).filter(verb__in=verbs)
 	rows = (
-		visible_for(user)
+		events
 		.annotate(day=TruncDate('created_at'))
 		.values('verb', 'post_id', 'day')
 		.annotate(

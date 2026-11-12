@@ -1,9 +1,8 @@
-/* ---------- Профиль ---------- */
-/* Без overflow: hidden — иначе карточка обрезает меню «…». Скругление обложки задаём ей самой
-   (радиус карточки минус рамка). */
-.profile-card { border-radius: 24px; }
-.cover { aspect-ratio: 3 / 1; display: block; width: 100%; object-fit: cover; }
-.profile-card .cover { border-radius: 23px 23px 0 0; }
+/* ---------- Профиль (R2-Profile) ---------- */
+/* Обложка без полосок: своя картинка или ровный --brand-soft. */
+.cover { position: relative; aspect-ratio: 3 / 1; background: var(--brand-soft); }
+.cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cover-add { position: absolute; right: var(--space-3); bottom: var(--space-3); background: var(--surface); }
 
 /* Редактирование фото профиля */
 .media-edit { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -37,14 +36,29 @@
 .crop-frame img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
 .crop-zoom { display: flex; align-items: center; gap: 12px; color: var(--text-2); }
 .crop-zoom input { flex: 1; accent-color: var(--accent); min-height: 44px; }
-.profile-info { padding: 0 24px 22px; display: flex; flex-direction: column; gap: 12px; }
-.profile-top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-top: -56px; }
-.profile-buttons { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
-.profile-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.profile-name h1 { font-family: var(--font-display); font-weight: 500; font-size: 24px; overflow-wrap: anywhere; }
-.profile-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 14px; color: var(--text-2); }
+.profile-card { border-bottom: 1px solid var(--border); }
+.profile-info { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.profile-top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-3); min-width: 0; margin-top: -48px; }
+.profile-top .avatar-xl { position: relative; width: 96px; height: 96px; font-size: 36px; border-width: 4px; }
+.profile-buttons { position: relative; display: flex; gap: var(--space-2); padding-bottom: var(--space-1); }
+.icon-btn-outline { border: 1.5px solid var(--border-strong); color: var(--text); }
+.profile-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 15px; }
+.profile-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.profile-name h1 {
+	font: 500 22px/1.25 var(--font-display); overflow-wrap: anywhere;
+	display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.profile-bio { font-size: 15px; }
+.profile-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); font-size: 14px; color: var(--text-2); }
 .profile-meta span { display: inline-flex; align-items: center; gap: 6px; }
-.profile-counts { display: flex; flex-wrap: wrap; gap: 20px; font-size: 15px; }
-.profile-counts a { color: var(--text); }
-.profile-counts b { font-weight: 800; }
+/* Счётчики одной строкой. */
+.profile-counts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: 15px; }
+.profile-counts a, .profile-counts span { color: var(--text-2); }
+.profile-counts b { color: var(--text); font-weight: 800; }
+@media (max-width: 760px) {
+	.profile-top { margin-top: -40px; }
+	.profile-top .avatar-xl { width: 80px; height: 80px; font-size: 30px; }
+	.hide-m { display: none; }
+	.cover-add { top: var(--space-3); bottom: auto; }
+}
 .people { display: flex; flex-direction: column; gap: 14px; }

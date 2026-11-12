@@ -30,16 +30,22 @@ class FeedPagesTests(TestCase):
 		self.assertNotContains(response, 'fonts.googleapis.com')
 		self.assertContains(response, 'fonts/manrope-cyrillic')
 
-	def test_guest_sees_feeds_and_signup_card(self):
-		for url in ('/', '/hot/'):
-			response = self.client.get(url)
-			self.assertEqual(response.status_code, 200)
-			self.assertContains(response, 'Впервые на AzzB?')
-			self.assertContains(response, 'Привет\nвторая строка')
-			self.assertNotContains(response, 'id="composer"')
+	def test_guest_home_is_showcase(self):
+		response = self.client.get('/')
+		self.assertTemplateUsed(response, 'azzb/guest_home.html')
+		self.assertContains(response, '<h1 class="land-heading">Присоединяйтесь к растущему сообществу!</h1>', html=True)
+		self.assertContains(response, 'Привет\nвторая строка')  # популярные посты — живой контент
+		self.assertContains(response, 'href="/auth/signup/"')
+		self.assertNotContains(response, 'id="composer"')
+		self.assertNotContains(response, 'class="tabbar"')
+		self.assertContains(response, 'WebSite')
+
+	def test_old_feed_addresses_redirect_permanently(self):
+		self.assertRedirects(self.client.get('/follows-updates/'), '/following/', status_code=301, fetch_redirect_response=False)
+		self.assertRedirects(self.client.get('/hot/'), '/', status_code=301)
 
 	def test_guest_is_sent_to_login_from_following_feed(self):
-		response = self.client.get('/follows-updates/')
+		response = self.client.get('/following/')
 		self.assertEqual(response.status_code, 302)
 		self.assertIn('/auth/login', response['Location'])
 
@@ -56,7 +62,7 @@ class FeedPagesTests(TestCase):
 
 	def test_following_feed_empty_state(self):
 		self.client.force_login(make_user('bob'))
-		self.assertContains(self.client.get('/follows-updates/'), 'Здесь пока тихо')
+		self.assertContains(self.client.get('/following/'), 'Здесь пока тихо')
 
 	def test_badges(self):
 		self.alice.is_staff = True

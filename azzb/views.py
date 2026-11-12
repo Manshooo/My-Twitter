@@ -6,9 +6,10 @@ from django.conf import settings
 from django.templatetags.static import static
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_POST
 
 from django.contrib.auth.decorators import login_required
 
@@ -18,6 +19,7 @@ from .ratelimit import rate_limit
 from django.views.generic import TemplateView
 
 from accounts import consent
+from accounts.models import FeedSort
 from tracking import services as tracking
 from tracking.models import InteractionEvent, Surface
 from post.models import Post
@@ -68,27 +70,49 @@ def offline(request):
 
 
 def index(request):
-	queryset = Post.objects.for_feed(request.user).top_level().without_muted(request.user).without_not_interested(request.user)
-	posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
-	# Свой новый пост из composer логично показать сверху именно «Свежего».
-	context = {"feed": "latest", "prepend": True}
-	return render_posts(request, FEED_TEMPLATE, context, posts, cursor and {"cursor": cursor})
+	"""«Для вас» (docs/feed.md). Сортировку человек выбирает чипом, она хранится в профиле.
+	Гостю — витрина (guest_home)."""
+	user = request.user
+	if not user.is_authenticated:
+		return guest_home(request)
+	sort = user.profile.feed_sort
+	queryset = Post.objects.for_feed(user).top_level().without_muted(user).without_not_interested(user)
+	# Свой новый пост из composer показываем сверху ленты.
+	context = {"feed": "for-you", "sort": sort, "sorts": FeedSort.choices, "prepend": True}
+	if sort == FeedSort.NEW:
+		posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
+		return render_posts(request, FEED_TEMPLATE, context, posts, cursor and {"cursor": cursor})
+	posts, next_page = number_page(queryset.for_you(user), request.GET.get("page"))
+	return render_posts(request, FEED_TEMPLATE, context, posts, next_page and {"page": next_page})
 
 
-def follows_updates(request):
+GUEST_HOME_POSTS = 3
+
+
+def guest_home(request):
+	"""Витрина для гостя (R2-GuestHome): знак, фраза, «Создать аккаунт» и «Войти», три популярных
+	поста — живой контент и для поисковиков. Дальше — регистрация."""
+	posts = list(Post.objects.for_feed(None).top_level().hot()[:GUEST_HOME_POSTS])
+	return render(request, "azzb/guest_home.html", {"posts": posts})
+
+
+@login_required
+def following(request):
+	"""«Подписки»: всегда по времени."""
 	follows = request.user.profile.follows.all()
 	queryset = Post.objects.for_feed(request.user).top_level().without_muted(request.user).filter(author__in=follows)
 	posts, cursor = cursor_page(queryset, request.GET.get("cursor"))
 	return render_posts(request, FEED_TEMPLATE, {"feed": "following"}, posts, cursor and {"cursor": cursor})
 
 
-def hot_news(request):
-	queryset = (
-		# Без репостов (hot() их отбрасывает): иначе пост стоял бы здесь столько раз, сколько его репостили.
-		Post.objects.for_feed(request.user).top_level().without_muted(request.user).without_not_interested(request.user).hot()
-	)
-	posts, next_page = number_page(queryset, request.GET.get("page"))
-	return render_posts(request, FEED_TEMPLATE, {"feed": "hot"}, posts, next_page and {"page": next_page})
+@require_POST
+@login_required
+def set_feed_sort(request):
+	sort = request.POST.get("sort")
+	if sort in FeedSort.values and request.user.profile.feed_sort != sort:
+		request.user.profile.feed_sort = sort
+		request.user.profile.save(update_fields=["feed_sort"])
+	return redirect("index")
 
 
 SUGGESTIONS_PAGE = 30

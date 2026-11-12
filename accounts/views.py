@@ -101,6 +101,7 @@ PROFILE_TOASTS = {
 	'remove_follower': '@{username} больше не подписан(а) на вас',
 }
 GUEST_TEMPLATE = "accounts/profile_guest.html"
+GUEST_POSTS = 3
 
 # Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
 @method_decorator(rate_limit('follow', '30/m', '300/h'), name='post')
@@ -122,10 +123,18 @@ class UserProfileDetailView(DetailView):
 	def get(self, request, *args, **kwargs):
 		if request.user.is_authenticated:
 			return super().get(request, *args, **kwargs)
-		# Гостю — только карточка (её же видят мессенджеры и поисковики), посты — после входа.
+		# Гостю — шапка профиля и три последних поста, если автор разрешил поисковики (Profile.indexable);
+		# дальше — после входа.
 		if is_load_more(request):
 			return redirect_to_login(request.get_full_path())
-		return render(request, GUEST_TEMPLATE, {'profile': self.get_object(), 'avatar_size': AVATAR_SIZE})
+		profile = self.get_object()
+		posts = []
+		if profile.indexable:
+			posts = list(
+				Post.objects.for_feed(None).top_level().filter(author=profile, is_repost=False)
+				.order_by('-created_at', '-id')[:GUEST_POSTS]
+			)
+		return render(request, GUEST_TEMPLATE, {'profile': profile, 'avatar_size': AVATAR_SIZE, 'posts': posts})
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)

@@ -1,0 +1,5 @@
+<c-vars label class="" />
+<nav class="tabs{% if class %} {{ class }}{% endif %}" aria-label="{{ label }}" {{ attrs }}>
+	{{ slot }}
+	{% if tail %}<div class="tabs-tail">{{ tail }}</div>{% endif %}
+</nav>
