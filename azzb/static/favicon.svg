@@ -1,6 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AzzB">
-	<!-- Знак AzzB, вариант 1 «Круг»: буква A без перекладины, вместо неё точка. Светлая тема. -->
-	<circle cx="32" cy="32" r="32" fill="#13302f"/>
-	<path d="M19 47 L32 16 L45 47" fill="none" stroke="#b6dfdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="6.5"/>
-	<circle cx="32" cy="38" r="3.6" fill="#b6dfdf"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+	<!-- Фавиконка: линии жирнее, чем в основном знаке (docs/brand/logo.svg) — в 16 px обычная толщина сливается.
+	     Тема сайта во вкладку не попадает, поэтому цвета переключаются по теме системы. -->
+	<style>
+		.c { fill: #13302f } .g { stroke: #b6dfdf } .d { fill: #b6dfdf }
+		@media (prefers-color-scheme: dark) { .c { fill: #b6dfdf } .g { stroke: #13302f } .d { fill: #13302f } }
+	</style>
+	<circle class="c" cx="32" cy="32" r="32"/>
+	<path class="g" d="M19 47 L32 15 L45 47" fill="none" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+	<circle class="d" cx="32" cy="38.5" r="4.6"/>
 </svg>
