@@ -15,6 +15,8 @@ from rest_framework.response import Response
 from azzb.activity import Action, record
 from azzb.htmx import htmx_errors, htmx_login_required, is_htmx, trigger
 from azzb.ratelimit import rate_limit
+from tracking import services as tracking
+from tracking.models import InteractionEvent
 
 from .models import Bookmark, Hashtag, Post
 from .pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
@@ -56,6 +58,8 @@ def like_post(request, pk):
 	"""Лайк или снятие лайка. htmx заменяет кнопку на ту, что вернулась отсюда."""
 	post = visible_original(request, pk)
 	liked, total = toggle_like(post, request.user.profile)
+	if not liked:
+		tracking.record(request, InteractionEvent.Kind.UNLIKE, post=post)
 	if not is_htmx(request):
 		return redirect('post', pk=post.pk)
 	return render(request, 'post/_like.html', {'post': post, 'liked': liked, 'likes_total': total})
@@ -309,6 +313,8 @@ def post_detail(request, pk):
 	next_url = page_url(request, cursor=cursor) if cursor else None
 	if is_load_more(request):
 		return render(request, REPLIES_TEMPLATE, {"posts": replies, "next_url": next_url})
+	if post.available:
+		tracking.record(request, InteractionEvent.Kind.OPEN, post=post, surface=tracking.surface_from_referer(request))
 	conversation = None
 	if not cursor_in and len(replies) == 1 and replies[0].replies_count:
 		conversation = follow_conversation(replies[0], request.user)

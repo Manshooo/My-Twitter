@@ -10,5 +10,6 @@ class Command(BaseCommand):
 		done = purge_expired()
 		self.stdout.write(
 			f"Стёрто: аккаунтов {done['accounts']}, постов {done['posts']}, сообщений {done['messages']}, "
-			f"записей журнала {done['activity']}, сеансов {done['sessions']}."
+			f"записей журнала {done['activity']}, сеансов {done['sessions']}, "
+			f"секций событий {done['event_partitions']}."
 		)

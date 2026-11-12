@@ -71,7 +71,7 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run tests
-        run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications dm
+        run: python -W default::DeprecationWarning manage.py test azzb api accounts post moderation notifications dm tracking
 
   # CSS и JS из frontend/ (docs/frontend.md): ESLint и сборка esbuild.
   frontend:
