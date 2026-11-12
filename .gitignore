@@ -416,3 +416,8 @@ SERVER_CHEATSHEET.md
 .idea/
 .vscode/
 /ИП_ШК/
+
+# Собирает esbuild из frontend/ (npm run build).
+/azzb/static/css/azzb.css
+/azzb/static/js/azzb.js
+/azzb/static/**/*.map

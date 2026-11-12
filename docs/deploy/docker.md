@@ -16,9 +16,8 @@ cron 03:30 → /srv/azzb/backup.sh → бакет azzb-backups: дамп баз�
 - **PostgreSQL, Postfix, nginx и certbot остаются на хосте.** Контейнер работает в сети хоста
   (`network_mode: host`), поэтому база и почта доступны ему как раньше, по `localhost`.
 - **Статика** лежит в образе и отдаётся приложением (whitenoise) с хешем в имени, поэтому nginx
-  её больше не раздаёт. Свои `css/` и `js/` при `collectstatic` минифицируются (`azzb/storage.py`,
-  rcssmin/rjsmin), в репозитории остаются исходники. Локально без `DJANGO_STATIC_MANIFEST`
-  статика отдаётся как есть.
+  её больше не раздаёт. `azzb.css` и `azzb.js` собирает esbuild из `frontend/` на первой стадии
+  образа (Node есть только там) — см. `docs/frontend.md`.
 - **Ошибки 500** приходят письмом на адреса из `ADMINS`. О том, что сайт лёг совсем, сообщает
   uptime-чекер manshoo.ru: он уже следит за `https://azzb.ru`.
 

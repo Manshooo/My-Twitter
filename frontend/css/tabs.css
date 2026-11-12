@@ -1,0 +1,21 @@
+/* ---------- Вкладки ---------- */
+.seg { display: flex; gap: 6px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.seg-item {
+	flex: 1; min-height: 44px; border-radius: 12px; color: var(--text-2); font-weight: 800; font-size: 15px;
+	display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; white-space: nowrap;
+}
+.seg-item:hover { background: var(--surface-3); text-decoration: none; }
+.seg-item[aria-current="page"] { background: var(--brand); color: var(--brand-ink); }
+/* На телефоне три вкладки ленты не помещались в ширину: ужимаем отступы, а на самых узких — без иконок. */
+@media (max-width: 560px) {
+	.seg { gap: 4px; padding: 4px; }
+	.seg-item { gap: 6px; padding: 0 8px; font-size: 14px; }
+}
+@media (max-width: 380px) { .seg-item .icon { display: none; } }
+.tabs { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.tab {
+	flex: 1; min-height: 52px; display: grid; place-items: center; color: var(--text-2);
+	font-weight: 800; font-size: 15px; box-shadow: inset 0 -3px 0 transparent;
+}
+.tab:hover { background: var(--surface-3); text-decoration: none; }
+.tab[aria-current="page"] { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }

@@ -1,0 +1,23 @@
+/* ---------- Меню ---------- */
+.menu-wrap { position: relative; }
+.menu {
+	position: absolute; z-index: 30; display: flex; flex-direction: column; padding: 6px; min-width: 240px;
+	background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
+	top: calc(100% + 4px); right: 0;
+}
+.menu-start { left: 0; right: auto; }
+/* Открытое меню живёт в верхнем слое (popover, см. «Меню» в azzb.js): top и left ставит скрипт
+   от положения кнопки. Сбрасываем стили popover по умолчанию (inset: 0, margin: auto, цвета Canvas). */
+.menu[popover] { position: fixed; inset: auto; margin: 0; color: var(--text); overflow: visible; }
+.menu-item {
+	display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px;
+	border: 0; border-radius: 10px; background: transparent; color: var(--text);
+	font-weight: 700; font-size: 15px; text-align: left; cursor: pointer; white-space: nowrap;
+}
+.menu-item:hover { background: var(--surface-3); text-decoration: none; }
+.menu-item.danger { color: var(--danger); }
+.menu form { margin: 0; }
+.switch { width: 40px; height: 22px; border-radius: 999px; background: var(--border-strong); padding: 2px; display: flex; flex: none; }
+.switch::after { content: ''; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+[aria-checked="true"] .switch { background: var(--accent); }
+[aria-checked="true"] .switch::after { transform: translateX(18px); }

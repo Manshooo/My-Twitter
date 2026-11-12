@@ -1,0 +1,26 @@
+/* ---------- Карточки и поверхности ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+.card-pad { padding: 16px 18px; }
+.section-title { font-size: 17px; font-weight: 800; }
+
+/* ---------- Аватар ---------- */
+.avatar {
+	width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
+	font-weight: 800; font-size: 18px; overflow: hidden; object-fit: cover;
+}
+.avatar-sm { width: 40px; height: 40px; font-size: 16px; }
+.avatar-xs { width: 32px; height: 32px; font-size: 13px; }
+.avatar-xl { width: 112px; height: 112px; font-size: 40px; font-family: var(--font-display); border: 5px solid var(--surface); }
+.tone-1 { background: var(--av1-bg); color: var(--av1-ink); }
+.tone-2 { background: var(--av2-bg); color: var(--av2-ink); }
+.tone-3 { background: var(--av3-bg); color: var(--av3-ink); }
+.tone-4 { background: var(--av4-bg); color: var(--av4-ink); }
+.tone-5 { background: var(--av5-bg); color: var(--av5-ink); }
+
+/* Значки у имени: подтверждённый аккаунт и команда AzzB (staff) */
+.badge-verified { width: 18px; height: 18px; flex: none; }
+.badge-staff {
+	width: 18px; height: 18px; flex: none; border-radius: 50%; display: inline-grid; place-items: center;
+	background: var(--staff); color: var(--surface);
+}
+.badge-staff .icon { width: 12px; height: 12px; stroke-width: 2.6; }

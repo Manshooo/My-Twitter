@@ -243,9 +243,8 @@ STORAGES = {
 	'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
 	'staticfiles': {
 		# Имена с хешем содержимого: браузер кэширует файлы навсегда и не держит старые после выкладки.
-		# Свои CSS/JS минифицируются (azzb/storage.py). Нужен манифест от collectstatic,
-		# поэтому включается только в образе (Dockerfile).
-		'BACKEND': 'azzb.storage.MinifiedStaticFilesStorage'
+		# Нужен манифест от collectstatic, поэтому включается только в образе (Dockerfile).
+		'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 		if env_bool('DJANGO_STATIC_MANIFEST') else 'django.contrib.staticfiles.storage.StaticFilesStorage',
 	},
 }
