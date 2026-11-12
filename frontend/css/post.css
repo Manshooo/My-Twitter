@@ -119,14 +119,10 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
    а связь видна по строке «В ответ». */
 .thread-gap { display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4); font-size: 15px; border-bottom: 1px solid var(--border); }
 
-/* Главный пост (R2-Post): текст 19, полная дата и счётчики под текстом, ряд действий между линиями. */
+/* Главный пост (R2-Post): текст 19, полная дата под текстом, ряд действий между линиями.
+   Отдельной строки счётчиков нет: она повторяла числа ряда действий. */
 .post-main .post-text { font-size: 19px; }
 .post-fulldate { font-size: 14px; }
-.post-stats {
-	display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); padding-top: var(--space-3);
-	border-top: 1px solid var(--border); font-size: 14px; color: var(--text-2);
-}
-.post-stats b { color: var(--text); font-weight: 800; font-variant-numeric: tabular-nums; }
 .post-main .actions { border-top: 1px solid var(--border); margin-top: calc(var(--space-2) * -1); }
 /* Открытый пост из середины ветки прокручивается к верху экрана (azzb.js) — не под мобильную шапку. */
 .post-main { scroll-margin-top: 0; }

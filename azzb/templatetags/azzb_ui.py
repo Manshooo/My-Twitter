@@ -78,12 +78,6 @@ def count(number):
 	return str(n) if n > 0 else ''
 
 
-@register.filter
-def count_plural(number, forms):
-	"""Форма слова к счётчику из фильтра count: после «тыс.» и «млн» — всегда «многих» («12 тыс. репостов»)."""
-	return plural_ru(number if int(number or 0) < 1000 else 5, forms)
-
-
 @register.inclusion_tag('azzb/includes/avatar.html')
 def avatar(profile, size=''):
 	return {'profile': profile, 'size': size}
