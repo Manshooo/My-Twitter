@@ -100,7 +100,7 @@ class GuestProfileTests(TestCase):
 	def test_private_profile_hides_bio_and_is_not_indexed(self):
 		make('locked', is_private=True, bio='Только для своих')
 		response = self.client.get('/users/locked/')
-		self.assertContains(response, 'Закрытый аккаунт на AzzB')
+		self.assertContains(response, 'Закрытый аккаунт в AzzB')
 		self.assertNotContains(response, 'Только для своих')
 		self.assertContains(response, '<meta name="robots" content="noindex">', html=True)
 		self.assertIsNone(jsonld(response))
@@ -157,6 +157,13 @@ class PostMetaTests(TestCase):
 		self.assertEqual(jsonld(response)['@type'], 'WebSite')
 		self.assertContains(response, '<meta name="twitter:card" content="summary_large_image">', html=True)
 		self.assertContains(response, '<meta property="og:locale" content="ru_RU">', html=True)
+		self.assertContains(response, '<title>AzzB</title>', html=True)
+		self.assertNotContains(response, 'разработке')
+
+	def test_auth_pages_have_canonical_and_are_allowed(self):
+		page = self.client.get(reverse('account_login') + '?next=/hot/')
+		self.assertContains(page, '<link rel="canonical" href="http://testserver/auth/login/">', html=True)
+		self.assertIn('Allow: /auth/signup/', self.client.get('/robots.txt').content.decode())
 
 
 class SeoTagsTests(SimpleTestCase):

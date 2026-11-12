@@ -262,7 +262,7 @@ class RepliesTests(TestCase):
 		page = self.client.get(f'/p/{self.root.pk}/')
 		self.assertContains(page, 'Пост удалён')
 		self.assertNotContains(page, 'Удалю потом')
-		self.assertContains(self.client.get(f'/p/{middle.pk}/'), 'Ответ под удалённым')
+		self.assertContains(self.client.get(f'/p/{middle.pk}/'), 'Ответ под удалённым', status_code=404)
 		# Удалённый пост без ответов не нужен и заглушкой.
 		self.reply(self.bob, self.root, 'Одинокий')
 		lonely = Post.objects.get(text='Одинокий')

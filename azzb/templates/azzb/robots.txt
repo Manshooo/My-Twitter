@@ -1,6 +1,9 @@
 User-agent: *
 Disallow: /admin/
 Disallow: /api/
+# Вход и регистрация — в поиске (запросы «azzb вход»); остальное в /auth/ — служебное.
+Allow: /auth/login/
+Allow: /auth/signup/
 Disallow: /auth/
 Disallow: /bookmarks/
 Disallow: /compose/

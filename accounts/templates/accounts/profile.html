@@ -1,7 +1,7 @@
 {% extends "azzb/azzb_base.html" %}
 {% load azzb_ui %}
 {% block title %}{{ profile.username }} (@{{ profile.user.username }}){% endblock title %}
-{% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}Профиль @{{ profile.user.username }} на AzzB{% endif %}{% endblock meta_description %}
+{% block meta_description %}{% if profile.bio %}{{ profile.bio|truncatechars:150 }}{% else %}{{ profile.username }} (@{{ profile.user.username }}) в AzzB — посты, ответы и медиа{% endif %}{% endblock meta_description %}
 {% block content %}
 	{% url 'profile' profile.user.username as profile_url %}
 	<section class="card profile-card" aria-label="Профиль">

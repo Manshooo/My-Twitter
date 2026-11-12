@@ -4,6 +4,7 @@
 """
 import json
 
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -79,4 +80,11 @@ def website(request):
 		'name': 'AzzB',
 		'alternateName': 'AzzB.ru',
 		'url': request.build_absolute_uri('/'),
+		'inLanguage': 'ru',
+		'publisher': {
+			'@type': 'Organization',
+			'name': 'AzzB',
+			'url': request.build_absolute_uri('/'),
+			'logo': request.build_absolute_uri(static('icon-512.png')),
+		},
 	}
