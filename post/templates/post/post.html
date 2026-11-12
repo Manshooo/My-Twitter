@@ -65,13 +65,6 @@
 		{% if quote %}{% include "post/_quote.html" %}{% endif %}
 		{% if variant == "main" %}
 			<p class="post-fulldate muted"><time datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"H:i · j E Y" }}</time>{% if post.edited_at %} · изменено{% endif %}</p>
-			{% if likes_total or reposts_total %}
-				<p class="post-stats">
-					{% if likes_total %}<span><b>{{ likes_total|count }}</b> нравится</span>{% endif %}
-					{% if reposts_only %}<span><b>{{ reposts_only|count }}</b> {{ reposts_only|count_plural:"репост,репоста,репостов" }}</span>{% endif %}
-					{% if quotes_total %}<span><b>{{ quotes_total|count }}</b> {{ quotes_total|count_plural:"цитата,цитаты,цитат" }}</span>{% endif %}
-				</p>
-			{% endif %}
 		{% endif %}
 		<div class="actions" role="group" aria-label="Действия с постом">
 			{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
