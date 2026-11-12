@@ -253,7 +253,8 @@ sudo cp /etc/nginx/sites-available/azzb ~/azzb.nginx.uwsgi
 ```
 
 Возьмите [deploy/nginx/azzb.conf](../../deploy/nginx/azzb.conf) и подставьте два значения:
-- `max-age` в трёх строках `Strict-Transport-Security` — ваш текущий шаг HSTS;
+- `Strict-Transport-Security` в трёх строках — итоговый, с `includeSubDomains` и `preload`
+  (security.md, раздел 5); если HSTS ещё на начальных шагах — свой `max-age` без этих двух слов;
 - публичный домен бакета (`<uuid>.selstorage.ru`) в двух строках `/media/`.
 
 Блок `default_server`, если он у вас в этом файле, оставьте. Затем — папка для кэша картинок
