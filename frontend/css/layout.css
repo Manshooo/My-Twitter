@@ -8,7 +8,8 @@
 	position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
 }
 .main { flex: 0 1 640px; min-width: 0; padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
-.rail { flex: 0 0 320px; display: flex; flex-direction: column; gap: 16px; padding: 16px 0 40px; position: sticky; top: 0; }
+/* min-width: 0 — иначе длинное имя в «Кого почитать» раздвигает колонку за счёт ленты. */
+.rail { flex: 0 0 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 16px 0 40px; position: sticky; top: 0; }
 
 .logo {
 	display: inline-flex; align-items: center; gap: 10px; min-height: 48px; color: var(--text);
@@ -35,7 +36,7 @@
 .topbar, .tabbar, .fab { display: none; }
 .topbar {
 	position: sticky; top: 0; z-index: 20; align-items: center; justify-content: space-between; gap: 8px;
-	padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--border);
+	height: var(--h-header-m); padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .topbar .logo { font-size: 20px; min-height: 44px; gap: 8px; }
 .topbar .logo-mark { width: 30px; height: 30px; }
@@ -64,4 +65,27 @@
 	.fab { display: grid; }
 	.shell { padding: 0 12px; }
 	.main { padding-top: 12px; padding-bottom: 96px; }
+}
+
+/* ---------- Сплошная колонка (R2-B-Density) ----------
+   Страница включает её блоком main_class: посты идут строками через --border, без карточек и зазоров. */
+.main-col {
+	padding: 0; gap: 0; min-height: 100vh; background: var(--surface);
+	border-inline: 1px solid var(--border);
+}
+.main-col .feed { display: flex; flex-direction: column; }
+.main-col :is(.feed, .load-more) > .card, .main-col > .card {
+	border-width: 0 0 1px; border-radius: 0; background: transparent;
+}
+.main-col .post-stub { background: var(--surface-2); }
+.col-pad { padding: var(--space-3) var(--space-4); }
+.main-col .load-more { padding: var(--space-4) 0; }
+.main-col .load-more.htmx-request { padding: 0; }
+.main-col .load-more.htmx-request .skel-cards { gap: 0; }
+.main-col .main-footer { padding: var(--space-4); }
+@media (max-width: 760px) {
+	.shell:has(.main-col) { padding: 0; }
+	.main-col { border: 0; padding-bottom: 96px; }
+	/* Строку «Что нового» на телефоне заменяет плавающая кнопка. */
+	.main-col .composer-start { display: none; }
 }

@@ -2,16 +2,17 @@
 {% load azzb_ui %}
 {% block title %}{% if query %}{{ query }} — поиск{% else %}Поиск{% endif %}{% endblock title %}
 {% block metatags %}<meta name="robots" content="noindex">{% endblock metatags %}
+{% block main_class %} main-col{% endblock main_class %}
 {% block content %}
 	<h1 class="sr">Поиск</h1>
-	{% include "azzb/includes/search_box.html" with box_id="search-main" autofocus=True %}
+	<div class="col-pad">{% include "azzb/includes/search_box.html" with box_id="search-main" autofocus=True %}</div>
 	{% if query %}
-		<nav class="seg" aria-label="Что искать">
-			<a class="seg-item" href="{% querystring tab='posts' page=None %}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
-			<a class="seg-item" href="{% querystring tab='people' page=None %}"{% if tab == 'people' %} aria-current="page"{% endif %}>Люди</a>
-			<a class="seg-item" href="{% querystring tab='tags' page=None %}"{% if tab == 'tags' %} aria-current="page"{% endif %}>Теги</a>
-		</nav>
-		<div class="feed" style="display: flex; flex-direction: column; gap: 14px">
+		<c-tabs label="Что искать" class="tabs-under-head">
+			<c-tabs.item href="{% querystring tab='posts' page=None %}" current="{% if tab == 'posts' %}1{% endif %}">Посты</c-tabs.item>
+			<c-tabs.item href="{% querystring tab='people' page=None %}" current="{% if tab == 'people' %}1{% endif %}">Люди</c-tabs.item>
+			<c-tabs.item href="{% querystring tab='tags' page=None %}" current="{% if tab == 'tags' %}1{% endif %}">Теги</c-tabs.item>
+		</c-tabs>
+		<div class="feed">
 			{% if tab == 'posts' %}
 				{% if posts %}{% include "azzb/includes/post_page.html" %}{% else %}{% include "azzb/includes/search_empty.html" %}{% endif %}
 			{% elif tab == 'people' %}
@@ -48,6 +49,6 @@
 			<p>Слова из постов, <b>@логин</b> или имя человека, <b>#тег</b>. Точную фразу возьмите в кавычки, лишнее слово уберите минусом: <b>-реклама</b>.</p>
 		</c-empty>
 		{# На телефоне правой колонки нет — тренды показываем здесь. #}
-		<div class="search-trends">{% include "azzb/includes/trends.html" %}</div>
+		<div class="search-trends col-pad">{% include "azzb/includes/trends.html" %}</div>
 	{% endif %}
 {% endblock content %}

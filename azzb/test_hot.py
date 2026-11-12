@@ -22,7 +22,8 @@ class HotFeedTests(TestCase):
 		Post.objects.filter(pk=post.pk).update(created_at=timezone.now() - timedelta(hours=hours))
 
 	def hot(self):
-		return list(self.client.get(reverse('hot-news')).context['posts'])
+		# Гостю главная — «Популярное» без личных множителей, то есть «Горячее».
+		return list(self.client.get(reverse('index')).context['posts'])
 
 	def test_fresh_discussion_beats_old_popularity(self):
 		old = publish_post(self.author.profile, 'старый популярный')
@@ -50,4 +51,4 @@ class HotFeedTests(TestCase):
 		self.assertEqual(self.hot(), [post])
 		self.client.force_login(self.author)
 		relations.mute(self.author.profile, self.users[1].profile)
-		self.assertContains(self.client.get(reverse('hot-news')), 'Пока ничего горячего')
+		self.assertContains(self.client.get(reverse('index')), 'За неделю пока тихо')

@@ -17,7 +17,7 @@ class EmptyComponentTests(TestCase):
 
 	def test_feed_empty_state(self):
 		html = self.client.get('/').content.decode()
-		self.assertIn('class="empty card"', html)
+		self.assertIn('class="empty"', html)
 		self.assertIn('class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people">', html)
 		self.assertIn('data-feed-empty', html)
 		self.assertIn('<h2>Постов пока нет</h2>', html)

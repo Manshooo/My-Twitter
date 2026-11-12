@@ -111,12 +111,12 @@
 		</div>
 	</section>
 
-	<nav class="tabs" aria-label="Публикации">
-		<a class="tab" href="{{ profile_url }}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
-		<a class="tab" href="{{ profile_url }}?tab=replies"{% if tab == 'replies' %} aria-current="page"{% endif %}>Ответы</a>
-		<a class="tab" href="{{ profile_url }}?tab=media"{% if tab == 'media' %} aria-current="page"{% endif %}>Медиа</a>
+	<nav class="tabs-card" aria-label="Публикации">
+		<a class="tab-card" href="{{ profile_url }}"{% if tab == 'posts' %} aria-current="page"{% endif %}>Посты</a>
+		<a class="tab-card" href="{{ profile_url }}?tab=replies"{% if tab == 'replies' %} aria-current="page"{% endif %}>Ответы</a>
+		<a class="tab-card" href="{{ profile_url }}?tab=media"{% if tab == 'media' %} aria-current="page"{% endif %}>Медиа</a>
 		{% if likes_visible %}
-			<a class="tab" href="{{ profile_url }}?tab=likes"{% if tab == 'likes' %} aria-current="page"{% endif %}>Лайки</a>
+			<a class="tab-card" href="{{ profile_url }}?tab=likes"{% if tab == 'likes' %} aria-current="page"{% endif %}>Лайки</a>
 		{% endif %}
 	</nav>
 

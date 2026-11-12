@@ -47,6 +47,12 @@ class Theme(models.TextChoices):
 	DARK = 'dark', 'Тёмная'
 
 
+class FeedSort(models.TextChoices):
+	"""Сортировка ленты «Для вас» (docs/feed.md); «Подписки» всегда по времени."""
+	POPULAR = 'popular', 'Популярное'
+	NEW = 'new', 'Новое'
+
+
 class DmPolicy(models.TextChoices):
 	"""Кто может начать со мной диалог (F2). Ответить в диалоге, где я уже писал(а), можно всегда."""
 	EVERYONE = 'everyone', 'Все'
@@ -166,6 +172,10 @@ class Profile(models.Model):
 	dm_policy = models.CharField(
 		"Кто может писать мне", max_length=10, choices=DmPolicy.choices,
 		default=DmPolicy.EVERYONE, db_default=DmPolicy.EVERYONE,
+	)
+	feed_sort = models.CharField(
+		"Сортировка «Для вас»", max_length=10, choices=FeedSort.choices,
+		default=FeedSort.POPULAR, db_default=FeedSort.POPULAR,
 	)
 	# Закреплённый пост (B8): первым на вкладке «Посты». Только свой пост, меняется через post.services.toggle_pin.
 	pinned_post = models.ForeignKey(

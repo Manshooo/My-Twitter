@@ -175,8 +175,9 @@ class RepliesTests(TestCase):
 		reply = Post.objects.get(text='Ответ Боба')
 		self.assertTrue(reply.is_reply)
 		self.assertEqual(reply.reply_to, self.root)
-		for url in ('/', '/hot/'):
-			self.assertNotContains(self.client.get(url), 'Ответ Боба')
+		for sort in ('popular', 'new'):
+			self.client.post('/settings/feed-sort/', {'sort': sort})
+			self.assertNotContains(self.client.get('/'), 'Ответ Боба', msg_prefix=sort)
 		self.assertNotContains(self.client.get('/users/bob/'), 'Ответ Боба')
 		self.assertContains(self.client.get('/users/bob/?tab=replies'), 'Ответ Боба')
 

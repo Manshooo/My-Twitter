@@ -39,6 +39,7 @@ npm run lint    # ESLint
 | Компонент | Что это |
 |---|---|
 | `<c-empty icon="bookmark" tone="danger">` | Пустое состояние: иконка 56, заголовок и текст — в слоте |
+| `<c-tabs label="…">` + `<c-tabs.item href current count>` | Вкладки 48 px, липнут к верху; `<c-slot name="tail">` — чип справа |
 
 Карточка поста — inclusion-тег `{% show_posts %}` (`post/templatetags/show_posts.py`): ей нужны
 данные из запроса, а не только разметка.
@@ -52,6 +53,8 @@ npm run lint    # ESLint
 - Счётчики под постом сокращаются («1,2 тыс.», «12 тыс.»): фильтр `count` (`azzb_ui.py`) и
   `formatCount` (`util.js`) дают одинаковый текст. Точное число — в `data-n`; JS читает его, а не текст.
 - Меню (`.menu`) на телефоне — нижний лист с затемнением (`::backdrop` у popover).
+- Сплошная колонка (`R2-B-Density`): страница включает её блоком `{% block main_class %} main-col{% endblock %}`,
+  карточки внутри теряют рамку и скругление и идут строками через `--border`.
 
 ## Прод
 

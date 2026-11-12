@@ -6,7 +6,7 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import connection, models
 from django.db.models import (
-	BooleanField, Count, Exists, F, FloatField, IntegerField, OuterRef, Prefetch, Q, Subquery, Value,
+	BooleanField, Case, Count, Exists, F, FloatField, IntegerField, OuterRef, Prefetch, Q, Subquery, Value, When,
 )
 from django.db.models.functions import Cast, Coalesce, Extract, Now, Power
 from django.utils import timezone
@@ -119,11 +119,51 @@ class PostQuerySet(models.QuerySet['Post']):
 		старого популярного. Считается в запросе: ответы и репосты хранятся в посте, лайки уже
 		посчитаны для карточек (likes_n), поэтому вызывать после for_feed(). Окно HOT_WINDOW
 		ограничивает работу базы: через месяц пост с любым числом лайков в топ уже не попадёт."""
-		hours = Extract(Now() - F('created_at'), 'epoch') / Value(3600.0)
-		engagement = Cast(F('likes_n') + 2 * F('replies_count') + 3 * F('reposts_count'), FloatField())
+		return self._ranked(HOT_WINDOW, _engagement() / _age_penalty())
+
+	def for_you(self, user):
+		"""«Для вас», сортировка «Популярное»: оценка «Горячего», умноженная на личные множители
+		(docs/feed.md). Без подписок и лайков все множители — 1, и лента совпадает с «Горячим».
+		К вовлечённости прибавлена единица: свежий пост без лайков от того, на кого подписан,
+		тоже получает место, а не стоит последним с нулевой оценкой. Вызывать после for_feed()."""
+		if user is None or not user.is_authenticated:
+			return self.hot()
+		me = user.profile.pk
+		since = timezone.now() - AFFINITY_WINDOW
+		follows = FollowThrough.objects.filter(follower_id=me)
+		author = OuterRef('author_id')  # Post.author ссылается на Profile.user: это id пользователя
+		followed = Exists(follows.filter(followee__user_id=author))
+		liked_author = Exists(Like.objects.filter(profile_id=me, created_at__gte=since, post__author_id=author))
+		replied_author = Exists(Post.objects.filter(
+			author_id=user.pk, is_reply=True, created_at__gte=since, reply_to__author_id=author,
+		))
+		followee_ids = follows.values('followee_id')
+		liked_by_follows = Exists(Like.objects.filter(post_id=OuterRef('pk'), profile_id__in=followee_ids))
+		reposted_by_follows = Exists(Post.objects.filter(
+			repost_of_id=OuterRef('pk'), is_repost=True, deleted_at__isnull=True, author__id__in=followee_ids,
+		))
+		liked_tags = PostHashtag.objects.filter(
+			post__like__profile_id=me, post__like__created_at__gte=since,
+		).values('hashtag_id')
+		tagged = Exists(PostHashtag.objects.filter(post_id=OuterRef('pk'), hashtag_id__in=liked_tags))
+
+		def boost(condition, factor):
+			return Case(When(condition, then=Value(factor)), default=Value(1.0), output_field=FloatField())
+
+		score = (
+			(_engagement() + Value(1.0)) / _age_penalty()
+			* boost(followed, 3.0)
+			* boost(liked_author | replied_author, 2.0)
+			* boost(liked_by_follows | reposted_by_follows, 1.5)
+			* boost(tagged, 1.5)
+		)
+		return self._ranked(FOR_YOU_WINDOW, score)
+
+	def _ranked(self, window, score):
+		# Без репостов: иначе пост стоял бы в ленте столько раз, сколько его репостили.
 		return (
-			self.filter(is_repost=False, created_at__gte=timezone.now() - HOT_WINDOW)
-			.annotate(hot_score=engagement / Power(hours + Value(2.0), Value(1.5)))
+			self.filter(is_repost=False, created_at__gte=timezone.now() - window)
+			.annotate(hot_score=score)
 			.order_by('-hot_score', '-created_at', '-id')
 		)
 
@@ -140,6 +180,18 @@ class PostQuerySet(models.QuerySet['Post']):
 
 
 HOT_WINDOW = timedelta(days=30)
+FOR_YOU_WINDOW = timedelta(days=7)
+# За какой срок лайки и ответы говорят об интересах (авторы, теги).
+AFFINITY_WINDOW = timedelta(days=30)
+
+
+def _engagement():
+	return Cast(F('likes_n') + 2 * F('replies_count') + 3 * F('reposts_count'), FloatField())
+
+
+def _age_penalty():
+	hours = Extract(Now() - F('created_at'), 'epoch') / Value(3600.0)
+	return Power(hours + Value(2.0), Value(1.5))
 
 
 class Post(models.Model):

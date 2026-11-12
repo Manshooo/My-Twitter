@@ -18,8 +18,8 @@ from post.views import (
 
 from .sitemaps import SITEMAPS
 from .views import (
-	devtools_workspace, follows_updates, healthz, hot_news, index, legal_page, offline, robots_txt, search,
-	service_worker, suggested_people,
+	devtools_workspace, following, healthz, index, legal_page, offline, robots_txt, search, service_worker,
+	set_feed_sort, suggested_people,
 )
 
 urlpatterns = [
@@ -30,7 +30,8 @@ urlpatterns = [
 	path('offline/', offline, name='offline'),
 	path('sitemap.xml', sitemap_views.index, {'sitemaps': SITEMAPS, 'sitemap_url_name': 'sitemap-section'}, name='sitemap'),
 	path('sitemap-<section>.xml', sitemap_views.sitemap, {'sitemaps': SITEMAPS}, name='sitemap-section'),
-	path("hot/", hot_news, name="hot-news"),
+	# «Горячее» стало сортировкой «Популярное» в «Для вас» (ревизия R2).
+	path("hot/", RedirectView.as_view(pattern_name="index", permanent=True)),
 	path("search/", search, name="search"),
 	path("people/suggested/", suggested_people, name="who-to-follow"),
 	path('p/<uuid:pk>/', post_detail, name='post'),
@@ -71,7 +72,9 @@ urlpatterns = [
 	path("privacy/consent/", legal_page("legal/consent.html"), name="pd-consent"),
 	path("cookies/", legal_page("legal/cookies.html"), name="cookies"),
 	path('api/', include('api.urls')),
-	path('follows-updates/', login_required(follows_updates), name="follows-updates"),
+	path('following/', following, name='following'),
+	path('follows-updates/', RedirectView.as_view(pattern_name='following', permanent=True)),
+	path('settings/feed-sort/', set_feed_sort, name='feed-sort'),
 ]
 if settings.DEBUG:
 	# Статику при DEBUG и так раздаёт runserver (django.contrib.staticfiles); здесь — загрузки и toolbar.

@@ -322,9 +322,9 @@ class BlockMuteTests(TestCase):
 	def test_mute_hides_from_feeds_only(self):
 		from .models import FollowThrough
 		FollowThrough.objects.create(follower=self.alice.profile, followee=self.bob.profile)
-		response = self.act('mute', next='/hot/')
-		self.assertRedirects(response, '/hot/', fetch_redirect_response=False)
-		for url in ('/', '/hot/', '/follows-updates/'):
+		response = self.act('mute', next='/following/')
+		self.assertRedirects(response, '/following/', fetch_redirect_response=False)
+		for url in ('/', '/following/'):
 			self.assertNotContains(self.client.get(url), 'пост Боба', msg_prefix=url)
 		self.assertContains(self.client.get('/users/bob/'), 'пост Боба')
 		self.assertEqual(self.client.get(f'/p/{self.bob_post.pk}/').status_code, 200)
