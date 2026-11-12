@@ -11,12 +11,13 @@ from post.models import Post
 from post.services import delete_post, publish_post
 
 from .discover import compute_trends, who_to_follow
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 
 
 def make(name):
-	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345')
+	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
 
 
 class WhoToFollowTests(TestCase):

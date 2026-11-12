@@ -14,13 +14,14 @@ from notifications.services import unread_count
 from .models import Poll, PollVote
 from .services import delete_post, publish_post, purge_posts, toggle_repost, vote
 from .models import Post
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 def make(name):
-	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345')
+	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
 
 
 class PollTests(TestCase):

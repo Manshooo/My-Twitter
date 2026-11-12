@@ -10,13 +10,14 @@ from django.test import Client, TestCase, override_settings
 from accounts.forms import SignupForm
 from accounts.models import CustomUser, FollowThrough
 from post.models import Post
+from azzb.testing import ACTIVE
 
 # Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
 User = CustomUser
 
 
 def make_user(login, **extra):
-	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **extra)
+	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **ACTIVE, **extra)
 
 
 class FeedPagesTests(TestCase):

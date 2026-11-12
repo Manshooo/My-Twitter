@@ -8,6 +8,7 @@ from notifications.models import Notification
 
 from .models import Post
 from .services import delete_post, publish_post, toggle_like, toggle_repost
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 HX = {'HTTP_HX_REQUEST': 'true'}
@@ -16,7 +17,7 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 class RepostTests(TestCase):
 	def setUp(self):
 		self.ann, self.bob, self.cat = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('ann', 'bob', 'cat')
+			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat')
 		)
 		self.post = publish_post(self.ann.profile, 'исходный пост')
 
@@ -101,8 +102,8 @@ class RepostTests(TestCase):
 
 class QuoteTests(TestCase):
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.post = publish_post(self.ann.profile, 'исходный пост')
 
 	def test_quote_via_composer(self):

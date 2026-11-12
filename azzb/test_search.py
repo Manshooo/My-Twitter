@@ -7,14 +7,15 @@ from django.utils import timezone
 
 from accounts import relations
 from post.services import delete_post, edit_post, publish_post, toggle_repost
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 
 
 class SearchTests(TestCase):
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob_builder', 'bob@example.com', 'pass-12345')
+		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob_builder', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.bob.profile.username = 'Боб Строитель'
 		self.bob.profile.save()
 		self.client.force_login(self.ann)

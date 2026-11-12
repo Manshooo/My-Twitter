@@ -1,5 +1,6 @@
 """Клиент WebSocket для тестов. channels.testing не годится: он тянет daphne, а у нас uvicorn."""
 import json
+from datetime import datetime, timezone
 from unittest import mock
 
 from asgiref.testing import ApplicationCommunicator
@@ -46,3 +47,7 @@ class WebsocketClient(ApplicationCommunicator):
 	async def disconnect(self, code=1000, timeout=1):
 		await self.send_input({'type': 'websocket.disconnect', 'code': code})
 		await self.wait(timeout)
+
+
+# Пользователь тестов — как настоящий: хоть раз входил. Иначе Profile.objects.public() его не покажет.
+ACTIVE = {'last_login': datetime(2026, 1, 1, tzinfo=timezone.utc)}

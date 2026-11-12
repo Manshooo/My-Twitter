@@ -12,13 +12,14 @@ from . import realtime
 from .asgi import application
 from .consumers import CLOSE_UNAUTHORIZED, UserConsumer
 from .testing import ConsumerTestCase, WebsocketClient
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 
 
 class RealtimeTests(ConsumerTestCase):
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345')
+		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
 
 	async def connect(self, user):
 		communicator = WebsocketClient(UserConsumer.as_asgi(), user=user)

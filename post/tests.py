@@ -12,6 +12,7 @@ from PIL import Image as PILImage
 
 from .media import MAX_SIDE, parse_crop, process_cropped_image, process_post_image
 from .models import Image, Post
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp(prefix='azzb-test-media-')
@@ -98,7 +99,7 @@ class ProcessImageTests(TestCase):
 @override_settings(MEDIA_ROOT=MEDIA_ROOT)
 class CreatePostWithImagesTests(TestCase):
 	def setUp(self):
-		self.user = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.user = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 		self.client.force_login(self.user)
 
 	def post(self, **data):
@@ -159,8 +160,8 @@ class CreatePostWithImagesTests(TestCase):
 
 class RepliesTests(TestCase):
 	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.root = Post.objects.create(author=self.alice.profile, text='Корень ветки')
 
 	def reply(self, user, parent, text):
@@ -316,7 +317,7 @@ class RepliesTests(TestCase):
 
 	def test_conversation_follows_the_dialogue_at_forks(self):
 		first, second = self.chat(self.root, [self.bob, self.alice])
-		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345')
+		carol = User.objects.create_user('carol', 'carol@example.com', 'pass-12345', **ACTIVE)
 		# На «реплику 1» (Алиса) отвечают Кэрол (раньше) и Боб — продолжением разговора будет Боб.
 		Post.objects.create(author=carol.profile, text='вставка Кэрол', reply_to=second, is_reply=True)
 		Post.objects.create(author=self.bob.profile, text='Боб отвечает Алисе', reply_to=second, is_reply=True)
@@ -350,8 +351,8 @@ class RepliesTests(TestCase):
 
 class EditPostTests(TestCase):
 	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.post = Post.objects.create(author=self.alice.profile, text='Перавя версия')
 
 	def edit(self, user, text, post=None):
@@ -421,8 +422,8 @@ class HtmxActionsTests(TestCase):
 	"""Действия на страницах через htmx: лайк, удаление, composer, подгрузка лент."""
 
 	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
 		self.post = Post.objects.create(author=self.alice.profile, text='Пост Алисы')
 
 	def test_like_returns_new_button(self):
@@ -534,7 +535,7 @@ class PageChromeTests(TestCase):
 	"""Превью ссылок (og:image) и скелетоны подгрузки ленты (C4, C6)."""
 
 	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345')
+		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 
 	def test_post_page_og_image(self):
 		plain = Post.objects.create(author=self.alice.profile, text='Без картинки')

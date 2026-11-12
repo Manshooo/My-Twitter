@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from accounts.models import CustomUser
 from post.models import Post
+from azzb.testing import ACTIVE
 
 # Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
 User = CustomUser
@@ -11,8 +12,8 @@ User = CustomUser
 
 class ProfileApiPermissionsTests(TestCase):
 	def setUp(self):
-		self.owner = User.objects.create_user('owner', 'owner@example.com', 'pass-12345')
-		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345')
+		self.owner = User.objects.create_user('owner', 'owner@example.com', 'pass-12345', **ACTIVE)
+		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345', **ACTIVE)
 		self.url = f'/api/profiles/{self.owner.profile.pk}/'
 
 	def test_anonymous_cannot_read_update_or_delete(self):
@@ -61,8 +62,8 @@ class ProfileApiPermissionsTests(TestCase):
 
 class CreatePostApiTests(TestCase):
 	def setUp(self):
-		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345')
-		self.victim = User.objects.create_user('victim', 'victim@example.com', 'pass-12345')
+		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345', **ACTIVE)
+		self.victim = User.objects.create_user('victim', 'victim@example.com', 'pass-12345', **ACTIVE)
 		self.client.force_login(self.author)
 
 	def post_json(self, payload):
@@ -94,8 +95,8 @@ class CreatePostApiTests(TestCase):
 
 class LikeAndDeleteApiTests(TestCase):
 	def setUp(self):
-		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345')
-		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345')
+		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345', **ACTIVE)
+		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345', **ACTIVE)
 		self.post = Post.objects.create(author=self.author.profile, text='Пост')
 
 	def call(self, url, payload):
@@ -134,9 +135,9 @@ class LikeAndDeleteApiTests(TestCase):
 class FeedPermissionsTests(TestCase):
 	def test_following_feed_shows_only_followed_authors(self):
 		from accounts.models import FollowThrough
-		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345')
-		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345')
-		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345')
+		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345', **ACTIVE)
+		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345', **ACTIVE)
+		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345', **ACTIVE)
 		FollowThrough.objects.create(follower=reader.profile, followee=followed.profile)
 		Post.objects.create(author=followed.profile, text='От подписки')
 		Post.objects.create(author=stranger.profile, text='От незнакомца')
@@ -148,10 +149,10 @@ class FeedPermissionsTests(TestCase):
 
 class MentionApiTests(TestCase):
 	def setUp(self):
-		self.me = User.objects.create_user('me', 'me@example.com', 'pass-12345')
-		self.anna = User.objects.create_user('anna', 'anna@example.com', 'pass-12345')
-		self.annabel = User.objects.create_user('annabel', 'annabel@example.com', 'pass-12345')
-		self.zed = User.objects.create_user('zed', 'zed@example.com', 'pass-12345')
+		self.me = User.objects.create_user('me', 'me@example.com', 'pass-12345', **ACTIVE)
+		self.anna = User.objects.create_user('anna', 'anna@example.com', 'pass-12345', **ACTIVE)
+		self.annabel = User.objects.create_user('annabel', 'annabel@example.com', 'pass-12345', **ACTIVE)
+		self.zed = User.objects.create_user('zed', 'zed@example.com', 'pass-12345', **ACTIVE)
 		self.zed.profile.username = 'Аннушка'
 		self.zed.profile.save()
 		self.client.force_login(self.me)

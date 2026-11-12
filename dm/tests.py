@@ -23,6 +23,7 @@ from azzb.testing import ConsumerTestCase, WebsocketClient
 
 from . import services
 from .models import Conversation, Member, Message, MessageImage
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp(prefix='azzb-test-dm-')
@@ -40,7 +41,7 @@ def make_upload(name='photo.png'):
 
 
 def users(*names):
-	return [User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in names]
+	return [User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in names]
 
 
 class RulesTests(TestCase):

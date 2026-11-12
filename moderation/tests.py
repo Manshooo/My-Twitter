@@ -9,13 +9,14 @@ from post.models import Post
 
 from . import services
 from .models import Ban, Reason, Report
+from azzb.testing import ACTIVE
 
 # Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
 User = CustomUser
 
 
 def make_user(login):
-	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345')
+	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **ACTIVE)
 
 
 class ModerationTests(TestCase):

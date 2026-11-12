@@ -10,12 +10,13 @@ from django.utils import timezone
 
 from post.models import Post
 from post.services import publish_post
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 
 
 def make(name, **profile):
-	user = User.objects.create_user(name, f'{name}@example.com', 'pass-12345')
+	user = User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
 	if profile:
 		for field, value in profile.items():
 			setattr(user.profile, field, value)

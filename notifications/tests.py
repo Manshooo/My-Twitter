@@ -12,6 +12,7 @@ from post.services import delete_post, publish_post, toggle_like
 
 from .models import Notification
 from .services import grouped_page, unread_count
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 Verb = Notification.Verb
@@ -19,7 +20,7 @@ Verb = Notification.Verb
 
 class NotificationTests(TestCase):
 	def setUp(self):
-		self.ann, self.bob, self.cat = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('ann', 'bob', 'cat'))
+		self.ann, self.bob, self.cat = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat'))
 		self.post = publish_post(self.ann.profile, 'привет')
 
 	def test_like_notifies_author_and_unlike_retracts(self):
@@ -119,7 +120,7 @@ class RealtimeSignalTests(TestCase):
 	"""F3: значки обновляются по сигналу из сокета, а не только опросом."""
 
 	def setUp(self):
-		self.ann, self.bob = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345') for name in ('ann', 'bob'))
+		self.ann, self.bob = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob'))
 		self.post = publish_post(self.ann.profile, 'привет')
 
 	def test_new_notification_signals_recipient_once(self):

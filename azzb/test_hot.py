@@ -8,13 +8,14 @@ from django.utils import timezone
 from accounts import relations
 from post.models import HOT_WINDOW, Post
 from post.services import publish_post, toggle_like, toggle_repost
+from azzb.testing import ACTIVE
 
 User = get_user_model()
 
 
 class HotFeedTests(TestCase):
 	def setUp(self):
-		self.users = [User.objects.create_user(f'u{i}', f'u{i}@example.com', 'pass-12345') for i in range(6)]
+		self.users = [User.objects.create_user(f'u{i}', f'u{i}@example.com', 'pass-12345', **ACTIVE) for i in range(6)]
 		self.author = self.users[0]
 
 	def age(self, post, hours):
