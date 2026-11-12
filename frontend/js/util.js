@@ -10,3 +10,16 @@ export function errorsOf(xhr, fallback) {
 	} catch (e) { /* не JSON */ }
 	return [fallback];
 }
+
+// Счётчик под постом, как фильтр count в azzb_ui.py: 0 → «», 1234 → «1,2 тыс.», 12345 → «12 тыс.».
+export function formatCount(n) {
+	for (const [size, unit] of [[1e6, 'млн'], [1e3, 'тыс.']]) {
+		if (n >= size) {
+			const tenths = Math.floor((n * 10) / size);
+			const whole = Math.floor(tenths / 10);
+			const text = tenths < 100 && tenths % 10 ? whole + ',' + (tenths % 10) : String(whole);
+			return text + ' ' + unit;
+		}
+	}
+	return n > 0 ? String(n) : '';
+}

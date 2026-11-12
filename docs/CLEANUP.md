@@ -109,8 +109,9 @@ class AccountsConfig(AppConfig):
 
 **Решено:** без Tailwind и без SPA. Свои токены остаются, CSS и JS разбиты на файлы в `frontend/`
 и собираются esbuild (`docs/frontend.md`). Дальше:
-1. Компоненты шаблонов — django-cotton (`<c-post-card>`, `<c-tabs>`): вместо `{% include %}`
-   с `{% with %}` и вместо 111 `style="…"` в шаблонах.
+1. Компоненты шаблонов — django-cotton (`docs/frontend.md`). Подключён вместе с ревизией R2:
+   есть `<c-empty>`, следующие — вкладки, призыв войти; вместо `{% include %}` с `{% with %}`
+   и вместо `style="…"` в шаблонах.
 2. htmx-расширение idiomorph: обновление карточек без потери фокуса и прокрутки, тогда
    ручные `replaceCardBodies`/`insertCards` в `frontend/js/composer.js` упрощаются.
 3. htmx — из npm в общую сборку вместо `azzb/static/vendor/`.

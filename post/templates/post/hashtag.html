@@ -7,11 +7,10 @@
 		{% if posts %}
 			{% include "azzb/includes/post_page.html" %}
 		{% else %}
-			<div class="card empty">
-				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
+			<c-empty icon="search" class="card">
 				<h2>Постов с этим тегом пока нет</h2>
 				<p>Напишите первый — добавьте #{{ name }} в текст поста.</p>
-			</div>
+			</c-empty>
 		{% endif %}
 	</div>
 {% endblock content %}

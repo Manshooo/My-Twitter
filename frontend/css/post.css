@@ -1,14 +1,16 @@
-/* ---------- Пост ---------- */
-.post { position: relative; padding: 14px 18px 6px; display: flex; flex-direction: column; gap: 10px; }
-.post-row { display: flex; gap: 12px; align-items: flex-start; }
-.post-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+/* ---------- Пост (R2-B-Card) ---------- */
+/* Снизу 4: ряд действий сам высотой 44. */
+.post { position: relative; padding: var(--space-3) var(--space-4) var(--space-1); display: flex; flex-direction: column; }
 /* Шапка (аватар + имя) и тело во всю ширину карточки: под аватаром нет пустой колонки. */
-.post-header { display: flex; align-items: center; gap: 12px; min-width: 0; padding-right: 40px; }
-.post-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.post-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; line-height: 1.3; }
-.post-sub { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; line-height: 1.3; white-space: nowrap; }
-.post-name { font-weight: 800; color: var(--text); }
-.post-text { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-header { display: flex; align-items: center; gap: var(--space-3); min-width: 0; min-height: var(--avatar); padding-right: 36px; }
+.post-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.post-head { display: flex; align-items: center; gap: var(--space-1); min-width: 0; font-size: 15px; line-height: 20px; }
+/* Первым сокращается @логин, время остаётся целым. */
+.post-sub { display: flex; align-items: center; gap: var(--space-1); min-width: 0; font-size: 14px; line-height: 20px; white-space: nowrap; }
+.post-sub > :not(.clip1) { flex: none; }
+.post-name { font-weight: 800; color: var(--text); min-width: 0; }
+.post-body { min-width: 0; margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-3); }
+.post-text { font-size: 16px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tag-link, .mention-link { color: var(--accent); font-weight: 600; }
 
 /* Подсказки @упоминаний в composer */
@@ -33,8 +35,8 @@
 .trends { display: flex; flex-direction: column; gap: 12px; }
 .tag-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--text); }
 .tag-row b { overflow-wrap: anywhere; }
-.post-menu { position: absolute; top: 8px; right: 8px; }
-.media { display: grid; gap: 3px; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+.post-menu { position: absolute; top: var(--space-2); right: var(--space-2); }
+.media { display: grid; gap: 2px; aspect-ratio: 16 / 9; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
 .media-1 { grid-template-columns: 1fr; }
 .media-3, .media-4 { grid-template-rows: 1fr 1fr; }
 .media-3 > :first-child { grid-row: span 2; }
@@ -67,36 +69,48 @@
 	.lightbox { padding: 64px 8px; }
 	.lb-prev, .lb-next { top: auto; bottom: 12px; transform: none; }
 }
-.actions { display: flex; align-items: center; gap: 8px; margin-left: -10px; max-width: 440px; }
+/* Ряд действий (R2-B-Actions): Ответить · Репост · Нравится в слотах до 96 px — рост числа не сдвигает
+   соседей; справа Закладка и Поделиться без счётчиков. */
+.actions { display: flex; align-items: center; height: var(--h-control); margin: 0 -10px; }
 .action {
-	display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px;
-	border: 0; border-radius: 12px; background: transparent; color: var(--text-2);
-	font-weight: 700; font-size: 14px; cursor: pointer;
+	flex: 0 1 96px; display: inline-flex; align-items: center; gap: var(--space-1); min-width: var(--h-control); height: var(--h-control);
+	padding: 0 10px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-2);
+	font-weight: 700; font-size: 13px; cursor: pointer;
 }
 .action:hover { background: var(--surface-3); text-decoration: none; }
-/* Счётчик у кнопки. При нуле он пустой и прячется: иначе пустой flex-элемент добавляет gap,
-   и иконка съезжает влево. Текст .sr в раскладке не участвует (position: absolute) —
-   его читают только скринридеры: «Нравится 5», «Ответы» без числа при нуле. */
+.action-icon { flex: 0 0 var(--h-control); justify-content: center; padding: 0; }
+.actions-spacer { flex: 1; }
+/* Текст .sr в раскладке не участвует (position: absolute) — его читают только скринридеры:
+   «Нравится 5», «Ответы» без числа при нуле. */
+.action-n { min-width: 3ch; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .action-n:empty { display: none; }
 .action.liked { color: var(--like); }
 .action.liked .icon { fill: currentColor; }
 .action:disabled { cursor: progress; }
-.action.reposted { color: var(--accent); font-weight: 800; }
-.action.bookmarked { color: var(--accent); }
+.action.reposted { color: var(--repost); }
+.action.bookmarked { color: var(--bookmark); }
 .action.bookmarked .icon { fill: currentColor; }
-.repost-wrap { position: relative; }
-.repost-by { display: flex; align-items: center; gap: 6px; margin: -4px 0 -2px 12px; font-size: 13px; font-weight: 600; }
+/* Пульс только у кнопки, которую нажали (класс ставит posts.js), — не у всех лайков при загрузке. */
+.action.pop .icon { animation: az-pop .3s ease-out; }
+@keyframes az-pop { 40% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .action.pop .icon { animation: none; } }
+.repost-wrap { position: relative; flex: 0 1 96px; display: flex; }
+.repost-wrap > .action { flex: 1; }
+/* Строка репоста или закрепа: иконка у правого края аватара, текст по линии имени. */
+.repost-by { display: flex; align-items: center; gap: var(--space-3); height: 20px; margin-bottom: 6px; padding-right: 36px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.repost-by-ic { width: var(--avatar); flex: none; display: flex; justify-content: flex-end; }
 .repost-by a { color: inherit; font-weight: 800; }
+.repost-by-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Цитата внутри карточки (D4) */
 .quote-card {
-	display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding: 10px 12px;
-	border: 1px solid var(--border-strong); border-radius: 14px; color: var(--text); overflow: hidden;
+	display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3);
+	border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); overflow: hidden;
 }
 a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .quote-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; }
 .quote-head .avatar-xs { width: 22px; height: 22px; font-size: 10px; }
-.quote-text { font-size: 14px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.quote-text { font-size: 15px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
 .quote-media { width: 100%; max-height: 240px; object-fit: cover; border-radius: 10px; }
 .quote-gone { font-size: 14px; }
 .reply-to { font-size: 14px; margin-top: -4px; }
@@ -106,18 +120,17 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .thread { display: flex; flex-direction: column; gap: 14px; }
 .post-parent { overflow: visible; }
 .post-parent::after {
-	content: ''; position: absolute; left: 39px; top: 100%; bottom: -15px; width: 2px;
+	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2 - 1px); top: 100%; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
 .thread-gap { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 15px; }
 .post-main { border-color: var(--border-strong); }
-/* Заглушка вместо недоступного поста (post/_gone.html) */
-.post-gone { padding-bottom: 14px; }
-.post-gone .post-row { align-items: center; }
-.post-gone .post-body { gap: 0; }
-.post-gone .actions { margin-top: 2px; margin-bottom: -10px; }
-.gone-mark { background: var(--surface-3); color: var(--text-2); }
-.gone-text { color: var(--text-2); font-size: 15px; font-style: italic; }
+/* Заглушка вместо недоступного поста (post/_gone.html): строка 56 px, не притворяется постом. */
+.post-stub {
+	position: relative; display: flex; align-items: center; gap: var(--space-3); min-height: 56px;
+	padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface-2); color: var(--text-2); font-size: 14px;
+}
+.post-stub-text { flex: 1; min-width: 0; }
 .post-main .post-text { font-size: 18px; }
 .replies { display: flex; flex-direction: column; gap: 14px; }
 /* Открытый пост из середины ветки прокручивается к верху экрана (azzb.js) — не под мобильную шапку. */
@@ -132,11 +145,11 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .chain > .post:has(+ :is(.post, .chain-aside)) { overflow: visible; }
 .post:has(+ .chain > :is(.post, .chain-aside):first-child)::after,
 .chain > .post:has(+ :is(.post, .chain-aside))::after {
-	content: ''; position: absolute; left: 39px; top: 100%; bottom: -15px; width: 2px;
+	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2 - 1px); top: 100%; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
 .chain > .chain-aside:has(+ .post)::before {
-	content: ''; position: absolute; left: 40px; top: 0; bottom: -15px; width: 2px;
+	content: ''; position: absolute; left: calc(var(--space-4) + var(--avatar) / 2); top: 0; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
 /* Ссылки между карточками — правее линии ветки. */

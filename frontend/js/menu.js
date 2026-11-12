@@ -9,8 +9,12 @@ const VIEWPORT_PAD = 8;
 const canPopover = typeof HTMLElement.prototype.showPopover === 'function';
 let openMenu = null; // { btn, menu }
 
+// На телефоне меню — нижний лист (menu.css): его место задаёт CSS.
+const asSheet = window.matchMedia('(max-width: 760px)');
+
 function placeMenu(btn, menu) {
 	if (!canPopover) return; // старые браузеры: меню остаётся absolute внутри .menu-wrap
+	if (asSheet.matches) { menu.style.left = ''; menu.style.top = ''; return; }
 	const b = btn.getBoundingClientRect();
 	const width = menu.offsetWidth;
 	const height = menu.offsetHeight;

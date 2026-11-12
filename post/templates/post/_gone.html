@@ -1,20 +1,10 @@
-{% comment %} Заглушка вместо поста, который пользователь не видит, — чтобы ветка не рвалась.
-   Ни автора, ни текста: только причина и ссылка на ответы под постом. {% endcomment %}
-<article class="card post post-gone{% if variant %} post-{{ variant }}{% endif %}" data-post-id="{{ post.id }}"{% if post.reply_to_id %} data-reply-of="{{ post.reply_to_id }}"{% endif %}{% if variant == "main" %} data-main-post{% endif %}>
-	<div class="post-row">
-		<span class="avatar gone-mark" aria-hidden="true">
-			<svg class="icon icon-sm"><use href="#i-{% if gone == 'deleted' %}trash{% elif gone == 'hidden' %}shield{% else %}lock{% endif %}"></use></svg>
-		</span>
-		<div class="post-body">
-			<p class="gone-text">{% if gone == 'deleted' %}Пост удалён{% elif gone == 'hidden' %}Пост скрыт модератором{% else %}Пост недоступен{% endif %}</p>
-			{% if variant != "main" and post.replies_count %}
-				<div class="actions">
-					<a class="action" href="{% url 'post' post.id %}" title="Ответы">
-						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответы </span><span class="action-n" data-reply-count>{{ post.replies_count }}</span>
-					</a>
-				</div>
-			{% endif %}
-		</div>
-	</div>
+{% load azzb_ui %}{% comment %} Заглушка вместо поста, который пользователь не видит, — чтобы ветка не рвалась.
+   Строка без шапки и действий: только причина и ссылка на ответы под постом. {% endcomment %}
+<article class="card post-stub{% if variant %} post-{{ variant }}{% endif %}" data-post-id="{{ post.id }}"{% if post.reply_to_id %} data-reply-of="{{ post.reply_to_id }}"{% endif %}{% if variant == "main" %} data-main-post{% endif %}>
+	<svg class="icon icon-sm" aria-hidden="true"><use href="#i-{% if gone == 'deleted' %}trash{% elif gone == 'hidden' %}shield{% else %}lock{% endif %}"></use></svg>
+	<p class="post-stub-text">{% if gone == 'deleted' %}Пост удалён{% elif gone == 'hidden' %}Пост скрыт модератором за нарушение правил{% else %}Пост недоступен{% endif %}</p>
+	{% if gone == 'hidden' %}<a class="btn btn-ghost btn-sm" href="{% url 'rules' %}">Правила</a>{% endif %}
+	{% if variant != "main" and post.replies_count %}
+		<a class="btn btn-ghost btn-sm" href="{% url 'post' post.id %}"><span>Ответы: <span data-reply-count data-n="{{ post.replies_count }}">{{ post.replies_count|count }}</span></span></a>
+	{% endif %}
 </article>

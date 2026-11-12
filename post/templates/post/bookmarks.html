@@ -9,11 +9,10 @@
 		{% if posts %}
 			{% include "azzb/includes/post_page.html" %}
 		{% else %}
-			<div class="card empty">
-				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-bookmark"></use></svg></span>
+			<c-empty icon="bookmark" class="card">
 				<h2>Закладок пока нет</h2>
 				<p>Нажмите на значок закладки под постом, чтобы вернуться к нему позже.</p>
-			</div>
+			</c-empty>
 		{% endif %}
 	</div>
 {% endblock content %}

@@ -45,12 +45,11 @@
 		{% if posts %}
 			{% include "azzb/includes/post_page.html" %}
 		{% else %}
-			<div class="card empty" data-feed-empty>
-				<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people"></use></svg></span>
+			<c-empty icon="people" class="card" data-feed-empty>
 				{% if feed == 'following' %}
 					<h2>Здесь пока тихо</h2>
 					<p>Подпишитесь на людей, и их посты появятся в этой ленте.</p>
-					<a class="btn" href="{% url 'who-to-follow' %}" style="margin-top: 6px">Найти, кого почитать</a>
+					<a class="btn btn-outline" href="{% url 'who-to-follow' %}">Найти, кого почитать</a>
 				{% elif feed == 'hot' %}
 					<h2>Пока ничего горячего</h2>
 					<p>Здесь собираются посты за последний месяц, которые лайкают, обсуждают и репостят.</p>
@@ -58,7 +57,7 @@
 					<h2>Постов пока нет</h2>
 					<p>Станьте первым, кто что-нибудь напишет.</p>
 				{% endif %}
-			</div>
+			</c-empty>
 		{% endif %}
 	</div>
 {% endblock content %}

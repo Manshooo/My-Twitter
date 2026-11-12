@@ -39,6 +39,8 @@ INSTALLED_APPS = [
 	'django.contrib.sitemaps',
 	# Полнотекстовый поиск и триграммы (D3).
 	'django.contrib.postgres',
+	# Компоненты шаблонов <c-…>: azzb/templates/cotton/.
+	'django_cotton',
 
 	'api',
 	'azzb',

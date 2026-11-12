@@ -35,6 +35,14 @@ document.addEventListener('htmx:load', (event) => {
 	if (twins.length > 1 && twins[0] !== card) card.remove();
 });
 
+// Лайк, репост, закладку htmx заменяет новой кнопкой: включённой даём короткий «пульс».
+document.addEventListener('htmx:load', (event) => {
+	const elt = event.detail.elt;
+	if (!elt.matches) return;
+	const btn = elt.matches('.repost-wrap') ? elt.querySelector('.action.reposted') : elt;
+	if (btn && btn.matches('.action.liked, .action.reposted, .action.bookmarked')) btn.classList.add('pop');
+});
+
 export async function copyLink(btn) {
 	closeMenus();
 	const url = new URL(btn.dataset.copy, window.location.origin).href;

@@ -8,10 +8,9 @@
 			{% for person in people %}{% include "azzb/includes/who_row.html" %}{% endfor %}
 		</section>
 	{% else %}
-		<div class="card empty">
-			<span class="empty-icon" aria-hidden="true"><svg class="icon"><use href="#i-people"></use></svg></span>
+		<c-empty icon="people" class="card">
 			<h2>Вы уже читаете всех</h2>
 			<p>Новые люди появятся здесь, когда зарегистрируются.</p>
-		</div>
+		</c-empty>
 	{% endif %}
 {% endblock content %}
