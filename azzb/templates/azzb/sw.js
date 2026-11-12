@@ -16,7 +16,10 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
-		caches.keys()
+		// Navigation preload: браузер шлёт запрос страницы, не дожидаясь запуска воркера, —
+		// иначе после простоя (воркер останавливается через ~30 с) навигация ждёт его старта.
+		(self.registration.navigationPreload ? self.registration.navigationPreload.enable() : Promise.resolve())
+			.then(() => caches.keys())
 			.then((keys) => Promise.all(keys.filter((key) => key.startsWith('azzb-') && key !== CACHE).map((key) => caches.delete(key))))
 			.then(() => self.clients.claim()),
 	);
@@ -31,13 +34,22 @@ async function cacheFirst(request) {
 	return response;
 }
 
+// Страница — из сети: ответ, уже начатый браузером (navigation preload), или свой запрос; без связи — офлайн-страница.
+async function navigate(event) {
+	try {
+		return (await event.preloadResponse) || await fetch(event.request);
+	} catch (error) {
+		return caches.match(OFFLINE_URL);
+	}
+}
+
 self.addEventListener('fetch', (event) => {
 	const request = event.request;
 	if (request.method !== 'GET') return;
 	const url = new URL(request.url);
 	if (url.origin !== self.location.origin) return;
 	if (request.mode === 'navigate') {
-		event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+		event.respondWith(navigate(event));
 	} else if (url.pathname.startsWith('{{ static_prefix|escapejs }}')) {
 		// Файл с хешем в имени не меняется никогда; без хеша (разработка) — сначала сеть.
 		event.respondWith(HASHED.test(url.pathname)
