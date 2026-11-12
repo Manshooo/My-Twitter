@@ -1,9 +1,18 @@
 {% load show_posts %}{% comment %} Ответы на странице поста. Под ответом с ответами — его ветка (вариант B ревизии R2):
    рельс от аватара, сообщения разговора сдвинуты на половину аватара, глубже не уходим
-   (post.views.attach_branches, post/_conversation.html). {% endcomment %}
+   (post.views.attach_branches, post/_conversation.html). Ветки раскрыты у первых ответов страницы,
+   у остальных — «Показать ветку»: подгружает её на место кнопки. {% endcomment %}
 {% for post in posts %}{% show_posts "reply" %}
 	{% if post.branch %}
 		<div class="branch-wrap"><div class="branch">{% with conversation=post.branch %}{% include "post/_conversation.html" %}{% endwith %}</div></div>
+	{% elif post.replies_count %}
+		<div class="branch-wrap"><div class="branch">
+			<a class="more" href="{% url 'post' post.id %}"
+				hx-get="{% url 'post-conversation' post.id %}" hx-target="closest .branch" hx-swap="innerHTML"
+				hx-disabled-elt="this" data-error="Не удалось загрузить ветку">
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"></use></svg>Показать ветку · {{ post.replies_count }}
+			</a>
+		</div></div>
 	{% endif %}
 {% endfor %}
 {% include "azzb/includes/load_more.html" %}

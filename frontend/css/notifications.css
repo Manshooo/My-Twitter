@@ -41,3 +41,4 @@
 /* «Новые уведомления» — под липкими вкладками. */
 .main-col .new-pill { top: calc(var(--h-tab) + var(--space-2)); margin-top: var(--space-2); }
 @media (max-width: 760px) { .main-col .new-pill { top: calc(var(--h-header-m) + var(--h-tab) + var(--space-2)); } }
+.request-answer { display: flex; gap: 6px; }

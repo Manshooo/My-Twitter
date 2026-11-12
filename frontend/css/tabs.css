@@ -31,4 +31,6 @@
 }
 .chip::before { content: ''; position: absolute; inset: -6px -2px; }
 .chip:hover { background: var(--surface-3); }
+/* Не сортировка по умолчанию («Новое») — чип залит, чтобы выбор было видно. */
+.chip-on, .chip-on:hover { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
 .menu-check { margin-left: auto; color: var(--accent); }

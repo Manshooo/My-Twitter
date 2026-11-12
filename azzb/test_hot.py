@@ -52,3 +52,36 @@ class HotFeedTests(TestCase):
 		self.client.force_login(self.author)
 		relations.mute(self.author.profile, self.users[1].profile)
 		self.assertContains(self.client.get(reverse('index')), 'За неделю пока тихо')
+
+
+class QuotesRankingTests(TestCase):
+	"""Цитаты в оценке (docs/feed.md): считаются отдельно от репостов, а «ratio» — много цитат и
+	ответов при малом одобрении — опускает пост, но не ниже половины оценки."""
+
+	def setUp(self):
+		self.users = [User.objects.create_user(f'q{i}', f'q{i}@example.com', 'pass-12345', **ACTIVE) for i in range(6)]
+		self.author = self.users[0]
+
+	def ranked(self):
+		return [post.text for post in Post.objects.for_feed(None).top_level().hot()]
+
+	def test_dunked_post_ranks_below_liked(self):
+		calm = publish_post(self.author.profile, 'спокойный')
+		dunked = publish_post(self.author.profile, 'спорный')
+		for user in self.users[1:5]:
+			toggle_like(calm, user.profile)  # 4, спорность 1
+		for user in self.users[1:4]:
+			publish_post(user.profile, 'ну и ну', quote_of=dunked)  # 2·3 = 6, спорность 2·1/4 = 0,5 → 3
+		self.assertEqual(self.ranked()[:2], ['спокойный', 'спорный'])
+		self.assertEqual(Post.objects.for_feed(None).top_level().hot().get(pk=dunked.pk).quotes_n, 3)
+
+	def test_quote_by_follow_lifts_post(self):
+		from accounts.models import FollowThrough
+		me, friend, stranger = self.users[1], self.users[2], self.users[3]
+		FollowThrough.objects.create(follower=me.profile, followee=friend.profile)
+		first = publish_post(self.author.profile, 'процитировал незнакомец')
+		second = publish_post(self.author.profile, 'процитировал друг')
+		publish_post(stranger.profile, 'цитата', quote_of=first)
+		publish_post(friend.profile, 'цитата', quote_of=second)
+		feed = [post.text for post in Post.objects.for_feed(me).top_level().for_you(me) if post.author_id == self.author.pk]
+		self.assertEqual(feed, ['процитировал друг', 'процитировал незнакомец'])

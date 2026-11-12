@@ -4,11 +4,12 @@
 <section class="cookie" role="region" aria-label="Cookie" data-cookie-banner{% if cookie_choice is not None %} hidden{% endif %}>
 	<div class="cookie-inner">
 		{# Названия сервисов — только в документах (политика cookie): здесь — что и зачем. #}
-		<p class="cookie-text">Необходимые cookie нужны для входа и защиты форм, аналитические — только с вашего разрешения. В аккаунте сайт учитывает лайки, подписки, просмотры и переходы, чтобы подбирать ленту. <a href="{% url 'cookies' %}">Подробнее</a></p>
+		<p class="cookie-text"><span class="cookie-full">Необходимые cookie нужны для входа и защиты форм, аналитические — только с вашего разрешения. В аккаунте сайт учитывает лайки, подписки, просмотры и переходы, чтобы подбирать ленту.</span><span class="cookie-short">Необходимые cookie — для входа, аналитика — с вашего разрешения.</span> <a href="{% url 'cookies' %}">Подробнее</a></p>
 		<div class="cookie-actions">
-			<button class="btn btn-sm" type="button" data-cookie-accept="all">Разрешить</button>
+			{# Согласие и отказ — одинаковые кнопки: ни один выбор не подталкиваем оформлением. #}
+			<button class="btn btn-outline btn-sm" type="button" data-cookie-accept="all">Разрешить</button>
 			<button class="btn btn-outline btn-sm" type="button" data-cookie-accept="necessary">Только необходимые</button>
-			<button class="btn btn-ghost btn-sm" type="button" data-cookie-customize>Настроить</button>
+			<button class="btn btn-ghost btn-sm cookie-customize" type="button" data-cookie-customize>Настроить</button>
 			<button class="btn btn-sm" type="button" data-cookie-accept="custom" hidden>Сохранить выбор</button>
 		</div>
 		<form class="cookie-options" data-cookie-options hidden>

@@ -1,0 +1,9 @@
+{% comment %} Липкая плашка гостевых страниц. Скрыта, пока человек не начал читать (guest.js показывает её
+   после прокрутки), и закрывается до конца сеанса вкладки. {% endcomment %}
+<c-cta class="dock-cta" title="Присоединяйтесь к обсуждению" text="Отвечайте, ставьте лайки и подписывайтесь на авторов" data-guest-cta hidden>
+	<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
+	<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
+	<button class="icon-btn" type="button" aria-label="Скрыть" data-guest-cta-close>
+		<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+	</button>
+</c-cta>

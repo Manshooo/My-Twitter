@@ -16,7 +16,7 @@ from azzb.htmx import htmx_errors, htmx_login_required, is_htmx
 from azzb.ratelimit import rate_limit
 from dm import services as dm
 from post.models import Image, Like, Post
-from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, page_url
+from post.pagination import PAGE_SIZE, PAGE_TEMPLATE, cursor_page, is_load_more, page_url
 from tracking import services as tracking
 from tracking.models import InteractionEvent
 
@@ -101,7 +101,7 @@ PROFILE_TOASTS = {
 	'remove_follower': '@{username} больше не подписан(а) на вас',
 }
 GUEST_TEMPLATE = "accounts/profile_guest.html"
-GUEST_POSTS = 3
+GUEST_POSTS = PAGE_SIZE
 
 # Подписка, блокировка и прочее — POST на страницу профиля, с лимитом частоты (E2).
 @method_decorator(rate_limit('follow', '30/m', '300/h'), name='post')
@@ -123,7 +123,7 @@ class UserProfileDetailView(DetailView):
 	def get(self, request, *args, **kwargs):
 		if request.user.is_authenticated:
 			return super().get(request, *args, **kwargs)
-		# Гостю — шапка профиля и три последних поста, если автор разрешил поисковики (Profile.indexable);
+		# Гостю — шапка профиля и первая страница постов, если автор разрешил поисковики (Profile.indexable);
 		# дальше — после входа.
 		if is_load_more(request):
 			return redirect_to_login(request.get_full_path())
@@ -240,6 +240,10 @@ def answer_follow_request(request, username):
 			messages.success(request, f'@{username} теперь читает вас')
 		elif 'decline' in request.POST:
 			relations.decline_request(me, requester)
+	# Отвечают и из настроек, и из вкладки «Заявки» уведомлений — возвращаем туда, откуда пришли.
+	next_url = request.POST.get('next')
+	if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+		return redirect(next_url)
 	return redirect('follow-requests')
 
 

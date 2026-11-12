@@ -303,7 +303,7 @@ class RepliesTests(TestCase):
 		positions = [page.index(f'реплика {i}<') for i in range(8)]
 		self.assertEqual(positions, sorted(positions))
 		self.assertIn('post-chain', page)
-		self.assertNotIn('Показать продолжение', page)
+		self.assertNotIn('Развернуть ветку', page)
 
 	def test_long_conversation_continues_by_button(self):
 		from .views import CONVERSATION_PAGE
@@ -329,12 +329,12 @@ class RepliesTests(TestCase):
 		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
 		self.assertIn('Боб отвечает Алисе', page)
 		self.assertNotIn('вставка Кэрол', page)
-		self.assertIn('Ещё 1 ответ на этот пост', page)
+		self.assertIn('1 ответ рядом', page)
 		# Если подходящего ответа нет — линия обрывается ссылкой на все ответы.
 		Post.objects.filter(text='Боб отвечает Алисе').update(author=carol.profile)
 		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
 		self.assertNotIn('Боб отвечает Алисе', page)
-		self.assertIn('Ещё 2 ответа на этот пост', page)
+		self.assertIn('2 ответа рядом', page)
 
 	def test_several_replies_show_branch_preview(self):
 		from .views import BRANCH_PREVIEW
@@ -347,6 +347,17 @@ class RepliesTests(TestCase):
 		self.assertIn(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', page)
 		part = self.client.get(f'/p/{posts[BRANCH_PREVIEW].pk}/conversation/?more=1', headers={'HX-Request': 'true'})
 		self.assertContains(part, f'реплика {BRANCH_PREVIEW + 1}<', html=False)
+
+	def test_only_first_branches_open(self):
+		from .services import publish_post
+		from .views import BRANCHES_OPEN
+		for i in range(BRANCHES_OPEN + 1):
+			head = publish_post(self.bob.profile, f'голова {i}', reply_to=self.root)
+			publish_post(self.alice.profile, f'под {i}', reply_to=head)
+		page = self.main_part(self.client.get(f'/p/{self.root.pk}/'))
+		self.assertIn(f'под {BRANCHES_OPEN - 1}<', page)
+		self.assertNotIn(f'под {BRANCHES_OPEN}<', page)
+		self.assertIn('Показать ветку · 1', page)
 
 	def test_conversation_shows_unavailable_posts_as_placeholders(self):
 		self.chat(self.root, [self.bob, self.alice, self.bob])
@@ -586,18 +597,20 @@ class PageChromeTests(TestCase):
 
 
 class GuestPostTests(TestCase):
-	"""Пост для гостя (R2-GuestPost): гостевая шапка, два ответа, остальное — после входа."""
+	"""Пост для гостя: гостевая шапка, первая страница ответов, остальное — после входа."""
 
 	def setUp(self):
 		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
 		self.root = Post.objects.create(author=self.alice.profile, text='Корень')
-		for i in range(5):
-			Post.objects.create(author=self.alice.profile, text=f'ответ {i}', reply_to=self.root, is_reply=True)
+		from .pagination import PAGE_SIZE
+		self.size = PAGE_SIZE
+		for i in range(PAGE_SIZE + 3):
+			Post.objects.create(author=self.alice.profile, text=f'ответ {i:02d}', reply_to=self.root, is_reply=True)
 
-	def test_two_replies_then_login(self):
+	def test_first_page_then_login(self):
 		response = self.client.get(f'/p/{self.root.pk}/')
-		self.assertContains(response, 'ответ 1<')
-		self.assertNotContains(response, 'ответ 2<')
+		self.assertContains(response, f'ответ {self.size - 1:02d}<')
+		self.assertNotContains(response, f'ответ {self.size:02d}<')
 		self.assertContains(response, 'Ещё 3 ответа. Войдите, чтобы прочитать')
 		self.assertContains(response, 'class="ghead"')
 		self.assertNotContains(response, 'class="tabbar"')

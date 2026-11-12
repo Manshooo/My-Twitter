@@ -77,9 +77,4 @@
 		</div>
 	</section>
 {% endblock content %}
-{% block dock_cta %}
-	<c-cta class="dock-cta" title="Присоединяйтесь к обсуждению" text="Отвечайте, ставьте лайки и подписывайтесь на авторов">
-		<a class="btn btn-outline" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Войти</a>
-		<a class="btn" href="{% url 'account_signup' %}">Создать аккаунт</a>
-	</c-cta>
-{% endblock dock_cta %}
+{% block dock_cta %}{% include "azzb/includes/guest_cta.html" %}{% endblock dock_cta %}
