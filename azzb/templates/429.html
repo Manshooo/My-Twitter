@@ -5,6 +5,7 @@
 	<span class="empty-icon danger" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></span>
 	<h1>Слишком много попыток</h1>
 	<p class="lead">{{ message|default:"Подождите немного и попробуйте снова." }}</p>
-	<a class="btn btn-outline" href="javascript:history.back()">Назад</a>
+	{# Не href="javascript:…": такие ссылки CSP не выполняет (azzb/csp.py). #}
+	<button class="btn btn-outline" type="button" data-history-back>Назад</button>
 	<a class="btn" href="{% url 'index' %}">На главную</a>
 {% endblock content %}

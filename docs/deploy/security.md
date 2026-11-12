@@ -121,9 +121,32 @@ curl -sI https://azzb.ru/static/css/azzb.css | grep -i strict-transport
 | Через день без проблем | `604800` | Неделя |
 | Ещё через неделю | `31536000` | Год — итоговое значение |
 
-`includeSubDomains` не добавляйте, пока каждый поддомен (`www`, `mail` и другие, если есть в DNS)
-не отвечает по HTTPS с действующим сертификатом. `preload` (вшивание домена в браузеры) не нужен:
-его почти невозможно отменить.
+### includeSubDomains и preload
+
+Итоговый заголовок (он же в `deploy/nginx/azzb.conf`):
+
+```nginx
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+```
+
+`includeSubDomains` распространяет правило на все поддомены. В DNS у azzb.ru wildcard: любое
+имя ведёт на сервер, но кроме `www` (перенаправление на azzb.ru) ни одно по HTTP ничего не отдаёт
+— nginx закрывает соединение (`default_server`, 444). Почте (`mail.azzb.ru`, MX) HSTS не мешает:
+SMTP и IMAP его не читают. **Перед тем как завести на поддомене веб-сервис** (веб-почту, панель,
+стенд) — сначала сертификат для него: по `http://` браузеры его уже не откроют.
+
+Порт 80 перенаправляет на HTTPS **того же имени** (`https://$host`), а уже `https://www` — на
+azzb.ru: так заголовок получает и `www`, этого требует список предзагрузки.
+
+`preload` сам по себе ничего не делает — это согласие на включение в список, вшитый в браузеры
+(тогда HTTPS действует с самого первого захода). Заявка — вручную на
+[hstspreload.org](https://hstspreload.org/?domain=azzb.ru), после выкладки заголовка. Отменить
+включение можно, но удаление доходит до пользователей с обновлениями браузеров — месяцы.
+
+```bash
+curl -sI http://www.azzb.ru | grep -i location      # https://www.azzb.ru/
+curl -sI https://azzb.ru | grep -i strict-transport  # ...; includeSubDomains; preload
+```
 
 Если что-то пошло не так — поставьте `max-age=0`: браузеры забудут правило при следующем заходе.
 
@@ -162,9 +185,16 @@ sudo systemctl restart azzb
 ## 7. Content-Security-Policy
 
 Заголовок ставит сам Django (`azzb/csp.py`), в nginx ничего добавлять не нужно. Скрипты разрешены
-только с сайта, из Метрики и SmartCaptcha; инлайн-скриптов и `eval` нет. Поэтому условия опроса
+по nonce и `'strict-dynamic'`: у каждого `<script>` в шаблоне — `nonce="{{ request.csp_nonce }}"`,
+скрипты, которые подгружают они сами (Метрика, SmartCaptcha), проходят без списка хостов.
+**Новый `<script>` в шаблоне без `nonce` не выполнится.** Страницы, где nonce не выводится
+(админка Django), получают прежнюю политику — список хостов без `'strict-dynamic'`.
+Инлайн-скриптов, ссылок `javascript:` и `eval` нет. Поэтому условия опроса
 не пишутся фильтрами `[...]` в `hx-trigger`: вместо них `azzb.js` шлёт события `azzb:poll-5` и `azzb:poll-30`.
 Стили допускают `unsafe-inline` из-за атрибутов `style`.
+
+Trusted Types (`require-trusted-types-for 'script'`) не включены: htmx вставляет ответы сервера
+через `innerHTML`, рекламные скрипты делают так же — с этим заголовком они перестанут работать.
 
 При `DEBUG` заголовок только сообщает о нарушениях (`Content-Security-Policy-Report-Only`), потому что debug toolbar
 вставляет инлайн-скрипт.

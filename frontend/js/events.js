@@ -23,6 +23,7 @@ document.addEventListener('click', (event) => {
 	}
 	if (target.matches('[data-menu-toggle]')) { event.preventDefault(); toggleMenu(target); return; }
 	if (target.matches('[data-theme-toggle]')) { event.preventDefault(); toggleTheme(); return; }
+	if (target.matches('[data-history-back]')) { event.preventDefault(); window.history.back(); return; }
 	if (target.matches('[data-composer-open]')) { event.preventDefault(); openComposer({ kind: 'new' }); return; }
 	if (target.matches('[data-poll-toggle]')) { event.preventDefault(); setPoll(target.form, !pollActive(target.form)); return; }
 	if (target.matches('[data-poll-add]')) { event.preventDefault(); addPollOption(target.form); return; }

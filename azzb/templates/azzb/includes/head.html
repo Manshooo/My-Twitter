@@ -14,7 +14,8 @@
 		<meta property="og:locale" content="ru_RU">
 		{# Счётчик Метрики: azzb.js загрузит его, только если посетитель разрешил аналитику. #}
 		{% if metrika_id %}<meta name="azzb-metrika" content="{{ metrika_id }}"{% if "analytics" in cookie_choice %} data-allowed{% endif %}>{% endif %}
-		{# Без eval: его запрещает CSP (azzb/csp.py). #}
-		<meta name="htmx-config" content='{"allowEval": false}'>
-		<script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
-		<script src="{% static 'js/azzb.js' %}" defer></script>
+		{# Без eval (его запрещает CSP) и без запуска <script> из подгруженного HTML (azzb/csp.py). #}
+		<meta name="htmx-config" content='{"allowEval": false, "allowScriptTags": false}'>
+		{# nonce — пропуск скрипта через CSP; без него браузер скрипт не выполнит. #}
+		<script src="{% static 'vendor/htmx-2.0.4.min.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+		<script src="{% static 'js/azzb.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
