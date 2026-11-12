@@ -12,6 +12,7 @@
 	display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
 }
 .cookie-text { flex: 1 1 420px; font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.cookie-short { display: none; }
 .cookie-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .cookie-actions .btn-outline { background: var(--surface); }
 .cookie-options { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); padding-bottom: var(--space-2); }
@@ -23,7 +24,13 @@
 	.dock .cookie, .no-tabbar .cookie { bottom: 0; }
 	.cookie-inner { padding: var(--space-2) var(--space-4); gap: var(--space-2); }
 	.cookie-actions { gap: var(--space-1); }
-	.cookie-actions .btn { min-height: 36px; padding: 0 var(--space-3); }
+	.cookie-actions { flex-wrap: nowrap; }
+	.cookie-actions .btn { min-height: 36px; padding: 0 10px; font-size: 13px; }
+	.cookie-actions .cookie-customize { padding: 0 6px; }
+	/* На телефоне — одна короткая строка; полный текст — в политике cookie. */
+	.cookie-full { display: none; }
+	.cookie-short { display: inline; }
+	.cookie-text { flex-basis: 100%; }
 }
 .main-footer { display: none; padding: 8px 6px 0; }
 @media (max-width: 1180px) { .main-footer { display: block; } }

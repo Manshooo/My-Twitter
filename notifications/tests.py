@@ -174,3 +174,15 @@ class NotificationPageTests(TestCase):
 		self.ann.profile.save()
 		relations.follow(self.bob.profile, self.ann.profile)
 		self.assertContains(self.client.get(reverse('notifications')), '<span class="tab-count">1</span>')
+
+	def test_requests_tab_answers_in_place(self):
+		self.ann.profile.is_private = True
+		self.ann.profile.save()
+		relations.follow(self.bob.profile, self.ann.profile)
+		url = reverse('notifications') + '?tab=requests'
+		page = self.client.get(url)
+		self.assertContains(page, 'name="approve"')
+		self.assertContains(page, 'value="/notifications/?tab=requests"')
+		response = self.client.post(reverse('follow-request-answer', args=['bob']), {'approve': '1', 'next': url})
+		self.assertRedirects(response, url, fetch_redirect_response=False)
+		self.assertContains(self.client.get(url), 'Новых заявок нет')

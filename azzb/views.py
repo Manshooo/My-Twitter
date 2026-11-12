@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
 from . import search as finder
@@ -23,7 +24,7 @@ from accounts.models import FeedSort
 from tracking import services as tracking
 from tracking.models import InteractionEvent, Surface
 from post.models import Post
-from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, number_page, page_url
+from post.pagination import PAGE_SIZE, PAGE_TEMPLATE, cursor_page, is_load_more, number_page, page_url
 
 FEED_TEMPLATE = "azzb/feed.html"
 
@@ -86,12 +87,13 @@ def index(request):
 	return render_posts(request, FEED_TEMPLATE, context, posts, next_page and {"page": next_page})
 
 
-GUEST_HOME_POSTS = 3
+# Гостю — первая страница популярного: живой контент виден и людям, и поисковикам.
+GUEST_HOME_POSTS = PAGE_SIZE
 
 
 def guest_home(request):
-	"""Витрина для гостя (R2-GuestHome): знак, фраза, «Создать аккаунт» и «Войти», три популярных
-	поста — живой контент и для поисковиков. Дальше — регистрация."""
+	"""Витрина для гостя (R2-GuestHome): знак, фраза, «Создать аккаунт» и «Войти», под ними —
+	первая страница популярного. Дальше — регистрация."""
 	posts = list(Post.objects.for_feed(None).top_level().hot()[:GUEST_HOME_POSTS])
 	return render(request, "azzb/guest_home.html", {"posts": posts})
 
@@ -112,6 +114,8 @@ def set_feed_sort(request):
 	if sort in FeedSort.values and request.user.profile.feed_sort != sort:
 		request.user.profile.feed_sort = sort
 		request.user.profile.save(update_fields=["feed_sort"])
+		# Выбор запоминается для всех устройств — подтверждаем его, чтобы потом не казалось, что лента «сломалась».
+		messages.success(request, 'Лента: сначала новые' if sort == FeedSort.NEW else 'Лента: сначала популярное')
 	return redirect("index")
 
 

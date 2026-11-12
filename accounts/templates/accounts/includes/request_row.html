@@ -1,0 +1,16 @@
+{% load azzb_ui %}{# Строка заявки на подписку: в настройках и во вкладке «Заявки» уведомлений. next — куда вернуться после ответа. #}
+{% with person=item.requester %}
+<div class="who-row">
+	<a class="nu" href="{% url 'profile' person.user.username %}">{% avatar person 'sm' %}</a>
+	<a class="who nu" href="{% url 'profile' person.user.username %}">
+		<b class="clip1">{{ person.username }}</b>
+		<span class="muted clip1" style="font-size: 13px">@{{ person.user.username }} · {{ item.created_at|ago }}</span>
+	</a>
+	<form method="post" action="{% url 'follow-request-answer' person.user.username %}" class="request-answer">
+		{% csrf_token %}
+		{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+		<button class="btn btn-sm" type="submit" name="approve">Одобрить</button>
+		<button class="btn btn-outline btn-sm" type="submit" name="decline">Отклонить</button>
+	</form>
+</div>
+{% endwith %}

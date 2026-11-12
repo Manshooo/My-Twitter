@@ -33,7 +33,8 @@ class FeedPagesTests(TestCase):
 	def test_guest_home_is_showcase(self):
 		response = self.client.get('/')
 		self.assertTemplateUsed(response, 'azzb/guest_home.html')
-		self.assertContains(response, '<h1 class="land-heading">Присоединяйтесь к растущему сообществу!</h1>', html=True)
+		self.assertContains(response, '<h1 class="land-kicker">AzzB — социальная сеть коротких постов</h1>', html=True)
+		self.assertContains(response, 'Присоединяйтесь к сообществу!')
 		self.assertContains(response, 'Привет\nвторая строка')  # популярные посты — живой контент
 		self.assertContains(response, 'href="/auth/signup/"')
 		self.assertNotContains(response, 'id="composer"')

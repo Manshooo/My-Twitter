@@ -22,7 +22,7 @@
 			{% if feed == 'for-you' %}
 				<c-slot name="tail">
 					<div class="menu-wrap">
-						<button class="chip" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="feed-sort-menu" data-menu-toggle>
+						<button class="chip{% if sort == 'new' %} chip-on{% endif %}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="feed-sort-menu" data-menu-toggle>
 							<span class="sr">Сортировка: </span>{% if sort == 'new' %}Новое{% else %}Популярное{% endif %}
 							<svg class="icon icon-xs" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
 						</button>

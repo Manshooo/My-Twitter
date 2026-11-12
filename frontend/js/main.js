@@ -13,6 +13,8 @@ import './cropper.js';
 import './posts.js';
 import './mentions.js';
 import './cookies.js';
+import './guest.js';
+import './chrome.js';
 import './dm.js';
 import './events.js';
 import './pwa.js';
