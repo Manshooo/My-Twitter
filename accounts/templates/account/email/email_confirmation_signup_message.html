@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Подтвердите почту{% endblock %}
+{% block preheader %}Осталось подтвердить почту — и можно писать первый пост.{% endblock %}
+{% block title_body %}Подтвердите почту{% endblock %}
+{% block content %}<p style="margin: 0;">Здравствуйте! Почту указали при регистрации в AzzB под логином <b>@{{ user.username }}</b>. Подтвердите её, чтобы войти.</p>{% endblock %}
+{% block action %}{% include "account/email/_button.html" with url=activate_url label="Подтвердить почту" %}{% endblock %}
+{% block reason %}<p style="margin: 0;">Если вы не регистрировались, просто удалите письмо: без подтверждения аккаунт не заработает.</p>{% endblock %}

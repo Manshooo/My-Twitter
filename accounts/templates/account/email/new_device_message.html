@@ -1,0 +1,17 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Вход с нового устройства{% endblock %}
+{% block preheader %}{{ device }}, {{ when|date:"j E, H:i" }}. Если это вы — ничего делать не нужно.{% endblock %}
+{% block title_body %}Вход с нового устройства{% endblock %}
+{% block content %}<p style="margin: 0;">В аккаунт <b>@{{ user.username }}</b> вошли с устройства, с которого раньше не входили.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0 0; background: #f4f9f9; border-radius: 14px;">
+	<tr><td style="padding: 14px 16px 4px; font-size: 13px; color: #4e6867;">Устройство</td></tr>
+	<tr><td style="padding: 0 16px 10px; font-size: 15px; font-weight: 700; color: #13302f;">{{ device }}</td></tr>
+	<tr><td style="padding: 0 16px 4px; font-size: 13px; color: #4e6867;">IP-адрес</td></tr>
+	<tr><td style="padding: 0 16px 10px; font-size: 15px; font-weight: 700; color: #13302f;">{{ ip }}</td></tr>
+	<tr><td style="padding: 0 16px 4px; font-size: 13px; color: #4e6867;">Время</td></tr>
+	<tr><td style="padding: 0 16px 14px; font-size: 15px; font-weight: 700; color: #13302f;">{{ when|date:"j E Y, H:i" }}</td></tr>
+</table>
+<p style="margin: 20px 0 0;">Если это вы — ничего делать не нужно. Если не вы — смените пароль: все остальные сеансы при этом завершатся.</p>{% endblock %}
+{% block action %}{% include "account/email/_button.html" with url=password_url label="Сменить пароль" %}{% endblock %}
+{% block after %}<p style="margin: 16px 0 0; font-size: 15px;"><a href="{{ settings_url }}" style="color: #1d6464; font-weight: 700;">Устройства, где выполнен вход</a></p>{% endblock %}
+{% block reason %}<p style="margin: 0;">Письма о входе с нового устройства приходят всегда: так вы узнаете, если в аккаунт вошёл кто-то другой.</p>{% endblock %}

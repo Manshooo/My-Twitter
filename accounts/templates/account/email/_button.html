@@ -1,0 +1,9 @@
+{# Кнопка письма: ссылка в ячейке таблицы с фоном — так её рисует и Outlook. Под ней адрес текстом: не все клиенты дают нажать кнопку. #}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0 0;">
+	<tr>
+		<td style="border-radius: 12px; background: #13302f;">
+			<a href="{{ url }}" style="display: inline-block; padding: 14px 24px; font-family: Manrope, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 16px; font-weight: 800; line-height: 1; color: #ffffff; text-decoration: none; border-radius: 12px;">{{ label }}</a>
+		</td>
+	</tr>
+</table>
+<p style="margin: 16px 0 0; font-size: 13px; line-height: 1.5; color: #4e6867;">Если кнопка не открывается, скопируйте адрес в браузер:<br><a href="{{ url }}" style="color: #1d6464; word-break: break-all;">{{ url }}</a></p>

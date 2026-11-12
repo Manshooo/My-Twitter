@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Аккаунт не найден{% endblock %}
+{% block preheader %}Аккаунта с этой почтой в AzzB нет.{% endblock %}
+{% block title_body %}Аккаунт не найден{% endblock %}
+{% block content %}<p style="margin: 0;">С адресом <b>{{ email }}</b> пытались войти в AzzB или восстановить пароль, но аккаунта с этой почтой нет.</p>{% endblock %}
+{% block action %}{% include "account/email/_button.html" with url=signup_url label="Зарегистрироваться" %}{% endblock %}
+{% block reason %}<p style="margin: 0;">Если это были не вы, просто удалите письмо.</p>{% endblock %}

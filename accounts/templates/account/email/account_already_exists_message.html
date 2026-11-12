@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Аккаунт уже есть{% endblock %}
+{% block preheader %}С этой почтой уже есть аккаунт AzzB.{% endblock %}
+{% block title_body %}У вас уже есть аккаунт{% endblock %}
+{% block content %}<p style="margin: 0;">С адресом <b>{{ email }}</b> пытались зарегистрироваться в AzzB, но аккаунт с этой почтой уже есть. Если это вы и забыли пароль — восстановите его.</p>{% endblock %}
+{% block action %}{% include "account/email/_button.html" with url=password_reset_url label="Восстановить пароль" %}{% endblock %}
+{% block reason %}<p style="margin: 0;">Если это были не вы, просто удалите письмо.</p>{% endblock %}
