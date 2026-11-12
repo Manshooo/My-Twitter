@@ -389,6 +389,8 @@
 		page.innerHTML = html;
 		page.content.querySelectorAll('[data-post-id]').forEach((fresh) => {
 			document.querySelectorAll('[data-post-id="' + fresh.dataset.postId + '"]').forEach((card) => {
+				// В шапке отметка «изменено».
+				card.querySelector('.post-header').replaceWith(fresh.querySelector('.post-header').cloneNode(true));
 				const body = fresh.querySelector('.post-body').cloneNode(true);
 				// Кнопки действий оставляем прежние: у главного поста «Ответить» открывает composer,
 				// а в свежей карточке (вид ленты) это ссылка на страницу поста.

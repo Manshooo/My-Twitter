@@ -12,91 +12,95 @@
 			<span aria-hidden="true">·</span> <time datetime="{{ repost_row.created_at|date:'c' }}">{{ repost_row.created_at|ago }}</time>
 		</p>
 	{% endif %}
-	<div class="post-row">
+	<header class="post-header">
 		<a class="nu" href="{% url 'profile' author.user.username %}" tabindex="-1" aria-hidden="true">{% avatar author %}</a>
-		<div class="post-body">
-			{% if post.hidden_at %}
-				<div class="notice post-hidden" role="note">
-					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>
-					<span>Скрыт модератором{% if post.hidden_reason %}: {{ post.hidden_reason }}{% endif %}. Пост видите только вы.</span>
-				</div>
-			{% endif %}
+		<div class="post-meta">
 			<div class="post-head">
-				<a class="post-name" href="{% url 'profile' author.user.username %}">{{ author.username }}</a>{% badges author %}
-				<span class="muted">@{{ author.user.username }}</span>
-				<span class="muted" aria-hidden="true">·</span>
+				<a class="post-name clip1" href="{% url 'profile' author.user.username %}">{{ author.username }}</a>{% badges author %}
+			</div>
+			<div class="post-sub muted">
+				<span class="clip1">@{{ author.user.username }}</span>
+				<span aria-hidden="true">·</span>
 				<a class="muted" href="{% url 'post' post.id %}"><time datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j E Y, H:i' }}">{{ post.created_at|ago }}</time></a>
-				{% if post.edited_at %}<span class="muted" title="Изменено {{ post.edited_at|date:'j E Y, H:i' }}">· изменено</span>{% endif %}
+				{% if post.edited_at %}<span title="Изменено {{ post.edited_at|date:'j E Y, H:i' }}">· изменено</span>{% endif %}
 			</div>
-			{% if post.is_reply %}
-				<p class="reply-to muted">
-					{% if post.reply_to and post.reply_to.author.user.is_active %}
-						В ответ <a href="{% url 'post' post.reply_to_id %}">@{{ post.reply_to.author.user.username }}</a>
-					{% elif post.reply_to %}
-						Ответ на недоступный пост
+		</div>
+	</header>
+	<div class="post-body">
+		{% if post.hidden_at %}
+			<div class="notice post-hidden" role="note">
+				<svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg>
+				<span>Скрыт модератором{% if post.hidden_reason %}: {{ post.hidden_reason }}{% endif %}. Пост видите только вы.</span>
+			</div>
+		{% endif %}
+		{% if post.is_reply %}
+			<p class="reply-to muted">
+				{% if post.reply_to and post.reply_to.author.user.is_active %}
+					В ответ <a href="{% url 'post' post.reply_to_id %}">@{{ post.reply_to.author.user.username }}</a>
+				{% elif post.reply_to %}
+					Ответ на недоступный пост
+				{% else %}
+					Ответ на удалённый пост
+				{% endif %}
+			</p>
+		{% endif %}
+		{% if post.text %}<p class="post-text">{{ post.text|linkify }}</p>{% endif %}
+		{% if images %}
+			{% with count=images|length %}
+			<div class="media media-{% if count > 4 %}4{% else %}{{ count }}{% endif %}"{% if count == 1 %} style="aspect-ratio: {{ images.0.ratio }}"{% endif %} data-gallery>
+				{% for image in images|slice:":4" %}
+					{% if image.file %}
+						<a class="media-cell nu" href="{{ image.file.url }}" data-lightbox="{{ forloop.counter0 }}" aria-label="Открыть картинку {{ forloop.counter }} из {% if count > 4 %}4{% else %}{{ count }}{% endif %}">
+							<img src="{{ image.file.url }}" alt="{% if image.alt %}{{ image.alt }}{% else %}Картинка {{ forloop.counter }} без описания{% endif %}"{% if image.width %} width="{{ image.width }}" height="{{ image.height }}"{% endif %} loading="lazy" decoding="async">
+							{% if image.alt %}<span class="alt-badge" aria-hidden="true">ALT</span>{% endif %}
+						</a>
 					{% else %}
-						Ответ на удалённый пост
+						<div class="media-cell"><div class="ph" style="width: 100%; height: 100%"></div></div>
 					{% endif %}
-				</p>
-			{% endif %}
-			{% if post.text %}<p class="post-text">{{ post.text|linkify }}</p>{% endif %}
-			{% if images %}
-				{% with count=images|length %}
-				<div class="media media-{% if count > 4 %}4{% else %}{{ count }}{% endif %}"{% if count == 1 %} style="aspect-ratio: {{ images.0.ratio }}"{% endif %} data-gallery>
-					{% for image in images|slice:":4" %}
-						{% if image.file %}
-							<a class="media-cell nu" href="{{ image.file.url }}" data-lightbox="{{ forloop.counter0 }}" aria-label="Открыть картинку {{ forloop.counter }} из {% if count > 4 %}4{% else %}{{ count }}{% endif %}">
-								<img src="{{ image.file.url }}" alt="{% if image.alt %}{{ image.alt }}{% else %}Картинка {{ forloop.counter }} без описания{% endif %}"{% if image.width %} width="{{ image.width }}" height="{{ image.height }}"{% endif %} loading="lazy" decoding="async">
-								{% if image.alt %}<span class="alt-badge" aria-hidden="true">ALT</span>{% endif %}
-							</a>
-						{% else %}
-							<div class="media-cell"><div class="ph" style="width: 100%; height: 100%"></div></div>
-						{% endif %}
-					{% endfor %}
-				</div>
-				{% endwith %}
-			{% endif %}
-			{% if post.poll %}{% load show_posts %}{% poll_block post %}{% endif %}
-			{% if quote %}{% include "post/_quote.html" %}{% endif %}
-			<div class="actions" role="group" aria-label="Действия с постом">
-				{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
-				   поста (variant "main") она открывает composer — ответить этому посту. {% endcomment %}
-				{% if variant == "main" and user.is_authenticated %}
-					<button class="action" type="button" title="Ответить" data-reply data-reply-name="@{{ author.user.username }}">
-						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответить. Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
-					</button>
-				{% else %}
-					<a class="action" href="{% url 'post' post.id %}" title="Ответы">
-						<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
-						<span class="sr">Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
-					</a>
-				{% endif %}
-				{% if user.is_authenticated and post.author.is_private and post.author.user_id != user.pk %}
-					<span class="action" title="Закрытый аккаунт: репост и цитата недоступны" aria-label="Репост недоступен: закрытый аккаунт">
-						<svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
-					</span>
-				{% elif user.is_authenticated and not post.hidden_at %}
-					{% include "post/_repost.html" %}
-				{% elif not user.is_authenticated %}
-					<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы делать репосты">
-						<svg class="icon" aria-hidden="true"><use href="#i-repost"></use></svg>
-						<span class="sr">Репосты </span><span class="action-n">{% if reposts_total %}{{ reposts_total }}{% endif %}</span>
-					</a>
-				{% endif %}
-				{% if user.is_authenticated %}
-					{% include "post/_like.html" %}
-				{% else %}
-					<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
-						<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
-						<span class="sr">Нравится </span><span class="action-n">{% if likes_total %}{{ likes_total }}{% endif %}</span>
-					</a>
-				{% endif %}
-				{% if user.is_authenticated %}{% include "post/_bookmark.html" %}{% endif %}
-				<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
-					<svg class="icon" aria-hidden="true"><use href="#i-share"></use></svg>
-				</button>
+				{% endfor %}
 			</div>
+			{% endwith %}
+		{% endif %}
+		{% if post.poll %}{% load show_posts %}{% poll_block post %}{% endif %}
+		{% if quote %}{% include "post/_quote.html" %}{% endif %}
+		<div class="actions" role="group" aria-label="Действия с постом">
+			{% comment %} Ответы живут на странице поста: в ленте кнопка ведёт туда. На самой странице
+			   поста (variant "main") она открывает composer — ответить этому посту. {% endcomment %}
+			{% if variant == "main" and user.is_authenticated %}
+				<button class="action" type="button" title="Ответить" data-reply data-reply-name="@{{ author.user.username }}">
+					<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
+					<span class="sr">Ответить. Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+				</button>
+			{% else %}
+				<a class="action" href="{% url 'post' post.id %}" title="Ответы">
+					<svg class="icon" aria-hidden="true"><use href="#i-reply"></use></svg>
+					<span class="sr">Ответы </span><span class="action-n" data-reply-count>{% if replies_total %}{{ replies_total }}{% endif %}</span>
+				</a>
+			{% endif %}
+			{% if user.is_authenticated and post.author.is_private and post.author.user_id != user.pk %}
+				<span class="action" title="Закрытый аккаунт: репост и цитата недоступны" aria-label="Репост недоступен: закрытый аккаунт">
+					<svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+				</span>
+			{% elif user.is_authenticated and not post.hidden_at %}
+				{% include "post/_repost.html" %}
+			{% elif not user.is_authenticated %}
+				<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы делать репосты">
+					<svg class="icon" aria-hidden="true"><use href="#i-repost"></use></svg>
+					<span class="sr">Репосты </span><span class="action-n">{% if reposts_total %}{{ reposts_total }}{% endif %}</span>
+				</a>
+			{% endif %}
+			{% if user.is_authenticated %}
+				{% include "post/_like.html" %}
+			{% else %}
+				<a class="action" href="{% url 'account_login' %}?next={{ request.path|urlencode }}" title="Войдите, чтобы ставить лайки">
+					<svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
+					<span class="sr">Нравится </span><span class="action-n">{% if likes_total %}{{ likes_total }}{% endif %}</span>
+				</a>
+			{% endif %}
+			{% if user.is_authenticated %}{% include "post/_bookmark.html" %}{% endif %}
+			<button class="action" type="button" aria-label="Поделиться" title="Скопировать ссылку на пост" data-copy="{% url 'post' post.id %}">
+				<svg class="icon" aria-hidden="true"><use href="#i-share"></use></svg>
+			</button>
 		</div>
 	</div>
 	{% if user.is_authenticated %}

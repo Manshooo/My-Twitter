@@ -309,7 +309,11 @@ img { max-width: 100%; }
 .post { position: relative; padding: 14px 18px 6px; display: flex; flex-direction: column; gap: 10px; }
 .post-row { display: flex; gap: 12px; align-items: flex-start; }
 .post-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.post-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 15px; line-height: 1.3; padding-right: 40px; }
+/* Шапка (аватар + имя) и тело во всю ширину карточки: под аватаром нет пустой колонки. */
+.post-header { display: flex; align-items: center; gap: 12px; min-width: 0; padding-right: 40px; }
+.post-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.post-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; line-height: 1.3; }
+.post-sub { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; line-height: 1.3; white-space: nowrap; }
 .post-name { font-weight: 800; color: var(--text); }
 .post-text { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tag-link, .mention-link { color: var(--accent); font-weight: 600; }
@@ -388,7 +392,7 @@ img { max-width: 100%; }
 .action.bookmarked { color: var(--accent); }
 .action.bookmarked .icon { fill: currentColor; }
 .repost-wrap { position: relative; }
-.repost-by { display: flex; align-items: center; gap: 6px; margin: -4px 0 8px 46px; font-size: 13px; font-weight: 600; }
+.repost-by { display: flex; align-items: center; gap: 6px; margin: -4px 0 -2px 12px; font-size: 13px; font-weight: 600; }
 .repost-by a { color: inherit; font-weight: 800; }
 
 /* Цитата внутри карточки (D4) */
@@ -409,7 +413,7 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .thread { display: flex; flex-direction: column; gap: 14px; }
 .post-parent { overflow: visible; }
 .post-parent::after {
-	content: ''; position: absolute; left: 39px; top: 62px; bottom: -15px; width: 2px;
+	content: ''; position: absolute; left: 39px; top: 100%; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
 .thread-gap { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 15px; }
@@ -435,17 +439,17 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .chain > .post:has(+ :is(.post, .chain-aside)) { overflow: visible; }
 .post:has(+ .chain > :is(.post, .chain-aside):first-child)::after,
 .chain > .post:has(+ :is(.post, .chain-aside))::after {
-	content: ''; position: absolute; left: 39px; top: 62px; bottom: -15px; width: 2px;
+	content: ''; position: absolute; left: 39px; top: 100%; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
 .chain > .chain-aside:has(+ .post)::before {
 	content: ''; position: absolute; left: 40px; top: 0; bottom: -15px; width: 2px;
 	background: var(--border-strong); border-radius: 2px;
 }
-/* Ссылки под карточками — по левому краю текста карточки (рамка + отступ + аватар + зазор). */
+/* Ссылки между карточками — правее линии ветки. */
 .chain-link {
 	position: relative; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
-	min-height: 32px; padding-left: 75px; color: var(--text-2); font-size: 14px; font-weight: 700;
+	min-height: 32px; padding-left: 56px; color: var(--text-2); font-size: 14px; font-weight: 700;
 }
 .chain-link:hover { color: var(--text); }
 .chain-link[disabled], .chain-link.htmx-request { opacity: .6; cursor: progress; }
@@ -510,10 +514,11 @@ a.quote-card:hover { background: var(--surface-2); text-decoration: none; }
 .tab-badge { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 18px; padding: 0 5px; font-size: 11px; line-height: 18px; }
 
 /* ---------- Уведомления ---------- */
-.notif { display: flex; gap: 14px; padding: 14px 18px; }
+.notif { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px; }
+.notif-header { display: flex; align-items: center; gap: 12px; }
 .notif-unread, .notif-reply.notif-unread > .card { box-shadow: inset 4px 0 0 var(--accent); }
 .notif-reply.notif-unread { box-shadow: none; }
-.notif-icon { flex: none; width: 40px; display: grid; justify-items: center; padding-top: 4px; color: var(--accent); }
+.notif-icon { flex: none; width: 40px; display: grid; justify-items: center; color: var(--accent); }
 .notif-like { color: var(--danger); }
 .notif-repost { color: var(--accent); }
 .notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
