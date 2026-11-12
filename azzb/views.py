@@ -1,6 +1,5 @@
 import hashlib
 import json
-from datetime import date
 from uuid import NAMESPACE_URL, uuid5
 
 from django.conf import settings
@@ -19,7 +18,10 @@ from .discover import who_to_follow
 from .ratelimit import rate_limit
 from django.views.generic import TemplateView
 
+from accounts import consent
 from accounts.models import FeedSort
+from tracking import services as tracking
+from tracking.models import InteractionEvent, Surface
 from post.models import Post
 from post.pagination import PAGE_TEMPLATE, cursor_page, is_load_more, number_page, page_url
 
@@ -72,7 +74,7 @@ def index(request):
 	Гостю — «Популярное» без вкладок."""
 	user = request.user
 	sort = user.profile.feed_sort if user.is_authenticated else FeedSort.POPULAR
-	queryset = Post.objects.for_feed(user).top_level().without_muted(user)
+	queryset = Post.objects.for_feed(user).top_level().without_muted(user).without_not_interested(user)
 	# Свой новый пост из composer показываем сверху ленты.
 	context = {"feed": "for-you", "sort": sort, "sorts": FeedSort.choices, "prepend": user.is_authenticated}
 	if sort == FeedSort.NEW:
@@ -123,6 +125,9 @@ def search(request):
 	context = {'query': query, 'tab': tab, 'feed': 'search'}
 	if not query:
 		return render(request, 'azzb/search.html', context)
+	if not request.GET.get('page'):
+		# Поиск без подгрузки: запрос — одно событие, а не по событию на страницу результатов.
+		tracking.record(request, InteractionEvent.Kind.SEARCH, surface=Surface.SEARCH, query=query[:200], tab=tab)
 	if tab == 'posts':
 		found, next_page = number_page(finder.posts(request.user, query), request.GET.get('page'))
 		return render_posts(request, 'azzb/search.html', context, found, next_page and {'page': next_page})
@@ -138,8 +143,7 @@ def healthz(request):
 	return HttpResponse('ok', content_type='text/plain')
 
 
-# Дата текущей редакции правил, политики и согласия (C5, E6). Меняете текст — меняйте и дату.
-LEGAL_UPDATED = date(2026, 11, 11)
+LEGAL_UPDATED = consent.EDITION
 
 
 def legal_page(template):

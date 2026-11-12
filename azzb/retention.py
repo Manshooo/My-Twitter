@@ -25,6 +25,7 @@ def purge_expired(now=None):
 	from dm.services import purge_messages
 	from post.models import Post
 	from post.services import purge_posts
+	from tracking import services as tracking
 
 	from .models import ActivityRecord
 
@@ -40,4 +41,9 @@ def purge_expired(now=None):
 	# Истёкшие сеансы и их записи об устройствах (IP, браузер): Django сам их не удаляет.
 	Session.objects.filter(expire_date__lt=now).delete()
 	sessions, _ = UserSession.objects.exclude(session_key__in=Session.objects.values('session_key')).delete()
-	return {'accounts': accounts, 'posts': posts, 'messages': messages, 'activity': records, 'sessions': sessions}
+	# Поведенческие события: показы — 30 дней, остальное — 180 (tracking/partitions.py), месяцами целиком.
+	partitions = tracking.purge(now)
+	return {
+		'accounts': accounts, 'posts': posts, 'messages': messages, 'activity': records, 'sessions': sessions,
+		'event_partitions': partitions,
+	}

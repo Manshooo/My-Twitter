@@ -20,7 +20,7 @@
 		{% block og_image %}{% include "azzb/includes/og_default.html" %}{% endblock og_image %}
 	</head>
 	{# CSRF-токен уходит заголовком с каждым запросом htmx. #}
-	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}>
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'{% if user.is_authenticated %} data-theme-url="{% url 'set-theme' %}" data-mention-url="{% url 'api-mention-suggestions' %}" data-users-exist-url="{% url 'api-users-exists' %}"{% if realtime_ws %} data-ws-path="/ws/"{% endif %}{% endif %}{% if tracking_surface %} data-events-url="{% url 'api-events' %}" data-surface="{{ tracking_surface }}"{% endif %}>
 		{% include "azzb/includes/icons.html" %}
 		{% with url_name=request.resolver_match.url_name %}
 		{# Шапка телефона (R2-B-Nav): на Главной — только логотип, на внутренних страницах — «Назад» и заголовок. #}

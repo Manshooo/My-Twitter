@@ -9,6 +9,7 @@ from notifications.services import unread_count
 from post.media import ACCEPT, MAX_UPLOAD_MB
 from post.models import ALT_MAX_LENGTH, MAX_IMAGES, POLL_DURATIONS, POLL_OPTION_MAX_LENGTH
 from post.serializer import POST_MAX_LENGTH
+from tracking.services import collecting
 
 from .cookies import CATEGORIES, cookie_choice
 from .discover import trends, who_to_follow
@@ -23,6 +24,23 @@ def current_theme(request):
 		return user.theme
 	theme = request.COOKIES.get('theme', '')
 	return theme if theme in THEMES else ''
+
+
+# Поверхность для поведенческих событий (tracking): где показан пост — по имени маршрута страницы.
+SURFACES = {
+	# «Горячее» и «Свежее» (hot, latest) остались в истории событий: с ревизии R2 это «Для вас» (docs/feed.md).
+	'index': 'for_you', 'following': 'following', 'profile': 'profile',
+	'post': 'thread', 'hashtag': 'tag', 'search': 'search', 'notifications': 'notifications', 'bookmarks': 'bookmarks',
+}
+
+
+def tracking(request):
+	"""Адрес приёма событий — только тем, у кого их пишем (tracking.services.collecting)."""
+	user = getattr(request, 'user', None)
+	if user is None or not collecting(user):
+		return {}
+	match = getattr(request, 'resolver_match', None)
+	return {'tracking_surface': SURFACES.get(match.url_name if match else '', 'other')}
 
 
 def ui(request):

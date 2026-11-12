@@ -127,6 +127,18 @@
 				</button>
 				{% else %}
 				{% url 'profile' author.user.username as author_url %}
+				{% url 'post-not-interested' post.id as not_interested_url %}
+				<button class="menu-item" type="button" role="menuitem" hx-post="{{ not_interested_url }}" hx-vals='{"what": "post"}' hx-swap="none" data-error="Не удалось отметить пост">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>Не интересно
+				</button>
+				<button class="menu-item" type="button" role="menuitem" hx-post="{{ not_interested_url }}" hx-vals='{"what": "author"}' hx-swap="none" data-error="Не удалось отметить автора">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>Не интересны посты @{{ author.user.username }}
+				</button>
+				{% with tag=post.hashtags.all.0 %}{% if tag %}
+				<button class="menu-item" type="button" role="menuitem" hx-post="{{ not_interested_url }}" hx-vals='{"what": "tag", "tag": "{{ tag.name|escapejs }}"}' hx-swap="none" data-error="Не удалось отметить тему">
+					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"></use></svg>Не интересна тема #{{ tag.name }}
+				</button>
+				{% endif %}{% endwith %}
 				<a class="menu-item" role="menuitem" href="{% url 'post-report' post.id %}?next={{ request.get_full_path|urlencode }}">
 					<svg class="icon icon-sm" aria-hidden="true"><use href="#i-flag"></use></svg>Пожаловаться
 				</a>
