@@ -97,3 +97,4 @@
 }
 .page-head .icon-btn { color: var(--text); }
 .page-title { min-width: 0; font-size: 20px; font-weight: 800; }
+.page-head:not(:has(.icon-btn)) { padding-left: var(--space-4); }

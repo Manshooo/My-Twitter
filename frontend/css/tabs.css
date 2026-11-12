@@ -32,12 +32,3 @@
 .chip::before { content: ''; position: absolute; inset: -6px -2px; }
 .chip:hover { background: var(--surface-3); }
 .menu-check { margin-left: auto; color: var(--accent); }
-
-/* Вкладки профиля в карточке — до перевода профиля на <c-tabs> (этап 4 ревизии). */
-.tabs-card { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-.tab-card {
-	flex: 1; min-height: 52px; display: grid; place-items: center; color: var(--text-2);
-	font-weight: 800; font-size: 15px; box-shadow: inset 0 -3px 0 transparent;
-}
-.tab-card:hover { background: var(--surface-3); text-decoration: none; }
-.tab-card[aria-current="page"] { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }

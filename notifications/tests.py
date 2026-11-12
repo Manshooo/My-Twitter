@@ -140,3 +140,37 @@ class RealtimeSignalTests(TestCase):
 			self.client.get(reverse('notifications'))
 			self.client.get(reverse('notifications'))  # читать уже нечего — сигнала нет
 		push.assert_called_once_with([self.ann.pk], 'badges')
+
+
+class NotificationPageTests(TestCase):
+	"""Страница по ревизии R2: вкладки, разделы «Сегодня / Ранее», ответ прямо из уведомления."""
+
+	def setUp(self):
+		self.ann, self.bob = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob'))
+		self.post = publish_post(self.ann.profile, 'привет')
+		self.client.force_login(self.ann)
+
+	def test_mentions_tab_keeps_only_replies_quotes_mentions(self):
+		toggle_like(self.post, self.bob.profile)
+		publish_post(self.bob.profile, 'ответ Боба', reply_to=self.post)
+		page = self.client.get(reverse('notifications') + '?tab=mentions')
+		self.assertEqual([g['verb'] for g in page.context['groups']], [Verb.REPLY])
+		self.assertContains(page, 'ответил(а) вам')
+		self.assertContains(page, 'data-reply-to=')
+		self.assertContains(page, 'class="tab" href="/notifications/?tab=mentions" aria-current="page"')
+
+	def test_sections_today_and_earlier(self):
+		toggle_like(self.post, self.bob.profile)
+		old = publish_post(self.ann.profile, 'старый')
+		toggle_like(old, self.bob.profile)
+		Notification.objects.filter(post=old).update(created_at=timezone.now() - timedelta(days=3))
+		html = self.client.get(reverse('notifications')).content.decode()
+		self.assertLess(html.index('>Сегодня<'), html.index('>Ранее<'))
+		self.assertEqual(html.count('class="group-h"'), 2)
+
+	def test_requests_tab_only_for_private_or_pending(self):
+		self.assertNotContains(self.client.get(reverse('notifications')), 'Заявки')
+		self.ann.profile.is_private = True
+		self.ann.profile.save()
+		relations.follow(self.bob.profile, self.ann.profile)
+		self.assertContains(self.client.get(reverse('notifications')), '<span class="tab-count">1</span>')
