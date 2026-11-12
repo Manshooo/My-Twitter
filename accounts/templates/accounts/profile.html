@@ -13,7 +13,7 @@
 		<p class="page-title clip1">{{ profile.username }}</p>
 	</div>
 	<section class="profile-card" aria-label="Профиль">
-		{# Обложка без полосок: своя картинка или ровный --brand-soft. #}
+		{# Обложка: своя картинка или полоски-заглушка (frontend/css/profile.css). #}
 		<div class="cover">
 			{% if profile.banner %}<img src="{{ profile.banner.url }}" alt="">{% endif %}
 			{% if is_own and not profile.banner %}
