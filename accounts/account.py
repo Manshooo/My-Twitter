@@ -30,6 +30,7 @@ from moderation.models import Ban, Report
 from notifications.models import Notification
 from post.models import Bookmark, Like, Mention, PollVote, Post
 from post.services import delete_posts, purge_posts
+from tracking.services import erase_user_events
 
 from . import devices
 from .models import DEFAULT_AVATAR, Block, FollowRequest, FollowThrough, Mute
@@ -259,6 +260,7 @@ def erase_account(user):
 		purge_messages(Message.objects.filter(sender=profile))
 		Member.objects.filter(profile=profile).delete()
 		EmailAddress.objects.filter(user=user).delete()
+		erase_user_events(user)
 		for field in media:
 			storage, name = field.storage, field.name
 			transaction.on_commit(lambda storage=storage, name=name: storage.delete(name))
@@ -294,6 +296,8 @@ def delete_account(request):
 		user.is_active = False
 		user.save(update_fields=['deleted_at', 'is_active'])
 		delete_posts(Post.objects.filter(author_id=user.pk))
+		# Поведенческие данные хранить незачем: закон требует хранить сообщения и журнал, а не их.
+		erase_user_events(user)
 		logout(request)
 	messages.success(request, 'Аккаунт удалён. Спасибо, что были с нами.')
 	return redirect('index')

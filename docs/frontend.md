@@ -72,3 +72,10 @@ npm run lint    # ESLint
 Первая стадия `Dockerfile` (`node:22-slim`) делает `npm ci && npm run build`, во вторую
 копируются только два собранных файла; дальше `collectstatic` добавляет хеш в имя и gzip
 (whitenoise). Node в итоговом образе нет.
+
+## Зависимости
+
+Версии закреплены точно (`package.json`, `package-lock.json`); CI проверяет их `npm audit`.
+`overrides` в `package.json` поднимает транзитивную зависимость, если уязвимость исправлена,
+а пакет-родитель ещё не обновился: `minimatch` 11 вместо 10.x из ESLint (GHSA-g3hv-75wg-m249).
+Когда ESLint сам перейдёт на исправленную версию — запись убрать.
