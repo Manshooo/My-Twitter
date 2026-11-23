@@ -36,7 +36,7 @@
 				</div>
 				<span class="muted">@{{ profile.user.username }}</span>
 			</div>
-			{% if profile.bio and not profile.is_private %}<p class="post-text profile-bio">{{ profile.bio }}</p>{% endif %}
+			{% if profile.bio and not profile.is_private %}<p class="post-text profile-bio">{{ profile.bio|linkify:"urls" }}</p>{% endif %}
 			<div class="profile-meta">
 				<span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"></use></svg>На AzzB с {{ profile.user.date_joined|date:"E Y" }}</span>
 			</div>

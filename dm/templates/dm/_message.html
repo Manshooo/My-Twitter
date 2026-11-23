@@ -12,7 +12,7 @@
 					{% endfor %}
 				</div>
 			{% endwith %}{% endif %}{% endwith %}
-			{% if message.text %}<p class="msg-text">{{ message.text|linkify }}</p>{% endif %}
+			{% if message.text %}<p class="msg-text">{{ message.text|linkify:"entities" }}</p>{% endif %}
 		</div>
 	{% endif %}
 	<div class="msg-meta">
