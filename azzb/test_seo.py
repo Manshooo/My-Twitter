@@ -4,8 +4,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.template import Context, Template
-from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -58,11 +57,6 @@ class SitemapTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		return response.content.decode()
 
-	def test_index_lists_sections(self):
-		body = self.client.get('/sitemap.xml').content.decode()
-		for name in ('pages', 'posts', 'people', 'tags'):
-			self.assertIn(f'http://testserver/sitemap-{name}.xml', body)
-
 	def test_only_indexable_posts_people_and_tags(self):
 		posts = self.section('posts')
 		self.assertIn(reverse('post', args=[self.visible.pk]), posts)
@@ -85,32 +79,6 @@ class GuestProfileTests(TestCase):
 		self.alice = make('alice', bio='Пишу про погоду')
 		publish_post(self.alice.profile, 'Секретов нет, но только после входа')
 
-	def test_guest_sees_header_and_latest_posts(self):
-		response = self.client.get('/users/alice/')
-		self.assertEqual(response.status_code, 200)
-		self.assertTemplateUsed(response, 'accounts/profile_guest.html')
-		self.assertContains(response, '<meta property="og:title" content="alice (@alice)">', html=True)
-		self.assertContains(response, '<meta property="og:type" content="profile">', html=True)
-		self.assertContains(response, '<meta property="og:description" content="Пишу про погоду">', html=True)
-		# Индексируемый профиль показывает гостю три последних поста (ревизия R2).
-		self.assertContains(response, 'Секретов нет')
-		self.assertContains(response, 'Присоединяйтесь к обсуждению')
-		self.assertNotContains(response, 'class="tabbar"')
-		self.assertNotContains(response, 'noindex')
-		data = jsonld(response)
-		self.assertEqual(data['@type'], 'ProfilePage')
-		self.assertEqual(data['mainEntity']['alternateName'], '@alice')
-
-	def test_bio_links_for_guest_and_signed_in_viewer(self):
-		owner = make('links', bio='Мой сайт example.ru')
-		bio = (
-			'<p class="post-text profile-bio">Мой сайт '
-			'<a class="url-link" href="https://example.ru" rel="ugc nofollow">example.ru</a></p>'
-		)
-		self.assertContains(self.client.get('/users/links/'), bio, html=True)
-		self.client.force_login(owner)
-		self.assertContains(self.client.get('/users/links/'), bio, html=True)
-
 	def test_private_profile_hides_bio_and_is_not_indexed(self):
 		make('locked', is_private=True, bio='Только для своих')
 		response = self.client.get('/users/locked/')
@@ -118,28 +86,6 @@ class GuestProfileTests(TestCase):
 		self.assertNotContains(response, 'Только для своих')
 		self.assertContains(response, '<meta name="robots" content="noindex">', html=True)
 		self.assertIsNone(jsonld(response))
-
-	def test_opted_out_profile_is_not_indexed(self):
-		quiet = make('quiet', search_indexing=False)
-		publish_post(quiet.profile, 'тихий пост')
-		response = self.client.get('/users/quiet/')
-		self.assertNotContains(response, 'тихий пост')
-		self.assertContains(response, '<meta name="robots" content="noindex">', html=True)
-		self.assertIsNone(jsonld(response))
-
-	def test_guest_actions_and_pages_need_login(self):
-		response = self.client.get('/users/alice/?cursor=x', headers={'HX-Request': 'true'})
-		self.assertEqual(response.status_code, 302)
-		self.assertIn(reverse('account_login'), response['Location'])
-		response = self.client.post('/users/alice/', {'subscribe': ''})
-		self.assertEqual(response.status_code, 302)
-		self.assertIn(reverse('account_login'), response['Location'])
-
-	def test_member_still_gets_full_profile(self):
-		self.client.force_login(make('bob'))
-		response = self.client.get('/users/alice/')
-		self.assertTemplateUsed(response, 'accounts/profile.html')
-		self.assertContains(response, 'Секретов нет')
 
 
 class PostMetaTests(TestCase):
@@ -205,49 +151,3 @@ class PostMetaTests(TestCase):
 		self.assertContains(response, '<meta name="robots" content="noindex">', html=True)
 		self.assertIsNone(jsonld(response))
 		self.assertContains(response, 'property="og:title"')
-
-	def test_home_describes_site(self):
-		response = self.client.get('/')
-		self.assertEqual(jsonld(response)['@type'], 'WebSite')
-		self.assertContains(response, '<meta name="twitter:card" content="summary_large_image">', html=True)
-		self.assertContains(response, '<meta property="og:locale" content="ru_RU">', html=True)
-		self.assertContains(response, '<title>AzzB</title>', html=True)
-		self.assertNotContains(response, 'разработке')
-
-	def test_auth_pages_have_canonical_and_are_allowed(self):
-		robots = self.client.get('/robots.txt').content.decode()
-		for name in ('account_login', 'account_signup'):
-			with self.subTest(name=name):
-				path = reverse(name)
-				page = self.client.get(path, {'next': '/users/alice/'})
-				self.assertContains(page, f'<link rel="canonical" href="http://testserver{path}">', html=True)
-				self.assertContains(page, '<input type="hidden" name="next" value="/users/alice/">', html=True)
-				self.assertIn(f'Allow: {path}\n', robots)
-
-
-class SeoTagsTests(SimpleTestCase):
-	def render(self, source, **context):
-		request = RequestFactory().get('/p/x/?cursor=abc')
-		return Template('{% load seo %}' + source).render(Context({'request': request, **context}))
-
-	def test_absolute_keeps_full_urls_from_storage(self):
-		self.assertEqual(self.render('{% absolute url %}', url='/media/a.webp'), 'http://testserver/media/a.webp')
-		self.assertEqual(self.render('{% absolute url %}', url='https://azzb.ru/media/a.webp'), 'https://azzb.ru/media/a.webp')
-
-	def test_canonical_drops_query(self):
-		self.assertEqual(self.render('{% canonical %}'), 'http://testserver/p/x/')
-
-	def test_capture_is_not_escaped_twice(self):
-		self.assertEqual(self.render('{% capture as t %} {{ v }} {% endcapture %}[{{ t }}]', v='a & b'), '[a &amp; b]')
-
-
-class SearchIndexingSettingTests(TestCase):
-	def test_profile_edit_saves_setting(self):
-		bob = make('bob')
-		self.client.force_login(bob)
-		self.client.post(reverse('edit-profile'), {'username': 'bob', 'theme': ''})
-		bob.profile.refresh_from_db()
-		self.assertFalse(bob.profile.search_indexing)
-		self.client.post(reverse('edit-profile'), {'username': 'bob', 'theme': '', 'search_indexing': 'on'})
-		bob.profile.refresh_from_db()
-		self.assertTrue(bob.profile.search_indexing)

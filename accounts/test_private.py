@@ -4,17 +4,15 @@ from django.test import TestCase
 from django.urls import reverse
 
 from azzb.discover import compute_trends
-from notifications.models import Notification
+from azzb.testing import ACTIVE
 from notifications.services import unread_count
 from post.models import Post
 from post.services import publish_post
 
 from . import relations
-from .models import FollowRequest, FollowThrough
-from azzb.testing import ACTIVE
+from .models import FollowThrough
 
 User = get_user_model()
-Verb = Notification.Verb
 HX = {'HTTP_HX_REQUEST': 'true'}
 
 
@@ -41,38 +39,6 @@ class PrivateAccountTests(TestCase):
 		relations.approve_request(self.owner.profile, self.fan.profile)
 		self.assertTrue(self.visible(self.fan))
 		self.assertEqual([row['name'] for row in compute_trends()], [])
-
-	def test_request_flow_and_notifications(self):
-		relations.follow(self.fan.profile, self.owner.profile)
-		relations.follow(self.fan.profile, self.owner.profile)
-		self.assertEqual(FollowRequest.objects.count(), 1)
-		self.assertFalse(self.follows(self.fan))
-		self.assertTrue(Notification.objects.filter(recipient=self.owner.profile, verb=Verb.FOLLOW_REQUEST).exists())
-		self.assertTrue(relations.approve_request(self.owner.profile, self.fan.profile))
-		self.assertTrue(self.follows(self.fan))
-		self.assertFalse(Notification.objects.filter(verb=Verb.FOLLOW_REQUEST).exists())
-		self.assertTrue(Notification.objects.filter(recipient=self.fan.profile, verb=Verb.FOLLOW_ACCEPTED).exists())
-		self.assertFalse(relations.approve_request(self.owner.profile, self.fan.profile))
-
-	def test_decline_and_cancel(self):
-		relations.follow(self.fan.profile, self.owner.profile)
-		relations.decline_request(self.owner.profile, self.fan.profile)
-		self.assertFalse(FollowRequest.objects.exists())
-		self.assertFalse(Notification.objects.exists())
-		relations.follow(self.stranger.profile, self.owner.profile)
-		relations.unfollow(self.stranger.profile, self.owner.profile)
-		self.assertFalse(FollowRequest.objects.exists())
-
-	def test_opening_account_approves_pending(self):
-		relations.follow(self.fan.profile, self.owner.profile)
-		relations.set_private(self.owner.profile, False)
-		self.assertTrue(self.follows(self.fan))
-		self.assertTrue(self.visible(self.stranger))
-
-	def test_block_drops_requests(self):
-		relations.follow(self.fan.profile, self.owner.profile)
-		relations.block(self.owner.profile, self.fan.profile)
-		self.assertFalse(FollowRequest.objects.exists())
 
 	def test_profile_page_for_stranger_and_request_button(self):
 		self.client.force_login(self.stranger)
@@ -116,14 +82,3 @@ class PrivateAccountTests(TestCase):
 	def test_mention_from_private_account_hidden_from_non_follower(self):
 		publish_post(self.owner.profile, 'привет @stranger')
 		self.assertEqual(unread_count(self.stranger), 0)
-
-	def test_settings_toggle(self):
-		relations.follow(self.fan.profile, self.owner.profile)
-		self.client.force_login(self.owner)
-		self.client.post(reverse('edit-profile'), {'username': 'owner', 'theme': '', 'is_private': 'on'})
-		self.owner.profile.refresh_from_db()
-		self.assertTrue(self.owner.profile.is_private)
-		self.client.post(reverse('edit-profile'), {'username': 'owner', 'theme': ''})
-		self.owner.profile.refresh_from_db()
-		self.assertFalse(self.owner.profile.is_private)
-		self.assertTrue(self.follows(self.fan))

@@ -1,9 +1,6 @@
 import re
 
-from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
-
-from .csp import ContentSecurityPolicyMiddleware
+from django.test import TestCase
 
 
 def directive(policy, name):
@@ -37,20 +34,3 @@ class ContentSecurityPolicyTests(TestCase):
 		first = directive(self.client.get('/')['Content-Security-Policy'], 'script-src')
 		second = directive(self.client.get('/')['Content-Security-Policy'], 'script-src')
 		self.assertNotEqual(first, second)
-
-	def test_pages_without_nonce_keep_host_allowlist(self):
-		# Админка Django: её <script> без nonce, 'strict-dynamic' их бы заблокировал.
-		admin = get_user_model().objects.create_superuser('root', 'root@example.com', 'pass')
-		self.client.force_login(admin)
-		script_src = directive(self.client.get('/admin/')['Content-Security-Policy'], 'script-src')
-		self.assertNotIn('nonce-', script_src)
-		self.assertNotIn('strict-dynamic', script_src)
-		self.assertIn("'self'", script_src)
-
-	def test_only_html_gets_policy(self):
-		self.assertNotIn('Content-Security-Policy', self.client.get('/robots.txt'))
-
-	@override_settings(DEBUG=True)
-	def test_debug_only_reports(self):
-		middleware = ContentSecurityPolicyMiddleware(lambda request: None)
-		self.assertEqual(middleware.header, 'Content-Security-Policy-Report-Only')

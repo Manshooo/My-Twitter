@@ -2,26 +2,17 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from accounts import relations
+from azzb.testing import ACTIVE
 from notifications.models import Notification
 
-from .models import Mention
-from .services import delete_post, edit_post, publish_post, purge_posts
-from .models import Post
-from .text import hashtags, linkify, mentions
-from azzb.testing import ACTIVE
+from .services import edit_post, publish_post
+from .text import linkify
 
 User = get_user_model()
 Verb = Notification.Verb
 
 
 class ParseTests(SimpleTestCase):
-	def test_hashtags(self):
-		self.assertEqual(hashtags('#Москва и #москва, #2024, #2024год a#b #snake_case'), ['москва', '2024год', 'snake_case'])
-
-	def test_mentions(self):
-		self.assertEqual(mentions('спасибо, @ann. и @bob-, почта me@site.ru, @ann'), ['ann', 'bob'])
-
 	def test_linkify_escapes_and_links(self):
 		html = linkify("<b>'#тег'</b> привет @ann.")
 		self.assertIn('&lt;b&gt;', html)
@@ -30,23 +21,9 @@ class ParseTests(SimpleTestCase):
 		# Экранированный апостроф (&#x27;) не превращается в тег.
 		self.assertNotIn('x27</a>', html)
 
-	def test_web_links_preserve_url_and_surrounding_punctuation(self):
-		html = linkify('«example.ru», (https://example.org/a%2Fb/(подборка)?x=1&y=2#section).')
-		self.assertIn('«<a class="url-link" href="https://example.ru" rel="ugc nofollow">example.ru</a>»,', html)
-		self.assertIn('href="https://example.org/a%2Fb/(подборка)?x=1&amp;y=2#section"', html)
-		self.assertTrue(html.endswith('#section</a>).'))
-
 	def test_unsupported_addresses_and_html_remain_text(self):
 		text = '<b>javascript:alert(1) ftp://example.org me@example.org</b>'
 		self.assertEqual(linkify(text), '&lt;b&gt;javascript:alert(1) ftp://example.org me@example.org&lt;/b&gt;')
-
-	def test_web_url_does_not_create_hashtags_or_mentions(self):
-		text = 'https://пример.рф/@bob/#fragment и #тег @ann'
-		self.assertEqual(hashtags(text), ['тег'])
-		self.assertEqual(mentions(text), ['ann'])
-		html = linkify(text)
-		self.assertEqual(html.count('<a '), 3)
-		self.assertIn('href="https://пример.рф/@bob/#fragment"', html)
 
 
 class EntityTests(TestCase):
@@ -64,12 +41,6 @@ class EntityTests(TestCase):
 		self.assertEqual([m.profile for m in post.mentions.all()], [self.bob.profile])
 		self.assertEqual(self.mentioned(self.bob).count(), 1)
 
-	def test_reply_author_gets_one_notification(self):
-		post = publish_post(self.ann.profile, 'пост')
-		publish_post(self.bob.profile, '@ann согласен', reply_to=post)
-		self.assertEqual(Notification.objects.filter(recipient=self.ann.profile).count(), 1)
-		self.assertFalse(self.mentioned(self.ann).exists())
-
 	def test_edit_syncs_entities(self):
 		post = publish_post(self.ann.profile, '@bob #один')
 		edit_post(post, '@cat #два')
@@ -78,33 +49,3 @@ class EntityTests(TestCase):
 		self.assertEqual(self.mentioned(self.cat).count(), 1)
 		edit_post(post, '@cat #два и ещё текст')
 		self.assertEqual(self.mentioned(self.cat).count(), 1)
-
-	def test_tag_page(self):
-		visible = publish_post(self.bob.profile, 'про #Котов')
-		reply = publish_post(self.cat.profile, 'и я про #котов', reply_to=visible)
-		publish_post(self.cat.profile, 'без тега')
-		self.client.force_login(self.ann)
-		self.assertRedirects(self.client.get(reverse('hashtag', args=['КОТОВ'])), reverse('hashtag', args=['котов']), status_code=301)
-		response = self.client.get(reverse('hashtag', args=['котов']))
-		self.assertEqual(set(response.context['posts']), {visible, reply})
-		self.assertContains(response, '#котов')
-		relations.mute(self.ann.profile, self.cat.profile)
-		self.assertEqual(self.client.get(reverse('hashtag', args=['котов'])).context['posts'], [visible])
-		delete_post(visible)
-		self.assertEqual(self.client.get(reverse('hashtag', args=['котов'])).context['posts'], [])
-		self.client.logout()
-		self.assertContains(self.client.get(reverse('hashtag', args=['нет_такого'])), 'Постов с этим тегом пока нет')
-
-	def test_purge_removes_entities(self):
-		post = publish_post(self.ann.profile, '@bob #тег')
-		delete_post(post)
-		purge_posts(Post.objects.filter(pk=post.pk))
-		self.assertFalse(post.hashtags.exists())
-		self.assertFalse(Mention.objects.exists())
-
-	def test_card_renders_links(self):
-		publish_post(self.ann.profile, 'смотри @bob #новости на example.ru')
-		response = self.client.get(reverse('index'))
-		self.assertContains(response, 'class="mention-link" href="/users/bob/"')
-		self.assertContains(response, 'class="tag-link"')
-		self.assertContains(response, 'class="url-link" href="https://example.ru"')

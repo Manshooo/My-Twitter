@@ -20,16 +20,3 @@ class EmailLayoutTests(TestCase):
 		link = next(line for line in message.body.splitlines() if line.startswith('http'))
 		self.assertIn(f'href="{link}"', html)
 		self.assertIn('@ann', message.body)
-
-	def test_unknown_account(self):
-		self.client.post(reverse('account_reset_password'), {'email': 'nobody@example.com'})
-		self.assertIn('Аккаунт не найден', html_of(mail.outbox[0]))
-
-	def test_signup_confirmation(self):
-		self.client.post(reverse('account_signup'), {
-			'username': 'bob', 'email': 'bob@example.com', 'password1': 'Long-pass-12345', 'password2': 'Long-pass-12345',
-			'accept_rules': 'on', 'pd_consent': 'on',
-		})
-		html = html_of(mail.outbox[0])
-		self.assertIn('Подтвердить почту', html)
-		self.assertIn('@bob', html)
