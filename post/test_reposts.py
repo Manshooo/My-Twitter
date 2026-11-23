@@ -36,16 +36,19 @@ class RepostTests(TestCase):
 	def test_repost_hidden_with_original(self):
 		toggle_repost(self.post, self.bob.profile)
 		self.client.force_login(self.cat)
-		visible = Post.objects.visible_to(self.cat).filter(is_repost=True)
-		self.assertEqual(visible.count(), 1)
+
+		def visible_reposts():
+			return Post.objects.visible_to(self.cat).filter(is_repost=True)
+
+		self.assertEqual(visible_reposts().count(), 1)
 		relations.block(self.cat.profile, self.ann.profile)
-		self.assertFalse(visible.exists())
+		self.assertFalse(visible_reposts().exists())
 		relations.unblock(self.cat.profile, self.ann.profile)
 		relations.mute(self.cat.profile, self.ann.profile)
-		self.assertEqual(list(Post.objects.visible_to(self.cat).without_muted(self.cat).filter(is_repost=True)), [])
+		self.assertFalse(visible_reposts().without_muted(self.cat).exists())
 		relations.unmute(self.cat.profile, self.ann.profile)
 		delete_post(self.post)
-		self.assertEqual(visible(), [])
+		self.assertFalse(visible_reposts().exists())
 
 
 class QuoteTests(TestCase):
