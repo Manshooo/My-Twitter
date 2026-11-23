@@ -100,6 +100,16 @@ class GuestProfileTests(TestCase):
 		self.assertEqual(data['@type'], 'ProfilePage')
 		self.assertEqual(data['mainEntity']['alternateName'], '@alice')
 
+	def test_bio_links_for_guest_and_signed_in_viewer(self):
+		owner = make('links', bio='Мой сайт example.ru')
+		bio = (
+			'<p class="post-text profile-bio">Мой сайт '
+			'<a class="url-link" href="https://example.ru" rel="ugc nofollow">example.ru</a></p>'
+		)
+		self.assertContains(self.client.get('/users/links/'), bio, html=True)
+		self.client.force_login(owner)
+		self.assertContains(self.client.get('/users/links/'), bio, html=True)
+
 	def test_private_profile_hides_bio_and_is_not_indexed(self):
 		make('locked', is_private=True, bio='Только для своих')
 		response = self.client.get('/users/locked/')

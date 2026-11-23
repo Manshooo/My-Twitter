@@ -30,6 +30,24 @@ class ParseTests(SimpleTestCase):
 		# Экранированный апостроф (&#x27;) не превращается в тег.
 		self.assertNotIn('x27</a>', html)
 
+	def test_web_links_preserve_url_and_surrounding_punctuation(self):
+		html = linkify('«example.ru», (https://example.org/a%2Fb/(подборка)?x=1&y=2#section).')
+		self.assertIn('«<a class="url-link" href="https://example.ru" rel="ugc nofollow">example.ru</a>»,', html)
+		self.assertIn('href="https://example.org/a%2Fb/(подборка)?x=1&amp;y=2#section"', html)
+		self.assertTrue(html.endswith('#section</a>).'))
+
+	def test_unsupported_addresses_and_html_remain_text(self):
+		text = '<b>javascript:alert(1) ftp://example.org me@example.org</b>'
+		self.assertEqual(linkify(text), '&lt;b&gt;javascript:alert(1) ftp://example.org me@example.org&lt;/b&gt;')
+
+	def test_web_url_does_not_create_hashtags_or_mentions(self):
+		text = 'https://пример.рф/@bob/#fragment и #тег @ann'
+		self.assertEqual(hashtags(text), ['тег'])
+		self.assertEqual(mentions(text), ['ann'])
+		html = linkify(text)
+		self.assertEqual(html.count('<a '), 3)
+		self.assertIn('href="https://пример.рф/@bob/#fragment"', html)
+
 
 class EntityTests(TestCase):
 	def setUp(self):
@@ -85,7 +103,8 @@ class EntityTests(TestCase):
 		self.assertFalse(Mention.objects.exists())
 
 	def test_card_renders_links(self):
-		publish_post(self.ann.profile, 'смотри @bob #новости')
+		publish_post(self.ann.profile, 'смотри @bob #новости на example.ru')
 		response = self.client.get(reverse('index'))
 		self.assertContains(response, 'class="mention-link" href="/users/bob/"')
 		self.assertContains(response, 'class="tag-link"')
+		self.assertContains(response, 'class="url-link" href="https://example.ru"')

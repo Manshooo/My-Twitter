@@ -48,9 +48,9 @@ def msg_time(value):
 
 
 @register.filter
-def linkify(text):
+def linkify(text, mode='all'):
 	from post.text import linkify as render
-	return render(text)
+	return render(text, urls=mode != 'entities', entities=mode != 'urls')
 
 
 @register.filter
