@@ -37,19 +37,14 @@ def person(request, profile):
 	return data
 
 
-def post(request, post):
+def _posting(request, post, schema_type):
 	url = request.build_absolute_uri(reverse('post', args=[post.pk]))
 	data = {
-		'@type': 'SocialMediaPosting',
+		'@type': schema_type,
 		'@id': url,
 		'url': url,
 		'datePublished': post.created_at.isoformat(),
 		'author': person(request, post.author),
-		'commentCount': post.replies_count,
-		'interactionStatistic': [
-			_counter('LikeAction', getattr(post, 'likes_n', 0)),
-			_counter('ShareAction', post.reposts_count),
-		],
 	}
 	if post.text:
 		data['text'] = post.text
@@ -58,8 +53,27 @@ def post(request, post):
 	images = [request.build_absolute_uri(image.file.url) for image in post.images.all() if image.file]
 	if images:
 		data['image'] = images
+	return data
+
+
+def post(request, post, replies):
+	data = _posting(request, post, 'SocialMediaPosting')
+	data['commentCount'] = post.replies_count
+	data['interactionStatistic'] = [
+		_counter('LikeAction', getattr(post, 'likes_n', 0)),
+		_counter('ShareAction', post.reposts_count),
+	]
 	if post.quote_of_id and getattr(post, 'quote_available', False):
 		data['sharedContent'] = {'@id': request.build_absolute_uri(reverse('post', args=[post.quote_of_id]))}
+	# Берём ответы с этой страницы. У вошедшего пользователя видимость шире, чем у поисковика.
+	comments = []
+	for reply in replies:
+		if reply.available and not reply.hidden_at and reply.author.indexable:
+			comment = _posting(request, reply, 'Comment')
+			if 'text' in comment or 'image' in comment:
+				comments.append(comment)
+	if comments:
+		data['comment'] = comments
 	return data
 
 

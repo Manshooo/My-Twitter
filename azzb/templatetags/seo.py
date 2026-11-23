@@ -47,8 +47,8 @@ def canonical(context):
 
 
 @register.simple_tag(takes_context=True)
-def jsonld_post(context, post):
-	return seo.script(seo.post(context['request'], post))
+def jsonld_post(context, post, replies):
+	return seo.script(seo.post(context['request'], post, replies))
 
 
 @register.simple_tag(takes_context=True)

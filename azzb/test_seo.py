@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.template import Context, Template
@@ -8,9 +9,9 @@ from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from post.models import Post
-from post.services import publish_post
 from azzb.testing import ACTIVE
+from post.models import Image, Post
+from post.services import publish_post
 
 User = get_user_model()
 
@@ -157,7 +158,45 @@ class PostMetaTests(TestCase):
 		self.assertEqual(data['@type'], 'SocialMediaPosting')
 		self.assertEqual(data['text'], 'Текст </script><b>поста</b>')
 		self.assertEqual(data['author']['url'], 'http://testserver/users/alice/')
+		self.assertEqual(data['commentCount'], 0)
+		self.assertNotIn('comment', data)
 		self.assertNotContains(response, 'noindex')
+
+	def test_post_marks_up_indexable_replies_from_the_guest_page_in_order(self):
+		post = publish_post(self.alice.profile, 'Начало обсуждения')
+		bob = make('bob')
+		first = publish_post(bob.profile, 'Первый ответ </script>', reply_to=post)
+		publish_post(make('private', is_private=True).profile, 'Закрытый ответ', reply_to=post)
+		publish_post(make('quiet', search_indexing=False).profile, 'Ответ без индексации', reply_to=post)
+		hidden = publish_post(bob.profile, 'Скрытый ответ', reply_to=post)
+		Post.objects.filter(pk=hidden.pk).update(hidden_at=timezone.now())
+		image_reply = Post.objects.create(author=bob.profile, reply_to=post, is_reply=True)
+		image = Image.objects.create(post=image_reply, file='posts/reply.webp')
+		publish_post(bob.profile, 'Ответ за пределами первой страницы', reply_to=post)
+
+		with patch('post.views.GUEST_REPLIES', 5):
+			response = self.client.get(reverse('post', args=[post.pk]))
+		self.assertContains(response, 'Ответ без индексации')
+		comments = jsonld(response)['comment']
+		self.assertEqual([comment['@type'] for comment in comments], ['Comment', 'Comment'])
+		self.assertEqual([comment['url'] for comment in comments], [
+			'http://testserver' + reverse('post', args=[reply.pk]) for reply in (first, image_reply)
+		])
+		self.assertEqual(comments[0]['text'], first.text)
+		self.assertEqual(comments[0]['author']['url'], 'http://testserver/users/bob/')
+		self.assertEqual(comments[0]['datePublished'], first.created_at.isoformat())
+		self.assertEqual(comments[1]['image'], ['http://testserver' + image.file.url])
+
+	def test_moderation_hidden_reply_is_omitted_even_for_its_author(self):
+		post = publish_post(self.alice.profile, 'Открытый пост')
+		bob = make('bob')
+		reply = publish_post(bob.profile, 'Виден только автору', reply_to=post)
+		Post.objects.filter(pk=reply.pk).update(hidden_at=timezone.now())
+		self.client.force_login(bob)
+
+		response = self.client.get(reverse('post', args=[post.pk]))
+		self.assertContains(response, reply.text)
+		self.assertNotIn('comment', jsonld(response))
 
 	def test_opted_out_author_posts_are_not_indexed(self):
 		quiet = make('quiet', search_indexing=False)
@@ -176,9 +215,14 @@ class PostMetaTests(TestCase):
 		self.assertNotContains(response, 'разработке')
 
 	def test_auth_pages_have_canonical_and_are_allowed(self):
-		page = self.client.get(reverse('account_login') + '?next=/hot/')
-		self.assertContains(page, '<link rel="canonical" href="http://testserver/auth/login/">', html=True)
-		self.assertIn('Allow: /auth/signup/', self.client.get('/robots.txt').content.decode())
+		robots = self.client.get('/robots.txt').content.decode()
+		for name in ('account_login', 'account_signup'):
+			with self.subTest(name=name):
+				path = reverse(name)
+				page = self.client.get(path, {'next': '/users/alice/'})
+				self.assertContains(page, f'<link rel="canonical" href="http://testserver{path}">', html=True)
+				self.assertContains(page, '<input type="hidden" name="next" value="/users/alice/">', html=True)
+				self.assertIn(f'Allow: {path}\n', robots)
 
 
 class SeoTagsTests(SimpleTestCase):
