@@ -16,7 +16,7 @@ User = get_user_model()
 
 
 def make(name, **profile):
-	user = User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
+	user = User.objects.create_user(name, f'{name}@example.com', **ACTIVE)
 	if profile:
 		for field, value in profile.items():
 			setattr(user.profile, field, value)
@@ -89,8 +89,9 @@ class GuestProfileTests(TestCase):
 
 
 class PostMetaTests(TestCase):
-	def setUp(self):
-		self.alice = make('alice')
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = make('alice')
 
 	def test_post_has_og_and_social_media_posting(self):
 		post = publish_post(self.alice.profile, 'Текст </script><b>поста</b>')

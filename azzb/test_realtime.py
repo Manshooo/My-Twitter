@@ -12,8 +12,9 @@ User = get_user_model()
 
 
 class RealtimeTests(ConsumerTestCase):
-	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = User.objects.create_user('ann', 'ann@example.com', **ACTIVE)
 
 	async def connect(self, user):
 		communicator = WebsocketClient(UserConsumer.as_asgi(), user=user)

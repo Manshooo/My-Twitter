@@ -33,8 +33,11 @@ class SecurityEventsTests(TestCase):
 
 
 class SessionsTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = make('ann')
+
 	def setUp(self):
-		self.ann = make('ann')
 		self.phone, self.laptop = Client(headers={'User-Agent': IPHONE}), Client(headers={'User-Agent': WINDOWS})
 		for client in (self.phone, self.laptop):
 			client.post(reverse('account_login'), {'login': 'ann', 'password': 'pass-12345'})

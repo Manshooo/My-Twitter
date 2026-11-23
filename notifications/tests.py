@@ -16,9 +16,10 @@ Verb = Notification.Verb
 
 
 class NotificationTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob, self.cat = (User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat'))
-		self.post = publish_post(self.ann.profile, 'привет')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = (User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in ('ann', 'bob', 'cat'))
+		cls.post = publish_post(cls.ann.profile, 'привет')
 
 	def test_like_notifies_author_and_unlike_retracts(self):
 		toggle_like(self.post, self.bob.profile)

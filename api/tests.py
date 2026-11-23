@@ -11,10 +11,11 @@ User = CustomUser
 
 
 class ProfileApiPermissionsTests(TestCase):
-	def setUp(self):
-		self.owner = User.objects.create_user('owner', 'owner@example.com', 'pass-12345', **ACTIVE)
-		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345', **ACTIVE)
-		self.url = f'/api/profiles/{self.owner.profile.pk}/'
+	@classmethod
+	def setUpTestData(cls):
+		cls.owner = User.objects.create_user('owner', 'owner@example.com', **ACTIVE)
+		cls.other = User.objects.create_user('other', 'other@example.com', **ACTIVE)
+		cls.url = f'/api/profiles/{cls.owner.profile.pk}/'
 
 	def test_anonymous_cannot_read_update_or_delete(self):
 		self.assertEqual(self.client.get(self.url).status_code, 403)
@@ -58,8 +59,8 @@ class ProfileApiPermissionsTests(TestCase):
 
 class CreatePostApiTests(TestCase):
 	def setUp(self):
-		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345', **ACTIVE)
-		self.victim = User.objects.create_user('victim', 'victim@example.com', 'pass-12345', **ACTIVE)
+		self.author = User.objects.create_user('author', 'author@example.com', **ACTIVE)
+		self.victim = User.objects.create_user('victim', 'victim@example.com', **ACTIVE)
 		self.client.force_login(self.author)
 
 	def post_json(self, payload):
@@ -79,10 +80,11 @@ class CreatePostApiTests(TestCase):
 
 
 class LikeAndDeleteApiTests(TestCase):
-	def setUp(self):
-		self.author = User.objects.create_user('author', 'author@example.com', 'pass-12345', **ACTIVE)
-		self.other = User.objects.create_user('other', 'other@example.com', 'pass-12345', **ACTIVE)
-		self.post = Post.objects.create(author=self.author.profile, text='Пост')
+	@classmethod
+	def setUpTestData(cls):
+		cls.author = User.objects.create_user('author', 'author@example.com', **ACTIVE)
+		cls.other = User.objects.create_user('other', 'other@example.com', **ACTIVE)
+		cls.post = Post.objects.create(author=cls.author.profile, text='Пост')
 
 	def call(self, url, payload):
 		return self.client.post(url, json.dumps(payload), content_type='application/json')
@@ -106,9 +108,9 @@ class LikeAndDeleteApiTests(TestCase):
 class FeedPermissionsTests(TestCase):
 	def test_following_feed_shows_only_followed_authors(self):
 		from accounts.models import FollowThrough
-		reader = User.objects.create_user('reader', 'reader@example.com', 'pass-12345', **ACTIVE)
-		followed = User.objects.create_user('followed', 'followed@example.com', 'pass-12345', **ACTIVE)
-		stranger = User.objects.create_user('stranger', 'stranger@example.com', 'pass-12345', **ACTIVE)
+		reader = User.objects.create_user('reader', 'reader@example.com', **ACTIVE)
+		followed = User.objects.create_user('followed', 'followed@example.com', **ACTIVE)
+		stranger = User.objects.create_user('stranger', 'stranger@example.com', **ACTIVE)
 		FollowThrough.objects.create(follower=reader.profile, followee=followed.profile)
 		Post.objects.create(author=followed.profile, text='От подписки')
 		Post.objects.create(author=stranger.profile, text='От незнакомца')
@@ -120,9 +122,9 @@ class FeedPermissionsTests(TestCase):
 
 class MentionApiTests(TestCase):
 	def setUp(self):
-		self.me = User.objects.create_user('me', 'me@example.com', 'pass-12345', **ACTIVE)
-		self.anna = User.objects.create_user('anna', 'anna@example.com', 'pass-12345', **ACTIVE)
-		self.annabel = User.objects.create_user('annabel', 'annabel@example.com', 'pass-12345', **ACTIVE)
+		self.me = User.objects.create_user('me', 'me@example.com', **ACTIVE)
+		self.anna = User.objects.create_user('anna', 'anna@example.com', **ACTIVE)
+		self.annabel = User.objects.create_user('annabel', 'annabel@example.com', **ACTIVE)
 		self.client.force_login(self.me)
 
 	def suggest(self, q):

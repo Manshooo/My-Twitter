@@ -1,7 +1,7 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
-from azzb.testing import ACTIVE
-from post.tests import MEDIA_ROOT, make_upload
+from azzb.testing import ACTIVE, use_temporary_media
+from post.tests import make_upload
 
 from .models import CustomUser
 
@@ -12,12 +12,15 @@ User = CustomUser
 class BlockTests(TestCase):
 	"""Блокировка скрывает посты в обе стороны и снимает подписки."""
 
-	def setUp(self):
+	@classmethod
+	def setUpTestData(cls):
 		from post.models import Post
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.alice_post = Post.objects.create(author=self.alice.profile, text='пост Алисы')
-		self.bob_post = Post.objects.create(author=self.bob.profile, text='пост Боба')
+		cls.alice = User.objects.create_user('alice', 'alice@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.alice_post = Post.objects.create(author=cls.alice.profile, text='пост Алисы')
+		cls.bob_post = Post.objects.create(author=cls.bob.profile, text='пост Боба')
+
+	def setUp(self):
 		self.client.force_login(self.alice)
 
 	def act(self, action, username='bob', **extra):
@@ -53,22 +56,25 @@ class BlockTests(TestCase):
 		self.assertNotContains(page, 'name="subscribe"')
 
 
-@override_settings(MEDIA_ROOT=MEDIA_ROOT)
 class AccountDataTests(TestCase):
 	"""E6: выгрузка своих данных и удаление аккаунта."""
 
-	def setUp(self):
+	@classmethod
+	def setUpTestData(cls):
 		from post.models import Post
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = Post.objects.create(author=self.alice.profile, text='мой пост')
-		Post.objects.create(author=self.bob.profile, text='пост Боба')
+		cls.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = Post.objects.create(author=cls.alice.profile, text='мой пост')
+		Post.objects.create(author=cls.bob.profile, text='пост Боба')
+
+	def setUp(self):
 		self.client.force_login(self.alice)
 
 	def test_export_zip(self):
 		import io
 		import json
 		import zipfile
+		use_temporary_media(self)
 		self.client.post('/compose/', {'text': 'с картинкой', 'images': make_upload()}, headers={'HX-Request': 'true'})
 		self.assertEqual(self.client.get('/settings/account/').status_code, 200)
 		response = self.client.post('/settings/account/export/')

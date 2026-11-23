@@ -11,8 +11,8 @@ User = get_user_model()
 
 class SearchTests(TestCase):
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob_builder', 'bob@example.com', 'pass-12345', **ACTIVE)
+		self.ann = User.objects.create_user('ann', 'ann@example.com', **ACTIVE)
+		self.bob = User.objects.create_user('bob_builder', 'bob@example.com', **ACTIVE)
 		self.client.force_login(self.ann)
 
 	def search(self, q, **params):

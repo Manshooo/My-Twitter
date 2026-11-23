@@ -1,27 +1,18 @@
 import json
-import shutil
-import tempfile
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from PIL import Image as PILImage
 
-from azzb.testing import ACTIVE
+from azzb.testing import ACTIVE, use_temporary_media
 
 from .media import process_post_image
 from .models import Image, Post
 
 User = get_user_model()
-MEDIA_ROOT = tempfile.mkdtemp(prefix='azzb-test-media-')
-
-
-def tearDownModule():
-	shutil.rmtree(MEDIA_ROOT, ignore_errors=True)
-
-
 def make_upload(name='photo.jpg', size=(64, 48), fmt='JPEG', color=(200, 40, 40), **save_kwargs):
 	buffer = BytesIO()
 	PILImage.new('RGB', size, color).save(buffer, fmt, **save_kwargs)
@@ -58,10 +49,10 @@ class ProcessImageTests(TestCase):
 			process_post_image(make_upload('bomb.png', size=(8000, 8000), fmt='PNG'))
 
 
-@override_settings(MEDIA_ROOT=MEDIA_ROOT)
 class CreatePostWithImagesTests(TestCase):
 	def setUp(self):
-		self.user = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
+		use_temporary_media(self)
+		self.user = User.objects.create_user('alice', 'alice@example.com', **ACTIVE)
 		self.client.force_login(self.user)
 
 	def post(self, **data):
@@ -77,10 +68,13 @@ class CreatePostWithImagesTests(TestCase):
 
 
 class RepliesTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = User.objects.create_user('alice', 'alice@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.root = Post.objects.create(author=cls.alice.profile, text='Корень ветки')
+
 	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.root = Post.objects.create(author=self.alice.profile, text='Корень ветки')
 		self.client.force_login(self.bob)
 
 	def reply(self, user, parent, text):
@@ -139,10 +133,11 @@ class RepliesTests(TestCase):
 
 
 class EditPostTests(TestCase):
-	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = Post.objects.create(author=self.alice.profile, text='Перавя версия')
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = User.objects.create_user('alice', 'alice@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = Post.objects.create(author=cls.alice.profile, text='Перавя версия')
 
 	def edit(self, user, text, post=None):
 		self.client.force_login(user)
@@ -180,10 +175,11 @@ HTMX = {'HX-Request': 'true'}
 class HtmxActionsTests(TestCase):
 	"""Лайк, удаление и публикация через htmx."""
 
-	def setUp(self):
-		self.alice = User.objects.create_user('alice', 'alice@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = Post.objects.create(author=self.alice.profile, text='Пост Алисы')
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = User.objects.create_user('alice', 'alice@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = Post.objects.create(author=cls.alice.profile, text='Пост Алисы')
 
 	def test_like_returns_new_button(self):
 		self.client.force_login(self.bob)
@@ -207,8 +203,8 @@ class HtmxActionsTests(TestCase):
 		self.assertEqual(self.client.post(f'/p/{self.post.pk}/delete/', headers=HTMX).status_code, 403)
 		self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
 
-	@override_settings(MEDIA_ROOT=MEDIA_ROOT)
 	def test_compose_new_post_with_images(self):
+		use_temporary_media(self)
 		self.client.force_login(self.bob)
 		response = self.client.post('/compose/', {
 			'text': 'Через htmx', 'images': [make_upload()], 'alt': ['Описание'], 'reply_to': '', 'edit': '',

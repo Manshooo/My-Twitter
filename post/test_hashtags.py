@@ -27,9 +27,10 @@ class ParseTests(SimpleTestCase):
 
 
 class EntityTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob, self.cat = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = (
+			User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in ('ann', 'bob', 'cat')
 		)
 
 	def mentioned(self, user):

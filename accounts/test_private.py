@@ -17,12 +17,13 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 class PrivateAccountTests(TestCase):
-	def setUp(self):
-		self.owner, self.fan, self.stranger = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('owner', 'fan', 'stranger')
+	@classmethod
+	def setUpTestData(cls):
+		cls.owner, cls.fan, cls.stranger = (
+			User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in ('owner', 'fan', 'stranger')
 		)
-		relations.set_private(self.owner.profile, True)
-		self.post = publish_post(self.owner.profile, 'только для своих #секрет')
+		relations.set_private(cls.owner.profile, True)
+		cls.post = publish_post(cls.owner.profile, 'только для своих #секрет')
 
 	def visible(self, user):
 		return Post.objects.visible_to(user).filter(pk=self.post.pk).exists()

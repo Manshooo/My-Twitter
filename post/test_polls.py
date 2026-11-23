@@ -16,14 +16,15 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 def make(name):
-	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE)
+	return User.objects.create_user(name, f'{name}@example.com', **ACTIVE)
 
 
 class PollTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob, self.cat = make('ann'), make('bob'), make('cat')
-		self.post = publish_post(self.ann.profile, 'Чай или кофе?', poll_options=['Чай', 'Кофе', ''], poll_duration='24')
-		self.tea, self.coffee = self.post.poll.options.all()
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = make('ann'), make('bob'), make('cat')
+		cls.post = publish_post(cls.ann.profile, 'Чай или кофе?', poll_options=['Чай', 'Кофе', ''], poll_duration='24')
+		cls.tea, cls.coffee = cls.post.poll.options.all()
 
 	def page(self, user):
 		self.client.force_login(user)

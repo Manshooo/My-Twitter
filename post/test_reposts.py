@@ -14,11 +14,12 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 class RepostTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob, self.cat = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = (
+			User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in ('ann', 'bob', 'cat')
 		)
-		self.post = publish_post(self.ann.profile, 'исходный пост')
+		cls.post = publish_post(cls.ann.profile, 'исходный пост')
 
 	def reposts_count(self):
 		self.post.refresh_from_db()
@@ -52,10 +53,11 @@ class RepostTests(TestCase):
 
 
 class QuoteTests(TestCase):
-	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = publish_post(self.ann.profile, 'исходный пост')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = User.objects.create_user('ann', 'ann@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = publish_post(cls.ann.profile, 'исходный пост')
 
 	def test_quote_via_composer(self):
 		self.client.force_login(self.bob)

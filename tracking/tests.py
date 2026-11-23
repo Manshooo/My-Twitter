@@ -16,16 +16,19 @@ from .models import Impression, InteractionEvent
 User = get_user_model()
 
 
-def make(name, **extra):
-	return User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **{**ACTIVE, **extra})
+def make(name, password=None, **extra):
+	return User.objects.create_user(name, f'{name}@example.com', password, **{**ACTIVE, **extra})
 
 
 class EventsApiTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = make('ann')
+		cls.bob = make('bob')
+		cls.post = publish_post(cls.bob.profile, 'привет #котики')
+		relations.block(cls.bob.profile, cls.ann.profile)
+
 	def setUp(self):
-		self.ann = make('ann')
-		self.bob = make('bob')
-		self.post = publish_post(self.bob.profile, 'привет #котики')
-		relations.block(self.bob.profile, self.ann.profile)
 		self.client.force_login(self.ann)
 
 	def send(self, items):
@@ -79,7 +82,7 @@ class RetentionTests(TestCase):
 		self.assertEqual(self.tables(), ['tracking_impression_y2026m11', 'tracking_impression_y2026m12'])
 
 	def test_events_erased_with_account(self):
-		ann, bob = make('ann'), make('bob')
+		ann, bob = make('ann', password='pass-12345'), make('bob')
 		post = publish_post(bob.profile, 'пост')
 		self.client.force_login(ann)
 		self.client.get(reverse('post', args=[post.pk]))

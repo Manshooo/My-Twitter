@@ -16,13 +16,14 @@ HTMX = {'HTTP_HX_REQUEST': 'true'}
 
 
 def users(*names):
-	return [User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in names]
+	return [User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in names]
 
 
 class RulesTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob = users('ann', 'bob')
-		self.a, self.b = self.ann.profile, self.bob.profile
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob = users('ann', 'bob')
+		cls.a, cls.b = cls.ann.profile, cls.bob.profile
 
 	def set_policy(self, profile, policy):
 		profile.dm_policy = policy
@@ -79,8 +80,11 @@ class RetentionTests(TestCase):
 
 
 class ViewTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = users('ann', 'bob', 'cat')
+
 	def setUp(self):
-		self.ann, self.bob, self.cat = users('ann', 'bob', 'cat')
 		self.client.force_login(self.ann)
 
 	def test_start_send_and_read(self):

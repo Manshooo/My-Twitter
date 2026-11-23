@@ -15,8 +15,8 @@ from post.models import Post
 User = CustomUser
 
 
-def make_user(login, **extra):
-	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **ACTIVE, **extra)
+def make_user(login, password=None, **extra):
+	return User.objects.create_user(login, f'{login}@example.com', password, **ACTIVE, **extra)
 
 
 class FeedPagesTests(TestCase):
@@ -42,11 +42,12 @@ class FeedPagesTests(TestCase):
 
 
 class ProfilePageTests(TestCase):
-	def setUp(self):
-		self.alice = make_user('alice')
-		self.bob = make_user('bob')
-		self.post = Post.objects.create(author=self.bob.profile, text='Пост Боба')
-		self.post.likes.add(self.alice.profile)
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = make_user('alice')
+		cls.bob = make_user('bob')
+		cls.post = Post.objects.create(author=cls.bob.profile, text='Пост Боба')
+		cls.post.likes.add(cls.alice.profile)
 
 	def test_likes_tab_hidden_from_others_by_default(self):
 		self.client.force_login(self.bob)
@@ -133,7 +134,7 @@ class EmailVerificationTests(TestCase):
 		self.assertEqual(mail.outbox[0].to, ['alice@example.com'])
 
 	def test_verified_user_logs_in_by_username_or_email(self):
-		user = make_user('alice')
+		user = make_user('alice', password='pass-12345')
 		EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 		for login in ('alice', 'alice@example.com'):
 			self.client.logout()

@@ -12,18 +12,19 @@ User = CustomUser
 
 
 def make_user(login):
-	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **ACTIVE)
+	return User.objects.create_user(login, f'{login}@example.com', **ACTIVE)
 
 
 class ModerationTests(TestCase):
 	"""E4: жалобы, очередь, скрытие постов, баны."""
 
-	def setUp(self):
-		self.alice = make_user('alice')
-		self.bob = make_user('bob')
-		self.mod = make_user('mod')
-		self.mod.groups.add(Group.objects.get(name='Модераторы'))
-		self.post = Post.objects.create(author=self.bob.profile, text='плохой пост')
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = make_user('alice')
+		cls.bob = make_user('bob')
+		cls.mod = make_user('mod')
+		cls.mod.groups.add(Group.objects.get(name='Модераторы'))
+		cls.post = Post.objects.create(author=cls.bob.profile, text='плохой пост')
 
 	def report_post(self, user=None, reason='spam'):
 		self.client.force_login(user or self.alice)

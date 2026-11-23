@@ -14,10 +14,13 @@ HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 class BookmarkTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = User.objects.create_user('ann', 'ann@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = publish_post(cls.ann.profile, 'пост в закладки')
+
 	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = publish_post(self.ann.profile, 'пост в закладки')
 		self.client.force_login(self.bob)
 
 	def test_toggle_is_private(self):
