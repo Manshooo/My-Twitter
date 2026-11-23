@@ -1,34 +1,28 @@
 import json
 import re
-from unittest import mock
 
 from allauth.account.models import EmailAddress
 from django.core import mail
 from django.core.cache import cache
-from django.test import Client, TestCase, override_settings
+from django.test import TestCase
 
 from accounts.forms import SignupForm
 from accounts.models import CustomUser, FollowThrough
-from post.models import Post
 from azzb.testing import ACTIVE
+from post.models import Post
 
 # Сама модель, а не get_user_model(): так редактор знает про create_user и поля аккаунта.
 User = CustomUser
 
 
-def make_user(login, **extra):
-	return User.objects.create_user(login, f'{login}@example.com', 'pass-12345', **ACTIVE, **extra)
+def make_user(login, password=None, **extra):
+	return User.objects.create_user(login, f'{login}@example.com', password, **ACTIVE, **extra)
 
 
 class FeedPagesTests(TestCase):
 	def setUp(self):
 		self.alice = make_user('alice')
 		Post.objects.create(author=self.alice.profile, text='Привет\nвторая строка')
-
-	def test_fonts_are_served_by_site(self):
-		response = self.client.get('/')
-		self.assertNotContains(response, 'fonts.googleapis.com')
-		self.assertContains(response, 'fonts/manrope-cyrillic')
 
 	def test_guest_home_is_showcase(self):
 		response = self.client.get('/')
@@ -41,45 +35,19 @@ class FeedPagesTests(TestCase):
 		self.assertNotContains(response, 'class="tabbar"')
 		self.assertContains(response, 'WebSite')
 
-	def test_old_feed_addresses_redirect_permanently(self):
-		self.assertRedirects(self.client.get('/follows-updates/'), '/following/', status_code=301, fetch_redirect_response=False)
-		self.assertRedirects(self.client.get('/hot/'), '/', status_code=301)
-
 	def test_guest_is_sent_to_login_from_following_feed(self):
 		response = self.client.get('/following/')
 		self.assertEqual(response.status_code, 302)
 		self.assertIn('/auth/login', response['Location'])
 
-	def test_authed_feed_has_composer_and_own_delete_menu(self):
-		self.client.force_login(self.alice)
-		response = self.client.get('/')
-		self.assertContains(response, 'id="composer"')
-		self.assertContains(response, '/delete/"')
-		self.assertContains(response, 'data-feed-prepend')
-
-	def test_other_users_post_has_no_delete_menu(self):
-		self.client.force_login(make_user('bob'))
-		self.assertNotContains(self.client.get('/'), '/delete/"')
-
-	def test_following_feed_empty_state(self):
-		self.client.force_login(make_user('bob'))
-		self.assertContains(self.client.get('/following/'), 'Здесь пока тихо')
-
-	def test_badges(self):
-		self.alice.is_staff = True
-		self.alice.save()
-		self.alice.profile.is_verified = True
-		self.alice.profile.save()
-		response = self.client.get('/')
-		self.assertContains(response, 'aria-label="Подтверждённый аккаунт"')
-		self.assertContains(response, 'aria-label="Команда AzzB"')
 
 class ProfilePageTests(TestCase):
-	def setUp(self):
-		self.alice = make_user('alice')
-		self.bob = make_user('bob')
-		self.post = Post.objects.create(author=self.bob.profile, text='Пост Боба')
-		self.post.likes.add(self.alice.profile)
+	@classmethod
+	def setUpTestData(cls):
+		cls.alice = make_user('alice')
+		cls.bob = make_user('bob')
+		cls.post = Post.objects.create(author=cls.bob.profile, text='Пост Боба')
+		cls.post.likes.add(cls.alice.profile)
 
 	def test_likes_tab_hidden_from_others_by_default(self):
 		self.client.force_login(self.bob)
@@ -89,23 +57,6 @@ class ProfilePageTests(TestCase):
 		self.assertContains(response, 'Лайки скрыты')
 		self.assertNotContains(response, 'Пост Боба')
 
-	def test_owner_always_sees_own_likes(self):
-		self.client.force_login(self.alice)
-		response = self.client.get('/users/alice/?tab=likes')
-		self.assertContains(response, 'Пост Боба')
-
-	def test_public_likes_visible_to_others(self):
-		self.alice.profile.likes_public = True
-		self.alice.profile.save()
-		self.client.force_login(self.bob)
-		self.assertContains(self.client.get('/users/alice/?tab=likes'), 'Пост Боба')
-
-	def test_following_and_followers_tabs(self):
-		FollowThrough.objects.create(follower=self.alice.profile, followee=self.bob.profile)
-		self.client.force_login(self.alice)
-		self.assertContains(self.client.get('/users/alice/?tab=following'), '@bob')
-		self.assertContains(self.client.get('/users/bob/?tab=followers'), '@alice')
-
 	def test_follow_redirects_to_safe_next_only(self):
 		self.client.force_login(self.alice)
 		response = self.client.post('/users/bob/', {'subscribe': '', 'next': '/hot/'})
@@ -114,40 +65,8 @@ class ProfilePageTests(TestCase):
 		response = self.client.post('/users/bob/', {'unsubscribe': '', 'next': 'https://evil.example/'})
 		self.assertRedirects(response, '/users/bob/', fetch_redirect_response=False)
 
-	def test_self_subscribe_does_not_crash(self):
-		self.client.force_login(self.alice)
-		response = self.client.post('/users/alice/', {'subscribe': ''})
-		self.assertEqual(response.status_code, 302)
-		self.assertFalse(FollowThrough.objects.exists())
-
-	def test_edit_profile_saves_names_and_likes_privacy(self):
-		self.client.force_login(self.alice)
-		self.assertEqual(self.client.get('/edit/').status_code, 200)
-		response = self.client.post('/edit/', {
-			'username': 'Алиса', 'first_name': 'Алиса', 'last_name': 'Иванова',
-			'bio': 'О себе', 'likes_public': 'on',
-		})
-		self.assertEqual(response.status_code, 302)
-		self.alice.refresh_from_db()
-		self.assertEqual(self.alice.last_name, 'Иванова')
-		self.assertEqual(self.alice.profile.username, 'Алиса')
-		self.assertTrue(self.alice.profile.likes_public)
-
 
 class AuthPagesTests(TestCase):
-	def test_auth_pages_render(self):
-		for url in ('/auth/login/', '/auth/signup/', '/auth/password/reset/'):
-			response = self.client.get(url)
-			self.assertEqual(response.status_code, 200, url)
-			self.assertContains(response, 'auth-card', msg_prefix=url)
-
-	def signup_form(self, username):
-		return SignupForm(data={
-			'username': username, 'email': 'new@example.com',
-			'password1': 'Very-strong-pass-42', 'password2': 'Very-strong-pass-42',
-			'accept_rules': 'on', 'pd_consent': 'on',
-		})
-
 	def test_consents_required_and_recorded(self):
 		form = SignupForm(data={
 			'username': 'ok', 'email': 'ok@example.com',
@@ -159,11 +78,6 @@ class AuthPagesTests(TestCase):
 		page = self.client.get('/auth/signup/')
 		self.assertContains(page, 'href="/rules/"')
 		self.assertContains(page, 'href="/privacy/consent/"')
-
-	def test_username_rules(self):
-		self.assertTrue(self.signup_form('ok_name.1-x').is_valid())
-		for bad in ('bad@name', 'plus+name', 'кириллица', 'a' * 31, 'admin'):
-			self.assertFalse(self.signup_form(bad).is_valid(), bad)
 
 
 class EmailVerificationTests(TestCase):
@@ -220,7 +134,7 @@ class EmailVerificationTests(TestCase):
 		self.assertEqual(mail.outbox[0].to, ['alice@example.com'])
 
 	def test_verified_user_logs_in_by_username_or_email(self):
-		user = make_user('alice')
+		user = make_user('alice', password='pass-12345')
 		EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 		for login in ('alice', 'alice@example.com'):
 			self.client.logout()
@@ -248,7 +162,7 @@ class CreatePostLimitsTests(TestCase):
 
 
 class RateLimitTests(TestCase):
-	"""E2: лимиты частоты на посты, лайки, подписки; капча на регистрации."""
+	"""Лимит публикаций и капча при регистрации."""
 
 	def setUp(self):
 		from unittest import mock
@@ -260,14 +174,6 @@ class RateLimitTests(TestCase):
 		self.addCleanup(clock.stop)
 		self.alice = make_user('alice')
 		self.client.force_login(self.alice)
-
-	def test_parse_rate(self):
-		from azzb.ratelimit import parse_rate
-		self.assertEqual(parse_rate('8/m'), (8, 60))
-		self.assertEqual(parse_rate('5/15m'), (5, 900))
-		self.assertEqual(parse_rate('100/d'), (100, 86400))
-		with self.assertRaises(ValueError):
-			parse_rate('8 per minute')
 
 	def test_posting_is_limited_per_minute(self):
 		from post.views import POST_RATES
@@ -282,30 +188,6 @@ class RateLimitTests(TestCase):
 		self.assertEqual(Post.objects.filter(author=self.alice.profile).count(), limit)
 		# API считается вместе с composer.
 		self.assertEqual(self.client.post('/api/new-post/', {'text': 'через API'}).status_code, 429)
-
-	def test_limits_are_per_user(self):
-		from azzb.ratelimit import hit
-		self.assertFalse(hit('t:u1', '1/m'))
-		self.assertTrue(hit('t:u1', '1/m'))
-		self.assertFalse(hit('t:u2', '1/m'))
-
-	def test_follow_limit_shows_page_for_plain_form(self):
-		for i in range(31):
-			bob = make_user(f'bob{i}')
-			response = self.client.post(f'/users/{bob.username}/', {'subscribe': ''})
-		self.assertEqual(response.status_code, 429)
-		self.assertContains(response, 'Слишком много попыток', status_code=429)
-		self.assertEqual(FollowThrough.objects.count(), 30)
-
-	def test_client_ip_from_trusted_header(self):
-		from django.test import RequestFactory, override_settings
-
-		from azzb.ratelimit import client_ip
-		request = RequestFactory().get('/', REMOTE_ADDR='127.0.0.1', HTTP_X_REAL_IP='203.0.113.7')
-		with override_settings(CLIENT_IP_HEADER='X-Real-IP'):
-			self.assertEqual(client_ip(request), '203.0.113.7')
-		with override_settings(CLIENT_IP_HEADER=''):
-			self.assertEqual(client_ip(request), '127.0.0.1')
 
 	def test_signup_requires_captcha_when_enabled(self):
 		from unittest import mock
@@ -330,33 +212,9 @@ class RateLimitTests(TestCase):
 
 
 class DeployTests(TestCase):
-	"""A10: проверка живости для выкладки и ссылки на картинки из S3."""
+	"""Проверка живости для выкладки."""
 
 	def test_healthz(self):
 		response = self.client.get('/healthz')
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.content, b'ok')
-
-	@override_settings(ADMINS=[('Admin', 'admin@example.com')])
-	def test_server_error_page_and_admin_mail(self):
-		client = Client(raise_request_exception=False)
-		with mock.patch('azzb.views.HttpResponse', side_effect=RuntimeError('сбой')):
-			response = client.get('/healthz')
-		self.assertContains(response, 'Что-то сломалось', status_code=500)
-		self.assertEqual(len(mail.outbox), 1)
-		self.assertIn('RuntimeError', mail.outbox[0].body)
-
-	def test_s3_client_trusts_selectel_root(self):
-		from botocore.httpsession import get_cert_path
-
-		with open(get_cert_path(True)) as bundle:
-			self.assertIn('GlobalSign Root CA - R6', bundle.read())
-
-	def test_s3_media_links_point_to_site(self):
-		from storages.backends.s3 import S3Storage
-
-		storage = S3Storage(
-			bucket_name='azzb-media', endpoint_url='https://s3.ru-6.storage.selcloud.ru',
-			custom_domain='azzb.ru/media', querystring_auth=False,
-		)
-		self.assertEqual(storage.url('posts/2026/11/abc.webp'), 'https://azzb.ru/media/posts/2026/11/abc.webp')

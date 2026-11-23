@@ -1,6 +1,7 @@
 """Клиент WebSocket для тестов. channels.testing не годится: он тянет daphne, а у нас uvicorn."""
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from tempfile import TemporaryDirectory
 from unittest import mock
 
 from asgiref.testing import ApplicationCommunicator
@@ -49,10 +50,15 @@ class WebsocketClient(ApplicationCommunicator):
 		await self.wait(timeout)
 
 
+def use_temporary_media(test):
+	media_root = test.enterContext(TemporaryDirectory(prefix='azzb-test-media-'))
+	test.enterContext(test.settings(MEDIA_ROOT=media_root))
+
+
 # Пользователь тестов — как настоящий: хоть раз входил (иначе Profile.objects.public() его не покажет)
 # и принял текущую редакцию согласия (иначе accounts.middleware.ConsentMiddleware уведёт на её экран).
 ACTIVE = {
-	'last_login': datetime(2026, 1, 1, tzinfo=timezone.utc),
-	'pd_consent_at': datetime(2026, 11, 12, 12, tzinfo=timezone.utc),
-	'terms_accepted_at': datetime(2026, 11, 12, 12, tzinfo=timezone.utc),
+	'last_login': datetime(2026, 1, 1, tzinfo=UTC),
+	'pd_consent_at': datetime(2026, 11, 12, 12, tzinfo=UTC),
+	'terms_accepted_at': datetime(2026, 11, 12, 12, tzinfo=UTC),
 }

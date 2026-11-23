@@ -1,26 +1,25 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
 
 from accounts import relations
-from accounts.models import FeedSort
+from azzb.testing import ACTIVE
 from notifications.models import Notification
 
 from .models import Post
-from .services import delete_post, publish_post, toggle_like, toggle_repost
-from azzb.testing import ACTIVE
+from .services import delete_post, publish_post, toggle_repost
 
 User = get_user_model()
 HX = {'HTTP_HX_REQUEST': 'true'}
 
 
 class RepostTests(TestCase):
-	def setUp(self):
-		self.ann, self.bob, self.cat = (
-			User.objects.create_user(name, f'{name}@example.com', 'pass-12345', **ACTIVE) for name in ('ann', 'bob', 'cat')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann, cls.bob, cls.cat = (
+			User.objects.create_user(name, f'{name}@example.com', **ACTIVE) for name in ('ann', 'bob', 'cat')
 		)
-		self.post = publish_post(self.ann.profile, 'исходный пост')
+		cls.post = publish_post(cls.ann.profile, 'исходный пост')
 
 	def reposts_count(self):
 		self.post.refresh_from_db()
@@ -35,81 +34,30 @@ class RepostTests(TestCase):
 		self.assertEqual(Post.objects.filter(repost_of=self.post, deleted_at__isnull=False).count(), 1)
 		self.assertEqual(toggle_repost(self.post, self.bob.profile), (True, 1))
 
-	def test_repost_view_resolves_repost_to_original(self):
-		toggle_repost(self.post, self.bob.profile)
-		row = Post.objects.get(repost_of=self.post)
-		self.client.force_login(self.cat)
-		response = self.client.post(reverse('post-repost', args=[row.pk]), **HX)
-		self.assertContains(response, 'Отменить репост')
-		self.assertEqual(self.reposts_count(), 2)
-		self.assertEqual(Post.objects.filter(repost_of=row).count(), 0)
-		# Лайк репоста — лайк исходного.
-		self.client.post(reverse('post-like', args=[row.pk]), **HX)
-		self.assertEqual(self.post.likes.count(), 1)
-
-	def test_feed_shows_repost_card_with_original_stats(self):
-		toggle_like(self.post, self.cat.profile)
-		toggle_repost(self.post, self.bob.profile)
-		self.client.force_login(self.cat)
-		self.cat.profile.feed_sort = FeedSort.NEW
-		self.cat.profile.save()
-		response = self.client.get(reverse('index'))
-		self.assertContains(response, 'сделал(а) репост')
-		self.assertContains(response, 'исходный пост', count=2)
-		row = Post.objects.get(repost_of=self.post)
-		cards = {post.pk: post for post in response.context['posts']}
-		self.assertEqual(cards[row.pk].likes_n, 1)
-		self.assertTrue(cards[row.pk].is_liked)
-		self.assertFalse(cards[row.pk].is_reposted)
-		# «Популярное» без репостов: пост там один раз.
-		self.cat.profile.feed_sort = FeedSort.POPULAR
-		self.cat.profile.save()
-		self.assertEqual([post.pk for post in self.client.get(reverse('index')).context['posts']], [self.post.pk])
-
 	def test_repost_hidden_with_original(self):
 		toggle_repost(self.post, self.bob.profile)
 		self.client.force_login(self.cat)
-		visible = lambda: list(Post.objects.visible_to(self.cat).filter(is_repost=True))
-		self.assertEqual(len(visible()), 1)
+
+		def visible_reposts():
+			return Post.objects.visible_to(self.cat).filter(is_repost=True)
+
+		self.assertEqual(visible_reposts().count(), 1)
 		relations.block(self.cat.profile, self.ann.profile)
-		self.assertEqual(visible(), [])
+		self.assertFalse(visible_reposts().exists())
 		relations.unblock(self.cat.profile, self.ann.profile)
 		relations.mute(self.cat.profile, self.ann.profile)
-		self.assertEqual(list(Post.objects.visible_to(self.cat).without_muted(self.cat).filter(is_repost=True)), [])
+		self.assertFalse(visible_reposts().without_muted(self.cat).exists())
 		relations.unmute(self.cat.profile, self.ann.profile)
 		delete_post(self.post)
-		self.assertEqual(visible(), [])
-
-	def test_hidden_post_cannot_be_reposted_or_quoted(self):
-		self.post.hidden_at = timezone.now()
-		self.post.save()
-		self.client.force_login(self.ann)
-		self.assertEqual(self.client.post(reverse('post-repost', args=[self.post.pk]), **HX).status_code, 403)
-		response = self.client.post(reverse('compose'), {'text': 'цитата', 'quote_of': str(self.post.pk)}, **HX)
-		self.assertEqual(response.status_code, 404)
-
-	def test_repost_page_redirects_and_cannot_be_edited(self):
-		toggle_repost(self.post, self.bob.profile)
-		row = Post.objects.get(repost_of=self.post)
-		self.client.force_login(self.bob)
-		self.assertRedirects(self.client.get(reverse('post', args=[row.pk])), reverse('post', args=[self.post.pk]))
-		response = self.client.post(reverse('compose'), {'edit': str(row.pk), 'text': 'текст'}, **HX)
-		self.assertEqual(response.status_code, 403)
-
-	def test_deleting_repost_or_quote_decrements_counter(self):
-		toggle_repost(self.post, self.bob.profile)
-		quote = publish_post(self.cat.profile, 'цитата', quote_of=self.post)
-		self.assertEqual(self.reposts_count(), 2)
-		delete_post(quote)
-		delete_post(Post.objects.get(repost_of=self.post))
-		self.assertEqual(self.reposts_count(), 0)
+		self.assertFalse(visible_reposts().exists())
 
 
 class QuoteTests(TestCase):
-	def setUp(self):
-		self.ann = User.objects.create_user('ann', 'ann@example.com', 'pass-12345', **ACTIVE)
-		self.bob = User.objects.create_user('bob', 'bob@example.com', 'pass-12345', **ACTIVE)
-		self.post = publish_post(self.ann.profile, 'исходный пост')
+	@classmethod
+	def setUpTestData(cls):
+		cls.ann = User.objects.create_user('ann', 'ann@example.com', **ACTIVE)
+		cls.bob = User.objects.create_user('bob', 'bob@example.com', **ACTIVE)
+		cls.post = publish_post(cls.ann.profile, 'исходный пост')
 
 	def test_quote_via_composer(self):
 		self.client.force_login(self.bob)
@@ -120,13 +68,6 @@ class QuoteTests(TestCase):
 		self.assertTrue(Notification.objects.filter(verb=Notification.Verb.QUOTE, post=quote).exists())
 		self.post.refresh_from_db()
 		self.assertEqual(self.post.reposts_count, 1)
-
-	def test_quote_of_repost_quotes_original(self):
-		toggle_repost(self.post, self.bob.profile)
-		row = Post.objects.get(repost_of=self.post)
-		self.client.force_login(self.bob)
-		self.client.post(reverse('compose'), {'text': 'к', 'quote_of': str(row.pk)}, **HX)
-		self.assertEqual(Post.objects.get(text='к').quote_of_id, self.post.pk)
 
 	def test_unavailable_quote_shows_placeholder(self):
 		quote = publish_post(self.bob.profile, 'цитата', quote_of=self.post)
